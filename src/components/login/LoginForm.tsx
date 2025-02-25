@@ -9,10 +9,10 @@ export const LoginForm: React.FC = () => {
 
   return (
     <section
-      className="w-6/12 ml-5 max-md:w-full max-md:ml-0"
+      className="w-6/12 max-md:w-full max-md:ml-0"
       aria-label="Login form"
     >
-      <div className="flex grow flex-col items-center justify-center px-20 py-[232px] rounded-[40px_0px_0px_40px] max-md:max-w-full max-md:px-5 max-md:py-[100px] bg-gradient-to-r from-[#0047AB] to-[#0047AB]">
+      <div className="flex grow flex-col items-center justify-center px-20 py-40 rounded-[40px_0px_0px_40px] max-md:max-w-full max-md:px-5 max-md:py-[100px] bg-gradient-to-r from-[#0047AB] to-[#0047AB]">
         <div className="flex w-[470px] max-w-full flex-col items-stretch">
           <img
             src="https://cdn.builder.io/api/v1/image/assets/e3c6b0ec50df45b58e99e24af78e19b0/496ecc137f8c0eeb6c4acc7eae1c9701ab567695346929631763cd049528af73?placeholderIfAbsent=true"
