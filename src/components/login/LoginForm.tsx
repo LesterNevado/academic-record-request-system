@@ -1,8 +1,26 @@
+
 import React from "react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export const LoginForm: React.FC = () => {
-  const handleGoogleLogin = () => {
-    console.log("Google login clicked");
+  const handleGoogleLogin = async () => {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        }
+      });
+
+      if (error) {
+        toast.error(`Login failed: ${error.message}`);
+        console.error("Google login error:", error);
+      }
+    } catch (err) {
+      console.error("Unexpected error during login:", err);
+      toast.error("An unexpected error occurred. Please try again.");
+    }
   };
 
   return (
