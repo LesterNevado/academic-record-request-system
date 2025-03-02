@@ -10,6 +10,7 @@ import { Session } from "@supabase/supabase-js";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
+import { toast } from "sonner";
 
 const queryClient = new QueryClient();
 
@@ -27,8 +28,23 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
+      async (event, session) => {
+        // Check if the user is signing in and validate their email domain
+        if (event === 'SIGNED_IN' && session) {
+          const email = session.user?.email;
+          
+          // Verify if the email ends with @neu.edu.ph
+          if (email && !email.endsWith('@neu.edu.ph')) {
+            // Sign out the user if they don't have an NEU email
+            await supabase.auth.signOut();
+            toast.error("Only @neu.edu.ph email addresses are allowed to access this system.");
+            setSession(null);
+          } else {
+            setSession(session);
+          }
+        } else {
+          setSession(session);
+        }
         setLoading(false);
       }
     );
@@ -94,8 +110,23 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
+      async (event, session) => {
+        // Check if the user is signing in and validate their email domain
+        if (event === 'SIGNED_IN' && session) {
+          const email = session.user?.email;
+          
+          // Verify if the email ends with @neu.edu.ph
+          if (email && !email.endsWith('@neu.edu.ph')) {
+            // Sign out the user if they don't have an NEU email
+            await supabase.auth.signOut();
+            toast.error("Only @neu.edu.ph email addresses are allowed to access this system.");
+            setSession(null);
+          } else {
+            setSession(session);
+          }
+        } else {
+          setSession(session);
+        }
         setLoading(false);
       }
     );
