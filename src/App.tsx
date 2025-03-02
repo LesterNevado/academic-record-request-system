@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,22 +19,17 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // Check if the user is signing in and validate their email domain
         if (event === 'SIGNED_IN' && session) {
           const email = session.user?.email;
           
-          // Verify if the email ends with @neu.edu.ph
           if (email && !email.endsWith('@neu.edu.ph')) {
-            // Sign out the user if they don't have an NEU email
             await supabase.auth.signOut();
             toast.error("Only @neu.edu.ph email addresses are allowed to access this system.");
             setSession(null);
@@ -69,13 +63,11 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session);
@@ -102,22 +94,17 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // Check if the user is signing in and validate their email domain
         if (event === 'SIGNED_IN' && session) {
           const email = session.user?.email;
           
-          // Verify if the email ends with @neu.edu.ph
           if (email && !email.endsWith('@neu.edu.ph')) {
-            // Sign out the user if they don't have an NEU email
             await supabase.auth.signOut();
             toast.error("Only @neu.edu.ph email addresses are allowed to access this system.");
             setSession(null);
@@ -151,7 +138,6 @@ const App = () => (
           <Routes>
             <Route path="/" element={<PublicRoute><Index /></PublicRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
