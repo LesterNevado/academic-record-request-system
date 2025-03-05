@@ -1,11 +1,14 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 export const LoginForm: React.FC = () => {
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleGoogleLogin = async () => {
     try {
+      setIsLoading(true);
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -13,7 +16,7 @@ export const LoginForm: React.FC = () => {
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
-            hd: 'neu.edu.ph' // Restrict to neu.edu.ph domain
+            hd: 'neu.edu.ph' // This ensures Google only shows neu.edu.ph accounts
           }
         }
       });
@@ -25,6 +28,8 @@ export const LoginForm: React.FC = () => {
     } catch (err) {
       console.error("Unexpected error during login:", err);
       toast.error("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -49,7 +54,8 @@ export const LoginForm: React.FC = () => {
 
           <button
             onClick={handleGoogleLogin}
-            className="bg-white shadow-[0px_4px_4px_rgba(0,0,0,0.25)] border flex w-full flex-col text-xl text-black font-semibold justify-center mt-[80px] px-[47px] py-5 rounded-[20px] border-[rgba(0,0,0,0.2)] border-solid max-md:max-w-full max-md:mt-10 max-md:px-5 hover:bg-gray-50 transition-colors"
+            disabled={isLoading}
+            className="bg-white shadow-[0px_4px_4px_rgba(0,0,0,0.25)] border flex w-full flex-col text-xl text-black font-semibold justify-center mt-[80px] px-[47px] py-5 rounded-[20px] border-[rgba(0,0,0,0.2)] border-solid max-md:max-w-full max-md:mt-10 max-md:px-5 hover:bg-gray-50 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
             aria-label="Sign in with Google"
           >
             <div className="flex items-stretch gap-[34px]">
@@ -58,7 +64,9 @@ export const LoginForm: React.FC = () => {
                 alt="Google logo"
                 className="aspect-[0.96] object-contain w-12 shrink-0"
               />
-              <span className="basis-auto my-auto">Continue with Google</span>
+              <span className="basis-auto my-auto">
+                {isLoading ? "Loading..." : "Continue with Google"}
+              </span>
             </div>
           </button>
         </div>

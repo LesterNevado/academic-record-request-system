@@ -1,11 +1,10 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { 
-  Layout, 
   LayoutDashboard, 
   User, 
   FileText, 
@@ -15,6 +14,50 @@ import {
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const [userProfile, setUserProfile] = useState<{
+    name: string | null;
+    email: string | null;
+    avatarUrl: string | null;
+  }>({
+    name: null,
+    email: null,
+    avatarUrl: null
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        // Get current session
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          navigate('/');
+          return;
+        }
+
+        // Get user metadata from auth
+        const { user } = session;
+        const name = user.user_metadata.name || user.user_metadata.full_name;
+        const email = user.email;
+        const avatarUrl = user.user_metadata.avatar_url;
+
+        // Set user profile
+        setUserProfile({
+          name,
+          email,
+          avatarUrl
+        });
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        toast.error("Failed to load user profile");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [navigate]);
 
   const handleSignOut = async () => {
     try {
@@ -34,7 +77,7 @@ const Dashboard: React.FC = () => {
   return (
     <div className="min-h-screen flex">
       {/* Sidebar */}
-      <div className="w-64 bg-[#0047AB] text-white p-6">
+      <div className="w-64 bg-[#0047AB] text-white p-6 flex flex-col">
         <div className="flex items-center mb-10">
           <img
             src="https://cdn.builder.io/api/v1/image/assets/e3c6b0ec50df45b58e99e24af78e19b0/496ecc137f8c0eeb6c4acc7eae1c9701ab567695346929631763cd049528af73?placeholderIfAbsent=true"
@@ -44,7 +87,24 @@ const Dashboard: React.FC = () => {
           <h1 className="text-xl font-bold">NEU ARRS</h1>
         </div>
         
-        <nav>
+        {/* User Profile Section */}
+        <div className="mb-6 flex flex-col items-center">
+          {userProfile.avatarUrl ? (
+            <img 
+              src={userProfile.avatarUrl} 
+              alt="Profile" 
+              className="w-16 h-16 rounded-full mb-2 border-2 border-white"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-2">
+              <User className="w-8 h-8" />
+            </div>
+          )}
+          <p className="text-sm font-semibold text-center">{userProfile.name || "User"}</p>
+          <p className="text-xs text-white/70 text-center">{userProfile.email}</p>
+        </div>
+        
+        <nav className="flex-1">
           <ul className="space-y-4">
             <li>
               <a href="#" className="flex items-center p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
@@ -73,7 +133,7 @@ const Dashboard: React.FC = () => {
           </ul>
         </nav>
         
-        <div className="mt-auto pt-20">
+        <div className="mt-auto">
           <Button 
             onClick={handleSignOut}
             variant="outline"
@@ -88,7 +148,7 @@ const Dashboard: React.FC = () => {
       {/* Main Content */}
       <div className="flex-1 p-10">
         <header className="mb-10">
-          <h1 className="text-3xl font-bold">Welcome to the Academic Record Request System</h1>
+          <h1 className="text-3xl font-bold">Welcome{userProfile.name ? `, ${userProfile.name.split(' ')[0]}` : ''}!</h1>
           <p className="text-gray-600 mt-2">Manage and track your academic record requests</p>
         </header>
         
