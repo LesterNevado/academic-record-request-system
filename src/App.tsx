@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,23 +20,46 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+      if (session) {
+        // Check email domain on initial load
+        const email = session.user?.email;
+        if (email && !email.endsWith('@neu.edu.ph')) {
+          console.log("Non-NEU email detected on initial load:", email);
+          
+          // First show toast
+          toast.error("Only @neu.edu.ph email addresses are allowed to access this system.");
+          
+          // Then sign out - this must be in a timeout to ensure the toast is shown
+          setTimeout(async () => {
+            await supabase.auth.signOut();
+            setSession(null);
+          }, 100);
+        } else {
+          setSession(session);
+        }
+      }
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("Auth state change event:", event);
-        console.log("Session:", session);
+        console.log("Session:", session?.user?.email);
         
         if (event === 'SIGNED_IN' && session) {
           const email = session.user?.email;
           
           if (email && !email.endsWith('@neu.edu.ph')) {
             console.log("Non-NEU email detected:", email);
+            
+            // First show toast
             toast.error("Only @neu.edu.ph email addresses are allowed to access this system.");
-            await supabase.auth.signOut();
-            setSession(null);
+            
+            // Then sign out - this must be in a timeout to ensure the toast is shown
+            setTimeout(async () => {
+              await supabase.auth.signOut();
+              setSession(null);
+            }, 100);
           } else {
             // Check if this user has a profile in the database
             const { error } = await supabase
@@ -116,7 +138,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
-      <Sonner />
+      <Sonner position="top-center" closeButton={true} />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<PublicRoute><Index /></PublicRoute>} />
