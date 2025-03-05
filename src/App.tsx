@@ -27,12 +27,16 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("Auth state change event:", event);
+        console.log("Session:", session);
+        
         if (event === 'SIGNED_IN' && session) {
           const email = session.user?.email;
           
           if (email && !email.endsWith('@neu.edu.ph')) {
-            await supabase.auth.signOut();
+            console.log("Non-NEU email detected:", email);
             toast.error("Only @neu.edu.ph email addresses are allowed to access this system.");
+            await supabase.auth.signOut();
             setSession(null);
           } else {
             // Check if this user has a profile in the database
