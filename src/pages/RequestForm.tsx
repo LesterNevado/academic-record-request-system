@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
@@ -15,9 +16,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useQueryClient } from "@tanstack/react-query";
 
 const RequestForm: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { session } = useContext(SessionContext);
   const [userProfile, setUserProfile] = useState<{
     name: string | null;
@@ -44,6 +47,7 @@ const RequestForm: React.FC = () => {
   });
   
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const updateUserProfile = () => {
@@ -125,7 +129,7 @@ const RequestForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     
     try {
       if (!session) {
@@ -159,14 +163,23 @@ const RequestForm: React.FC = () => {
         status: 'pending'
       };
       
+      console.log("Submitting request data:", requestData);
+      
       // Submit to Supabase
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('requests')
-        .insert(requestData);
+        .insert(requestData)
+        .select();
       
       if (error) {
+        console.error("Supabase error:", error);
         throw error;
       }
+      
+      console.log("Request submitted successfully:", data);
+      
+      // Invalidate requests query to refresh data
+      queryClient.invalidateQueries({ queryKey: ['requests'] });
       
       toast.success("Request submitted successfully!");
       navigate("/requests");
@@ -174,7 +187,7 @@ const RequestForm: React.FC = () => {
       console.error("Error submitting request:", error);
       toast.error(`Failed to submit request: ${error.message || "Please try again."}`);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -247,7 +260,7 @@ const RequestForm: React.FC = () => {
           <Button 
             onClick={handleSignOut}
             variant="outline"
-            className="w-full flex items-center justify-center text-white border border-white hover:bg-white/20 hover:text-white"
+            className="w-full flex items-center justify-center text-white bg-[#0047AB] border-2 border-white hover:bg-[#003d91]"
             disabled={loading}
           >
             <LogOut className="w-4 h-4 mr-2" />
@@ -456,9 +469,9 @@ const RequestForm: React.FC = () => {
               <Button 
                 type="submit" 
                 className="bg-[#0047AB] hover:bg-[#00377e]"
-                disabled={loading}
+                disabled={submitting}
               >
-                {loading ? "Submitting..." : "Submit Request"}
+                {submitting ? "Submitting..." : "Submit Request"}
               </Button>
             </div>
           </form>
