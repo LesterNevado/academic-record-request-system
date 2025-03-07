@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const RequestForm: React.FC = () => {
   const navigate = useNavigate();
@@ -35,9 +35,13 @@ const RequestForm: React.FC = () => {
     studentNumber: "",
     contactNumber: "",
     homeAddress: "",
-    requestType: "transcript",
-    copies: 1,
-    purpose: ""
+    purpose: "",
+    requestTypes: {
+      transcript: { selected: false, copies: 1 },
+      certificate: { selected: false, copies: 1 },
+      certification: { selected: false, copies: 1, details: "" },
+      others: { selected: false, copies: 1, details: "" }
+    }
   });
   
   const [loading, setLoading] = useState(false);
@@ -81,18 +85,42 @@ const RequestForm: React.FC = () => {
     });
   };
 
-  const handleRadioChange = (value: string) => {
+  const handleCheckboxChange = (type: string) => {
     setFormData({
       ...formData,
-      requestType: value
+      requestTypes: {
+        ...formData.requestTypes,
+        [type]: {
+          ...formData.requestTypes[type as keyof typeof formData.requestTypes],
+          selected: !formData.requestTypes[type as keyof typeof formData.requestTypes].selected
+        }
+      }
     });
   };
 
-  const handleCopiesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value) || 1;
+  const handleCopiesChange = (type: string, value: number) => {
     setFormData({
       ...formData,
-      copies: Math.max(1, value) // Ensure at least 1 copy
+      requestTypes: {
+        ...formData.requestTypes,
+        [type]: {
+          ...formData.requestTypes[type as keyof typeof formData.requestTypes],
+          copies: Math.max(1, value) // Ensure at least 1 copy
+        }
+      }
+    });
+  };
+
+  const handleDetailsChange = (type: string, value: string) => {
+    setFormData({
+      ...formData,
+      requestTypes: {
+        ...formData.requestTypes,
+        [type]: {
+          ...formData.requestTypes[type as keyof typeof formData.requestTypes],
+          details: value
+        }
+      }
     });
   };
 
@@ -248,19 +276,6 @@ const RequestForm: React.FC = () => {
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="copies">Number of Copies*</Label>
-                <Input
-                  id="copies"
-                  name="copies"
-                  type="number"
-                  min="1"
-                  value={formData.copies}
-                  onChange={handleCopiesChange}
-                  required
-                />
-              </div>
-              
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="homeAddress">Home Address*</Label>
                 <Input
@@ -273,36 +288,114 @@ const RequestForm: React.FC = () => {
               </div>
               
               <div className="space-y-3 md:col-span-2">
-                <Label>APPLICATION FOR:*</Label>
-                <RadioGroup 
-                  defaultValue={formData.requestType}
-                  onValueChange={handleRadioChange}
-                  className="grid grid-cols-1 md:grid-cols-2 gap-2"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="transcript" id="transcript" />
-                    <Label htmlFor="transcript">Transcript of Records (TOR)</Label>
+                <Label className="text-lg font-semibold">APPLICATION FOR:*</Label>
+                <div className="mt-4 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="col-span-2 flex items-center space-x-2">
+                      <Checkbox 
+                        id="transcript" 
+                        checked={formData.requestTypes.transcript.selected}
+                        onCheckedChange={() => handleCheckboxChange('transcript')}
+                      />
+                      <Label htmlFor="transcript" className="font-normal">Transcript of Records (TOR)</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Label htmlFor="transcriptCopies" className="text-sm whitespace-nowrap">Number of Copies:</Label>
+                      <Input
+                        id="transcriptCopies"
+                        type="number"
+                        min="1"
+                        value={formData.requestTypes.transcript.copies}
+                        onChange={(e) => handleCopiesChange('transcript', parseInt(e.target.value) || 1)}
+                        className="w-20"
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="certificate" id="certificate" />
-                    <Label htmlFor="certificate">Certificate of Grades (COG)</Label>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="col-span-2 flex items-center space-x-2">
+                      <Checkbox 
+                        id="certificate" 
+                        checked={formData.requestTypes.certificate.selected}
+                        onCheckedChange={() => handleCheckboxChange('certificate')}
+                      />
+                      <Label htmlFor="certificate" className="font-normal">Certificate of Grades (COG)</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Label htmlFor="certificateCopies" className="text-sm whitespace-nowrap">Number of Copies:</Label>
+                      <Input
+                        id="certificateCopies"
+                        type="number"
+                        min="1"
+                        value={formData.requestTypes.certificate.copies}
+                        onChange={(e) => handleCopiesChange('certificate', parseInt(e.target.value) || 1)}
+                        className="w-20"
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="certification" id="certification" />
-                    <Label htmlFor="certification">Certification</Label>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="md:col-span-2 flex items-start space-x-2">
+                      <Checkbox 
+                        id="certification" 
+                        checked={formData.requestTypes.certification.selected}
+                        onCheckedChange={() => handleCheckboxChange('certification')}
+                        className="mt-2"
+                      />
+                      <div className="flex-1">
+                        <Label htmlFor="certification" className="font-normal">Certification</Label>
+                        <Input
+                          className="mt-2"
+                          value={formData.requestTypes.certification.details}
+                          onChange={(e) => handleDetailsChange('certification', e.target.value)}
+                          placeholder="Please specify"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Label htmlFor="certificationCopies" className="text-sm whitespace-nowrap">Number of Copies:</Label>
+                      <Input
+                        id="certificationCopies"
+                        type="number"
+                        min="1"
+                        value={formData.requestTypes.certification.copies}
+                        onChange={(e) => handleCopiesChange('certification', parseInt(e.target.value) || 1)}
+                        className="w-20"
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="others" id="others" />
-                    <Label htmlFor="others">Others (Please Specify)</Label>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="md:col-span-2 flex items-start space-x-2">
+                      <Checkbox 
+                        id="others" 
+                        checked={formData.requestTypes.others.selected}
+                        onCheckedChange={() => handleCheckboxChange('others')}
+                        className="mt-2"
+                      />
+                      <div className="flex-1">
+                        <Label htmlFor="others" className="font-normal">Others (Please Specify)</Label>
+                        <Input
+                          className="mt-2"
+                          value={formData.requestTypes.others.details}
+                          onChange={(e) => handleDetailsChange('others', e.target.value)}
+                          placeholder="Please specify"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Label htmlFor="othersCopies" className="text-sm whitespace-nowrap">Number of Copies:</Label>
+                      <Input
+                        id="othersCopies"
+                        type="number"
+                        min="1"
+                        value={formData.requestTypes.others.copies}
+                        onChange={(e) => handleCopiesChange('others', parseInt(e.target.value) || 1)}
+                        className="w-20"
+                      />
+                    </div>
                   </div>
-                </RadioGroup>
-                
-                {formData.requestType === "others" && (
-                  <Input
-                    placeholder="Please specify"
-                    className="mt-2"
-                  />
-                )}
+                </div>
               </div>
               
               <div className="space-y-2 md:col-span-2">
