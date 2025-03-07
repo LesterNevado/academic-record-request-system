@@ -120,7 +120,7 @@ const Dashboard: React.FC = () => {
           <Button 
             onClick={handleSignOut}
             variant="outline"
-            className="w-full flex items-center justify-center text-white hover:bg-white/20 hover:text-white border border-white"
+            className="w-full flex items-center justify-center text-white border border-white hover:bg-white/20 hover:text-white"
             disabled={loading}
           >
             <LogOut className="w-4 h-4 mr-2" />

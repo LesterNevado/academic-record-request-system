@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
@@ -129,16 +128,51 @@ const RequestForm: React.FC = () => {
     setLoading(true);
     
     try {
-      // Here you would submit the form data to your backend
-      // For now, we'll just simulate a success
+      if (!session) {
+        toast.error("You must be logged in to submit a request");
+        return;
+      }
       
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      // Prepare request data for submission to Supabase
+      const requestData = {
+        user_id: session.user.id,
+        student_name: formData.studentName,
+        student_number: formData.studentNumber,
+        contact_number: formData.contactNumber,
+        home_address: formData.homeAddress,
+        purpose: formData.purpose,
+        
+        transcript_selected: formData.requestTypes.transcript.selected,
+        transcript_copies: formData.requestTypes.transcript.selected ? formData.requestTypes.transcript.copies : null,
+        
+        certificate_selected: formData.requestTypes.certificate.selected,
+        certificate_copies: formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.copies : null,
+        
+        certification_selected: formData.requestTypes.certification.selected,
+        certification_copies: formData.requestTypes.certification.selected ? formData.requestTypes.certification.copies : null,
+        certification_details: formData.requestTypes.certification.selected ? formData.requestTypes.certification.details : null,
+        
+        others_selected: formData.requestTypes.others.selected,
+        others_copies: formData.requestTypes.others.selected ? formData.requestTypes.others.copies : null,
+        others_details: formData.requestTypes.others.selected ? formData.requestTypes.others.details : null,
+        
+        status: 'pending'
+      };
+      
+      // Submit to Supabase
+      const { error } = await supabase
+        .from('requests')
+        .insert(requestData);
+      
+      if (error) {
+        throw error;
+      }
       
       toast.success("Request submitted successfully!");
-      navigate("/dashboard");
-    } catch (error) {
+      navigate("/requests");
+    } catch (error: any) {
       console.error("Error submitting request:", error);
-      toast.error("Failed to submit request. Please try again.");
+      toast.error(`Failed to submit request: ${error.message || "Please try again."}`);
     } finally {
       setLoading(false);
     }
@@ -213,7 +247,7 @@ const RequestForm: React.FC = () => {
           <Button 
             onClick={handleSignOut}
             variant="outline"
-            className="w-full flex items-center justify-center text-white hover:bg-white/20 hover:text-white border border-white"
+            className="w-full flex items-center justify-center text-white border border-white hover:bg-white/20 hover:text-white"
             disabled={loading}
           >
             <LogOut className="w-4 h-4 mr-2" />

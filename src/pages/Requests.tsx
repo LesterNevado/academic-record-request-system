@@ -19,6 +19,20 @@ import {
   ArrowUpDown
 } from "lucide-react";
 
+interface Request {
+  id: string;
+  student_name: string;
+  student_number: string;
+  status: string;
+  created_at: string;
+  purpose: string;
+  
+  transcript_selected: boolean;
+  certificate_selected: boolean;
+  certification_selected: boolean;
+  others_selected: boolean;
+}
+
 const Requests: React.FC = () => {
   const navigate = useNavigate();
   const { session } = useContext(SessionContext);
@@ -32,11 +46,11 @@ const Requests: React.FC = () => {
     avatarUrl: null
   });
   const [loading, setLoading] = useState(true);
-  const [requests, setRequests] = useState<any[]>([]);
+  const [requests, setRequests] = useState<Request[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    const updateUserProfile = () => {
+    const updateUserProfile = async () => {
       if (!session) {
         navigate('/');
         return;
@@ -54,13 +68,30 @@ const Requests: React.FC = () => {
         email,
         avatarUrl
       });
-      setLoading(false);
+      
+      // Fetch user requests from Supabase
+      try {
+        const { data, error } = await supabase
+          .from('requests')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          throw error;
+        }
+        
+        setRequests(data || []);
+        console.log("Fetched requests:", data);
+      } catch (err) {
+        console.error("Error fetching requests:", err);
+        toast.error("Failed to load your requests. Please try again.");
+      } finally {
+        setLoading(false);
+      }
     };
 
     updateUserProfile();
-    // In a real app, we would fetch requests from Supabase here
-    // For now, just setting empty array
-    setRequests([]);
   }, [session, navigate]);
 
   const handleSignOut = async () => {
@@ -81,10 +112,32 @@ const Requests: React.FC = () => {
     }
   };
 
-  // Filter requests based on search term (for when we have actual data)
+  // Get request type as a formatted string
+  const getRequestType = (request: Request): string => {
+    const types = [];
+    if (request.transcript_selected) types.push("Transcript of Records");
+    if (request.certificate_selected) types.push("Certificate of Grades");
+    if (request.certification_selected) types.push("Certification");
+    if (request.others_selected) types.push("Others");
+    
+    return types.join(", ");
+  };
+
+  // Format date to a more readable format
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
+  // Filter requests based on search term
   const filteredRequests = requests.filter(request => 
-    request?.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    request?.type?.toLowerCase().includes(searchTerm.toLowerCase())
+    request.student_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    getRequestType(request).toLowerCase().includes(searchTerm.toLowerCase()) ||
+    request.student_number.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -138,7 +191,7 @@ const Requests: React.FC = () => {
           <Button 
             onClick={handleSignOut}
             variant="outline"
-            className="w-full flex items-center justify-center text-white hover:bg-white/20 hover:text-white border border-white"
+            className="w-full flex items-center justify-center text-white border border-white hover:bg-white/20 hover:text-white"
             disabled={loading}
           >
             <LogOut className="w-4 h-4 mr-2" />
@@ -186,18 +239,23 @@ const Requests: React.FC = () => {
         </div>
 
         {/* Request Cards */}
-        {filteredRequests.length > 0 ? (
+        {loading ? (
+          <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
+            <p>Loading your requests...</p>
+          </div>
+        ) : filteredRequests.length > 0 ? (
           <div className="grid grid-cols-1 gap-4">
-            {filteredRequests.map((request, index) => (
+            {filteredRequests.map((request) => (
               <div 
-                key={index} 
+                key={request.id} 
                 className="bg-white rounded-lg shadow p-6 border border-gray-200 hover:border-[#0047AB] transition-colors"
               >
                 <div className="flex justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold">{request.title}</h3>
-                    <p className="text-gray-600 text-sm">Type: {request.type}</p>
-                    <p className="text-gray-600 text-sm">Submitted: {request.date}</p>
+                    <h3 className="text-lg font-semibold">{request.student_name}</h3>
+                    <p className="text-gray-600 text-sm">Type: {getRequestType(request)}</p>
+                    <p className="text-gray-600 text-sm">Student Number: {request.student_number}</p>
+                    <p className="text-gray-600 text-sm">Submitted: {formatDate(request.created_at)}</p>
                   </div>
                   <div className="flex items-center">
                     {request.status === 'pending' && (

@@ -42,6 +42,83 @@ export type Database = {
         }
         Relationships: []
       }
+      requests: {
+        Row: {
+          certificate_copies: number | null
+          certificate_selected: boolean
+          certification_copies: number | null
+          certification_details: string | null
+          certification_selected: boolean
+          contact_number: string
+          created_at: string
+          home_address: string
+          id: string
+          others_copies: number | null
+          others_details: string | null
+          others_selected: boolean
+          purpose: string
+          status: string
+          student_name: string
+          student_number: string
+          transcript_copies: number | null
+          transcript_selected: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          certificate_copies?: number | null
+          certificate_selected?: boolean
+          certification_copies?: number | null
+          certification_details?: string | null
+          certification_selected?: boolean
+          contact_number: string
+          created_at?: string
+          home_address: string
+          id?: string
+          others_copies?: number | null
+          others_details?: string | null
+          others_selected?: boolean
+          purpose: string
+          status?: string
+          student_name: string
+          student_number: string
+          transcript_copies?: number | null
+          transcript_selected?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          certificate_copies?: number | null
+          certificate_selected?: boolean
+          certification_copies?: number | null
+          certification_details?: string | null
+          certification_selected?: boolean
+          contact_number?: string
+          created_at?: string
+          home_address?: string
+          id?: string
+          others_copies?: number | null
+          others_details?: string | null
+          others_selected?: boolean
+          purpose?: string
+          status?: string
+          student_name?: string
+          student_number?: string
+          transcript_copies?: number | null
+          transcript_selected?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
