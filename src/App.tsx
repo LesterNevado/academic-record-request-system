@@ -10,6 +10,7 @@ import { Session } from "@supabase/supabase-js";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
+import RequestForm from "./pages/RequestForm";
 import { toast } from "sonner";
 
 const queryClient = new QueryClient();
@@ -121,6 +122,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<PublicRoute><Index /></PublicRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/request" element={<ProtectedRoute><RequestForm /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

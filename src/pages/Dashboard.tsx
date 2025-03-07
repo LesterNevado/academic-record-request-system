@@ -8,7 +8,6 @@ import {
   LayoutDashboard, 
   User, 
   FileText, 
-  Settings, 
   LogOut 
 } from "lucide-react";
 
@@ -74,6 +73,10 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const handleNewRequest = () => {
+    navigate("/request");
+  };
+
   return (
     <div className="min-h-screen flex">
       {/* Sidebar */}
@@ -107,27 +110,15 @@ const Dashboard: React.FC = () => {
         <nav className="flex-1">
           <ul className="space-y-4">
             <li>
-              <a href="#" className="flex items-center p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+              <a href="/dashboard" className="flex items-center p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
                 <LayoutDashboard className="w-5 h-5 mr-3" />
                 Dashboard
               </a>
             </li>
             <li>
-              <a href="#" className="flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors">
-                <User className="w-5 h-5 mr-3" />
-                Profile
-              </a>
-            </li>
-            <li>
-              <a href="#" className="flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors">
+              <a href="/request" className="flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors">
                 <FileText className="w-5 h-5 mr-3" />
                 Requests
-              </a>
-            </li>
-            <li>
-              <a href="#" className="flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors">
-                <Settings className="w-5 h-5 mr-3" />
-                Settings
               </a>
             </li>
           </ul>
@@ -159,7 +150,7 @@ const Dashboard: React.FC = () => {
               <div className="bg-blue-100 text-blue-800 rounded-full w-8 h-8 flex items-center justify-center font-bold">0</div>
             </div>
             <p className="text-gray-600">You have no pending requests</p>
-            <Button className="mt-4 w-full bg-[#0047AB] hover:bg-[#00377e]">New Request</Button>
+            <Button onClick={handleNewRequest} className="mt-4 w-full bg-[#0047AB] hover:bg-[#00377e]">New Request</Button>
           </div>
           
           <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
@@ -177,7 +168,6 @@ const Dashboard: React.FC = () => {
               <User className="w-8 h-8 text-gray-400" />
             </div>
             <p className="text-gray-600">Complete your profile to speed up future requests</p>
-            <Button className="mt-4 w-full bg-[#0047AB] hover:bg-[#00377e]">Edit Profile</Button>
           </div>
         </div>
       </div>
