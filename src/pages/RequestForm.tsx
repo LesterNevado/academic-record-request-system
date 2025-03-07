@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
 import { 
@@ -10,6 +10,7 @@ import {
   ArrowLeft 
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { SessionContext } from "../App";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +19,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const RequestForm: React.FC = () => {
   const navigate = useNavigate();
+  const { session } = useContext(SessionContext);
   const [userProfile, setUserProfile] = useState<{
     name: string | null;
     email: string | null;
@@ -40,43 +42,36 @@ const RequestForm: React.FC = () => {
   
   const [loading, setLoading] = useState(false);
 
-  React.useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        // Get current session
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          navigate('/');
-          return;
-        }
+  useEffect(() => {
+    const updateUserProfile = () => {
+      if (!session) {
+        navigate('/');
+        return;
+      }
 
-        // Get user metadata from auth
-        const { user } = session;
-        const name = user.user_metadata.name || user.user_metadata.full_name;
-        const email = user.email;
-        const avatarUrl = user.user_metadata.avatar_url;
+      // Get user metadata from session
+      const { user } = session;
+      const name = user.user_metadata.name || user.user_metadata.full_name;
+      const email = user.email;
+      const avatarUrl = user.user_metadata.avatar_url;
 
-        // Set user profile and pre-fill name if available
-        setUserProfile({
-          name,
-          email,
-          avatarUrl
-        });
-        
-        if (name) {
-          setFormData(prev => ({
-            ...prev,
-            studentName: name
-          }));
-        }
-      } catch (error) {
-        console.error("Error fetching user profile:", error);
+      // Set user profile and pre-fill name if available
+      setUserProfile({
+        name,
+        email,
+        avatarUrl
+      });
+      
+      if (name) {
+        setFormData(prev => ({
+          ...prev,
+          studentName: name
+        }));
       }
     };
 
-    fetchUserProfile();
-  }, [navigate]);
+    updateUserProfile();
+  }, [session, navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -123,6 +118,7 @@ const RequestForm: React.FC = () => {
 
   const handleSignOut = async () => {
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) {
         toast.error(`Logout failed: ${error.message}`);
@@ -133,6 +129,8 @@ const RequestForm: React.FC = () => {
     } catch (err) {
       console.error("Unexpected error during logout:", err);
       toast.error("An unexpected error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -186,11 +184,12 @@ const RequestForm: React.FC = () => {
         <div className="mt-auto">
           <Button 
             onClick={handleSignOut}
-            variant="ghost"
-            className="w-full flex items-center justify-center text-white border border-white hover:bg-white/20 hover:text-white"
+            variant="outline"
+            className="w-full flex items-center justify-center text-white hover:bg-white/20 hover:text-white border border-white"
+            disabled={loading}
           >
             <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
+            {loading ? "Signing out..." : "Sign Out"}
           </Button>
         </div>
       </div>

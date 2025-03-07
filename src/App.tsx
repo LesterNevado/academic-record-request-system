@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, createContext } from "react";
 import { supabase } from "./integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import Index from "./pages/Index";
@@ -16,21 +16,29 @@ import { toast } from "sonner";
 
 const queryClient = new QueryClient();
 
+// Create a session context to share session state across components
+export const SessionContext = createContext<{
+  session: Session | null;
+  loading: boolean;
+}>({ session: null, loading: true });
+
 // Auth-aware route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Initial session check:", session ? "Signed in" : "No session");
       setSession(session);
       setLoading(false);
     });
 
+    // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("Auth state change event:", event);
-        console.log("Session:", session);
         
         if (event === 'SIGNED_IN' && session) {
           const email = session.user?.email;
@@ -61,6 +69,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         } else if (event === 'SIGNED_OUT') {
           setSession(null);
           toast.info("You have been signed out.");
+        } else if (event === 'TOKEN_REFRESHED') {
+          // Update the session when the token is refreshed
+          console.log("Token refreshed, updating session");
+          setSession(session);
         } else {
           setSession(session);
         }
@@ -68,7 +80,19 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
-    return () => subscription.unsubscribe();
+    // Add a periodic session refresh check every 5 minutes
+    const refreshInterval = setInterval(async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        console.log("Periodic session refresh check");
+        setSession(data.session);
+      }
+    }, 5 * 60 * 1000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearInterval(refreshInterval);
+    };
   }, []);
 
   if (loading) {
@@ -79,7 +103,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/" replace />;
   }
 
-  return <>{children}</>;
+  return (
+    <SessionContext.Provider value={{ session, loading }}>
+      {children}
+    </SessionContext.Provider>
+  );
 };
 
 // For public routes that redirect to dashboard when authenticated

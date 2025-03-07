@@ -1,9 +1,10 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { SessionContext } from "../App";
 import { 
   LayoutDashboard, 
   User, 
@@ -13,6 +14,7 @@ import {
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { session } = useContext(SessionContext);
   const [userProfile, setUserProfile] = useState<{
     name: string | null;
     email: string | null;
@@ -25,41 +27,33 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        // Get current session
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          navigate('/');
-          return;
-        }
-
-        // Get user metadata from auth
-        const { user } = session;
-        const name = user.user_metadata.name || user.user_metadata.full_name;
-        const email = user.email;
-        const avatarUrl = user.user_metadata.avatar_url;
-
-        // Set user profile
-        setUserProfile({
-          name,
-          email,
-          avatarUrl
-        });
-      } catch (error) {
-        console.error("Error fetching user profile:", error);
-        toast.error("Failed to load user profile");
-      } finally {
-        setLoading(false);
+    const updateUserProfile = () => {
+      if (!session) {
+        navigate('/');
+        return;
       }
+
+      // Get user metadata from session
+      const { user } = session;
+      const name = user.user_metadata.name || user.user_metadata.full_name;
+      const email = user.email;
+      const avatarUrl = user.user_metadata.avatar_url;
+
+      // Set user profile
+      setUserProfile({
+        name,
+        email,
+        avatarUrl
+      });
+      setLoading(false);
     };
 
-    fetchUserProfile();
-  }, [navigate]);
+    updateUserProfile();
+  }, [session, navigate]);
 
   const handleSignOut = async () => {
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) {
         toast.error(`Logout failed: ${error.message}`);
@@ -70,6 +64,8 @@ const Dashboard: React.FC = () => {
     } catch (err) {
       console.error("Unexpected error during logout:", err);
       toast.error("An unexpected error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -123,11 +119,12 @@ const Dashboard: React.FC = () => {
         <div className="mt-auto">
           <Button 
             onClick={handleSignOut}
-            variant="ghost"
-            className="w-full flex items-center justify-center text-white border border-white hover:bg-white/20 hover:text-white"
+            variant="outline"
+            className="w-full flex items-center justify-center text-white hover:bg-white/20 hover:text-white border border-white"
+            disabled={loading}
           >
             <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
+            {loading ? "Signing out..." : "Sign Out"}
           </Button>
         </div>
       </div>
