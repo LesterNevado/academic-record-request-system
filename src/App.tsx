@@ -60,7 +60,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
             setSession(null);
           } else {
             // Check if this user has a profile in the database
-            const { error } = await supabase
+            const { data, error } = await supabase
               .from('profiles')
               .select('id')
               .eq('id', session.user.id)

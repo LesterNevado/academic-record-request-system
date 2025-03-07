@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQueryClient } from "@tanstack/react-query";
+import { TablesInsert } from "@/integrations/supabase/types";
 
 const RequestForm: React.FC = () => {
   const navigate = useNavigate();
@@ -138,7 +139,7 @@ const RequestForm: React.FC = () => {
       }
       
       // Prepare request data for submission to Supabase
-      const requestData = {
+      const requestData: TablesInsert<"requests"> = {
         user_id: session.user.id,
         student_name: formData.studentName,
         student_number: formData.studentNumber,

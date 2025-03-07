@@ -21,7 +21,5 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
         signal: AbortSignal.timeout(30000), // 30 seconds timeout
       });
     }
-  },
-  // Enable debug logs in development
-  debug: import.meta.env.DEV
+  }
 });

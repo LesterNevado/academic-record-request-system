@@ -19,20 +19,14 @@ import {
   XCircle,
   ArrowUpDown
 } from "lucide-react";
+import { Tables } from "@/integrations/supabase/types";
 
-interface Request {
-  id: string;
-  student_name: string;
-  student_number: string;
-  status: string;
-  created_at: string;
-  purpose: string;
-  
+type Request = Tables<"requests"> & {
   transcript_selected: boolean;
   certificate_selected: boolean;
   certification_selected: boolean;
   others_selected: boolean;
-}
+};
 
 const Requests: React.FC = () => {
   const navigate = useNavigate();
@@ -86,7 +80,7 @@ const Requests: React.FC = () => {
         throw error;
       }
       
-      return data || [];
+      return data as Request[];
     },
     enabled: !!session?.user?.id,
     refetchOnWindowFocus: true,
