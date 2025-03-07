@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { 
   LayoutDashboard, 
   User, 
@@ -169,16 +169,16 @@ const RequestForm: React.FC = () => {
         <nav className="flex-1">
           <ul className="space-y-4">
             <li>
-              <a href="/dashboard" className="flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors">
+              <Link to="/dashboard" className="flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors">
                 <LayoutDashboard className="w-5 h-5 mr-3" />
                 Dashboard
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/request" className="flex items-center p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+              <Link to="/requests" className="flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors">
                 <FileText className="w-5 h-5 mr-3" />
                 Requests
-              </a>
+              </Link>
             </li>
           </ul>
         </nav>
@@ -186,8 +186,8 @@ const RequestForm: React.FC = () => {
         <div className="mt-auto">
           <Button 
             onClick={handleSignOut}
-            variant="outline"
-            className="w-full flex items-center justify-center text-white border-white hover:bg-white/20 hover:text-white"
+            variant="ghost"
+            className="w-full flex items-center justify-center text-white border border-white hover:bg-white/20 hover:text-white"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Sign Out

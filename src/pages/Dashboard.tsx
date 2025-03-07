@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   LayoutDashboard, 
@@ -73,10 +73,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleNewRequest = () => {
-    navigate("/request");
-  };
-
   return (
     <div className="min-h-screen flex">
       {/* Sidebar */}
@@ -110,16 +106,16 @@ const Dashboard: React.FC = () => {
         <nav className="flex-1">
           <ul className="space-y-4">
             <li>
-              <a href="/dashboard" className="flex items-center p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+              <Link to="/dashboard" className="flex items-center p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
                 <LayoutDashboard className="w-5 h-5 mr-3" />
                 Dashboard
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="/request" className="flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors">
+              <Link to="/requests" className="flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors">
                 <FileText className="w-5 h-5 mr-3" />
                 Requests
-              </a>
+              </Link>
             </li>
           </ul>
         </nav>
@@ -127,8 +123,8 @@ const Dashboard: React.FC = () => {
         <div className="mt-auto">
           <Button 
             onClick={handleSignOut}
-            variant="outline"
-            className="w-full flex items-center justify-center text-white border-white hover:bg-white/20 hover:text-white"
+            variant="ghost"
+            className="w-full flex items-center justify-center text-white border border-white hover:bg-white/20 hover:text-white"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Sign Out
@@ -143,14 +139,19 @@ const Dashboard: React.FC = () => {
           <p className="text-gray-600 mt-2">Manage and track your academic record requests</p>
         </header>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Pending Requests</h2>
               <div className="bg-blue-100 text-blue-800 rounded-full w-8 h-8 flex items-center justify-center font-bold">0</div>
             </div>
             <p className="text-gray-600">You have no pending requests</p>
-            <Button onClick={handleNewRequest} className="mt-4 w-full bg-[#0047AB] hover:bg-[#00377e]">New Request</Button>
+            <Button 
+              onClick={() => navigate("/request")} 
+              className="mt-4 w-full bg-[#0047AB] hover:bg-[#00377e]"
+            >
+              New Request
+            </Button>
           </div>
           
           <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
@@ -159,15 +160,12 @@ const Dashboard: React.FC = () => {
               <div className="bg-green-100 text-green-800 rounded-full w-8 h-8 flex items-center justify-center font-bold">0</div>
             </div>
             <p className="text-gray-600">You have no approved requests</p>
-            <Button className="mt-4 w-full bg-[#0047AB] hover:bg-[#00377e]">View History</Button>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Account</h2>
-              <User className="w-8 h-8 text-gray-400" />
-            </div>
-            <p className="text-gray-600">Complete your profile to speed up future requests</p>
+            <Button 
+              onClick={() => navigate("/requests")} 
+              className="mt-4 w-full bg-[#0047AB] hover:bg-[#00377e]"
+            >
+              View All Requests
+            </Button>
           </div>
         </div>
       </div>

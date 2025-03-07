@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import RequestForm from "./pages/RequestForm";
+import Requests from "./pages/Requests";
 import { toast } from "sonner";
 
 const queryClient = new QueryClient();
@@ -123,6 +124,7 @@ const App = () => (
           <Route path="/" element={<PublicRoute><Index /></PublicRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/request" element={<ProtectedRoute><RequestForm /></ProtectedRoute>} />
+          <Route path="/requests" element={<ProtectedRoute><Requests /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
