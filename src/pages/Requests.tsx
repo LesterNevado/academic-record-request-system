@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SessionContext } from "../App";
+import { useQuery } from "@tanstack/react-query";
 import { 
   LayoutDashboard, 
   User, 
@@ -45,58 +46,68 @@ const Requests: React.FC = () => {
     email: null,
     avatarUrl: null
   });
-  const [loading, setLoading] = useState(true);
-  const [requests, setRequests] = useState<Request[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Update user profile whenever session changes
   useEffect(() => {
-    const updateUserProfile = async () => {
-      if (!session) {
-        navigate('/');
-        return;
-      }
+    if (!session) {
+      navigate('/');
+      return;
+    }
 
-      // Get user metadata from session
-      const { user } = session;
-      const name = user.user_metadata.name || user.user_metadata.full_name;
-      const email = user.email;
-      const avatarUrl = user.user_metadata.avatar_url;
+    // Get user metadata from session
+    const { user } = session;
+    const name = user.user_metadata.name || user.user_metadata.full_name;
+    const email = user.email;
+    const avatarUrl = user.user_metadata.avatar_url;
 
-      // Set user profile
-      setUserProfile({
-        name,
-        email,
-        avatarUrl
-      });
-      
-      // Fetch user requests from Supabase
-      try {
-        const { data, error } = await supabase
-          .from('requests')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          throw error;
-        }
-        
-        setRequests(data || []);
-        console.log("Fetched requests:", data);
-      } catch (err) {
-        console.error("Error fetching requests:", err);
-        toast.error("Failed to load your requests. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    updateUserProfile();
+    // Set user profile
+    setUserProfile({
+      name,
+      email,
+      avatarUrl
+    });
   }, [session, navigate]);
+
+  // Use React Query to fetch requests, which handles caching and refetching
+  const { data: requests = [], isLoading, error, refetch } = useQuery({
+    queryKey: ['requests', session?.user?.id],
+    queryFn: async () => {
+      if (!session?.user?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('requests')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error("Error fetching requests:", error);
+        throw error;
+      }
+      
+      return data || [];
+    },
+    enabled: !!session?.user?.id,
+    refetchOnWindowFocus: true,
+    staleTime: 30000 // Consider data stale after 30 seconds
+  });
+
+  // Handle errors from React Query
+  useEffect(() => {
+    if (error) {
+      toast.error("Failed to load your requests. Please try again.");
+      console.error("Request fetch error:", error);
+    }
+  }, [error]);
+
+  // Force refetch when visiting the page
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   const handleSignOut = async () => {
     try {
-      setLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) {
         toast.error(`Logout failed: ${error.message}`);
@@ -107,8 +118,6 @@ const Requests: React.FC = () => {
     } catch (err) {
       console.error("Unexpected error during logout:", err);
       toast.error("An unexpected error occurred. Please try again.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -190,12 +199,10 @@ const Requests: React.FC = () => {
         <div className="mt-auto">
           <Button 
             onClick={handleSignOut}
-            variant="outline"
-            className="w-full flex items-center justify-center text-white border border-white hover:bg-white/20 hover:text-white"
-            disabled={loading}
+            className="w-full flex items-center justify-center text-white bg-[#0047AB] border-2 border-white hover:bg-[#003d91]"
           >
             <LogOut className="w-4 h-4 mr-2" />
-            {loading ? "Signing out..." : "Sign Out"}
+            Sign Out
           </Button>
         </div>
       </div>
@@ -239,7 +246,7 @@ const Requests: React.FC = () => {
         </div>
 
         {/* Request Cards */}
-        {loading ? (
+        {isLoading ? (
           <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
             <p>Loading your requests...</p>
           </div>

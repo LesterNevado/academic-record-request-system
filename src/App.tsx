@@ -14,7 +14,17 @@ import RequestForm from "./pages/RequestForm";
 import Requests from "./pages/Requests";
 import { toast } from "sonner";
 
-const queryClient = new QueryClient();
+// Create a more persistent query client with longer caching
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: true,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 3,
+      retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 30 * 1000),
+    },
+  },
+});
 
 // Create a session context to share session state across components
 export const SessionContext = createContext<{
@@ -69,6 +79,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         } else if (event === 'SIGNED_OUT') {
           setSession(null);
           toast.info("You have been signed out.");
+          // When signing out, invalidate all queries to force a refetch when signing back in
+          queryClient.invalidateQueries();
         } else if (event === 'TOKEN_REFRESHED') {
           // Update the session when the token is refreshed
           console.log("Token refreshed, updating session");
@@ -80,14 +92,22 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
-    // Add a periodic session refresh check every 5 minutes
+    // Add a periodic session refresh check every 3 minutes
     const refreshInterval = setInterval(async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        console.log("Periodic session refresh check");
-        setSession(data.session);
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+          console.log("Periodic session refresh check");
+          setSession(data.session);
+        } else {
+          console.log("No session found during periodic check");
+          // If we suddenly don't have a session, make sure we update state correctly
+          setSession(null);
+        }
+      } catch (error) {
+        console.error("Error during session refresh:", error);
       }
-    }, 5 * 60 * 1000);
+    }, 3 * 60 * 1000);
 
     return () => {
       subscription.unsubscribe();
@@ -96,7 +116,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   if (loading) {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0047AB] mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!session) {
@@ -132,7 +159,14 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   if (loading) {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0047AB] mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   if (session) {

@@ -119,8 +119,7 @@ const Dashboard: React.FC = () => {
         <div className="mt-auto">
           <Button 
             onClick={handleSignOut}
-            variant="outline"
-            className="w-full flex items-center justify-center text-white border border-white hover:bg-white/20 hover:text-white"
+            className="w-full flex items-center justify-center text-white bg-[#0047AB] border-2 border-white hover:bg-[#003d91]"
             disabled={loading}
           >
             <LogOut className="w-4 h-4 mr-2" />
