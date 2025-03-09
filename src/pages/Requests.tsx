@@ -21,11 +21,27 @@ import {
 } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 
-type Request = Tables<"requests"> & {
+// Define the Request type properly
+type Request = {
+  id: string;
+  student_name: string;
+  student_number: string;
+  contact_number: string;
+  home_address: string;
+  purpose: string;
+  created_at: string;
+  status: string;
+  user_id: string;
   transcript_selected: boolean;
+  transcript_copies: number | null;
   certificate_selected: boolean;
+  certificate_copies: number | null;
   certification_selected: boolean;
+  certification_copies: number | null;
+  certification_details: string | null;
   others_selected: boolean;
+  others_copies: number | null;
+  others_details: string | null;
 };
 
 const Requests: React.FC = () => {
@@ -69,18 +85,25 @@ const Requests: React.FC = () => {
     queryFn: async () => {
       if (!session?.user?.id) return [];
       
-      const { data, error } = await supabase
-        .from('requests')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error("Error fetching requests:", error);
-        throw error;
+      try {
+        console.log("Fetching requests for user:", session.user.id);
+        const { data, error } = await supabase
+          .from('requests')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          console.error("Error fetching requests:", error);
+          throw error;
+        }
+        
+        console.log("Fetched requests:", data);
+        return data as Request[];
+      } catch (err) {
+        console.error("Error in request fetch function:", err);
+        throw err;
       }
-      
-      return data as Request[];
     },
     enabled: !!session?.user?.id,
     refetchOnWindowFocus: true,
@@ -97,8 +120,11 @@ const Requests: React.FC = () => {
 
   // Force refetch when visiting the page
   useEffect(() => {
-    refetch();
-  }, [refetch]);
+    if (session?.user?.id) {
+      console.log("Refetching requests on page load");
+      refetch();
+    }
+  }, [refetch, session]);
 
   const handleSignOut = async () => {
     try {
@@ -243,6 +269,18 @@ const Requests: React.FC = () => {
         {isLoading ? (
           <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
             <p>Loading your requests...</p>
+          </div>
+        ) : error ? (
+          <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
+            <XCircle className="w-16 h-16 mx-auto text-red-500 mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Error Loading Requests</h3>
+            <p className="text-gray-600 mb-6">There was a problem loading your requests.</p>
+            <Button 
+              onClick={() => refetch()} 
+              className="bg-[#0047AB] hover:bg-[#00377e]"
+            >
+              Try Again
+            </Button>
           </div>
         ) : filteredRequests.length > 0 ? (
           <div className="grid grid-cols-1 gap-4">

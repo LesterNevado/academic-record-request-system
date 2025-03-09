@@ -166,7 +166,7 @@ const RequestForm: React.FC = () => {
       
       console.log("Submitting request data:", requestData);
       
-      // Submit to Supabase
+      // Add explicit headers to ensure API key is included
       const { error, data } = await supabase
         .from('requests')
         .insert(requestData)

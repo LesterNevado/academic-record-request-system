@@ -39,17 +39,24 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     }
   },
   global: {
+    headers: {
+      // Ensure the API key is always included in requests
+      'apikey': SUPABASE_PUBLISHABLE_KEY,
+    },
     fetch: (url, options) => {
+      // Add the API key to each request
+      const headers = {
+        ...options?.headers,
+        'apikey': SUPABASE_PUBLISHABLE_KEY,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      };
+      
       return fetch(url, { 
         ...options,
+        headers,
         signal: AbortSignal.timeout(30000), // 30 seconds timeout
-        // Add cache control headers to prevent caching of auth endpoints
-        headers: {
-          ...options?.headers,
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0',
-        }
       });
     }
   }
@@ -61,6 +68,7 @@ if (typeof window !== 'undefined') {
     if (document.visibilityState === 'visible') {
       // When tab becomes visible again, refresh the session
       try {
+        console.log('Attempting to refresh session on visibility change');
         const { error } = await supabase.auth.refreshSession();
         if (error) {
           console.error('Failed to refresh session on visibility change:', error);
