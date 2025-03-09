@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,7 +13,7 @@ import RequestForm from "./pages/RequestForm";
 import Requests from "./pages/Requests";
 import { toast } from "sonner";
 
-// Create a more persistent query client with longer caching
+// Create a more persistent query client with longer caching and better retry logic
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -22,6 +21,8 @@ const queryClient = new QueryClient({
       staleTime: 1000 * 60 * 5, // 5 minutes
       retry: 3,
       retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 30 * 1000),
+      refetchOnReconnect: true,
+      keepPreviousData: true,
     },
   },
 });
@@ -30,20 +31,88 @@ const queryClient = new QueryClient({
 export const SessionContext = createContext<{
   session: Session | null;
   loading: boolean;
-}>({ session: null, loading: true });
+  refreshSession: () => Promise<void>;
+}>({ 
+  session: null, 
+  loading: true,
+  refreshSession: async () => {}
+});
 
 // Auth-aware route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionError, setSessionError] = useState<Error | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
+
+  const refreshSession = async () => {
+    try {
+      setLoading(true);
+      console.log("Manually refreshing session...");
+      const { data, error } = await supabase.auth.refreshSession();
+      
+      if (error) {
+        console.error("Error refreshing session:", error);
+        setSessionError(error);
+        return;
+      }
+      
+      if (data.session) {
+        console.log("Session successfully refreshed");
+        setSession(data.session);
+        setSessionError(null);
+      } else {
+        console.log("No session found during refresh");
+        setSession(null);
+      }
+    } catch (error) {
+      console.error("Unexpected error during session refresh:", error);
+      setSessionError(error as Error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
+    // Keep track of the last active time to detect long inactivity periods
+    let lastActiveTime = Date.now();
+    const INACTIVITY_THRESHOLD = 10 * 60 * 1000; // 10 minutes
+    
+    const updateLastActiveTime = () => {
+      lastActiveTime = Date.now();
+    };
+
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("Initial session check:", session ? "Signed in" : "No session");
-      setSession(session);
-      setLoading(false);
-    });
+    const initializeSession = async () => {
+      try {
+        console.log("Initializing session...");
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Error getting initial session:", error);
+          setSessionError(error);
+          setLoading(false);
+          return;
+        }
+        
+        if (data.session) {
+          console.log("Initial session found:", data.session.user.email);
+          setSession(data.session);
+        } else {
+          console.log("No initial session found");
+          setSession(null);
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error("Unexpected error during session initialization:", error);
+        setSessionError(error as Error);
+        setLoading(false);
+      }
+    };
+
+    initializeSession();
 
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -71,6 +140,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
               toast.error("An error occurred while verifying your account.");
               await supabase.auth.signOut();
               setSession(null);
+            } else if (!data) {
+              console.error("User profile not found");
+              toast.error("Your account is not registered in the system.");
+              await supabase.auth.signOut();
+              setSession(null);
             } else {
               setSession(session);
               toast.success(`Welcome ${session.user.user_metadata.name || session.user.email}`);
@@ -92,28 +166,67 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
-    // Add a periodic session refresh check every 3 minutes
+    // Add a visibility change listener to refresh session when tab becomes visible
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        // Check if session should be refreshed due to inactivity
+        const currentTime = Date.now();
+        const inactiveTime = currentTime - lastActiveTime;
+        
+        if (inactiveTime > INACTIVITY_THRESHOLD) {
+          console.log(`Tab visible after ${inactiveTime/1000}s inactivity, refreshing session`);
+          await refreshSession();
+        } else {
+          console.log(`Tab visible after ${inactiveTime/1000}s, no refresh needed`);
+        }
+        
+        updateLastActiveTime();
+      }
+    };
+
+    // Track user activity
+    const activityEvents = ['mousedown', 'keydown', 'touchstart', 'click'];
+    activityEvents.forEach(event => {
+      window.addEventListener(event, updateLastActiveTime);
+    });
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Add a periodic session refresh check every 4 minutes
     const refreshInterval = setInterval(async () => {
       try {
-        const { data } = await supabase.auth.getSession();
-        if (data.session) {
-          console.log("Periodic session refresh check");
-          setSession(data.session);
-        } else {
-          console.log("No session found during periodic check");
-          // If we suddenly don't have a session, make sure we update state correctly
-          setSession(null);
+        // Only refresh if the page is visible and user is active
+        if (document.visibilityState === 'visible') {
+          console.log("Performing periodic session refresh check");
+          await refreshSession();
         }
       } catch (error) {
-        console.error("Error during session refresh:", error);
+        console.error("Error during periodic session refresh:", error);
       }
-    }, 3 * 60 * 1000);
+    }, 4 * 60 * 1000);
 
     return () => {
       subscription.unsubscribe();
       clearInterval(refreshInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, updateLastActiveTime);
+      });
     };
   }, []);
+
+  // Auto-retry session initialization when there's an error
+  useEffect(() => {
+    if (sessionError && retryCount < MAX_RETRIES) {
+      const timer = setTimeout(() => {
+        console.log(`Retrying session initialization (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+        setRetryCount(prev => prev + 1);
+        refreshSession();
+      }, 1000 * (retryCount + 1)); // Exponential backoff
+
+      return () => clearTimeout(timer);
+    }
+  }, [sessionError, retryCount]);
 
   if (loading) {
     return (
@@ -121,6 +234,42 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0047AB] mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
+          {retryCount > 0 && (
+            <p className="text-sm text-gray-500 mt-2">Reconnecting... (attempt {retryCount}/{MAX_RETRIES})</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Handle persistent session errors
+  if (sessionError && retryCount >= MAX_RETRIES) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
+          <div className="text-red-500 text-5xl mb-4">⚠️</div>
+          <h2 className="text-xl font-bold mb-4">Connection Error</h2>
+          <p className="text-gray-600 mb-6">
+            We're having trouble connecting to the authentication service. This could be due to network issues.
+          </p>
+          <div className="space-y-4">
+            <button 
+              onClick={() => {
+                setRetryCount(0);
+                setSessionError(null);
+                refreshSession();
+              }}
+              className="w-full px-4 py-2 bg-[#0047AB] text-white rounded-lg hover:bg-[#003d91] transition-colors"
+            >
+              Try Again
+            </button>
+            <button 
+              onClick={() => window.location.href = '/'}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Return to Login
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -131,7 +280,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <SessionContext.Provider value={{ session, loading }}>
+    <SessionContext.Provider value={{ session, loading, refreshSession }}>
       {children}
     </SessionContext.Provider>
   );
@@ -143,10 +292,21 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    const initSession = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error("Error checking session on public route:", error);
+        }
+        setSession(data.session);
+        setLoading(false);
+      } catch (error) {
+        console.error("Unexpected error checking session on public route:", error);
+        setLoading(false);
+      }
+    };
+
+    initSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
