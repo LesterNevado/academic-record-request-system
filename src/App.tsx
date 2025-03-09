@@ -14,20 +14,18 @@ import RequestForm from "./pages/RequestForm";
 import Requests from "./pages/Requests";
 import { toast } from "sonner";
 
-// Create a reliable query client with moderate caching
+// Create a simple query client 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false, // Don't refetch on window focus
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      retry: 3,
-      retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 30 * 1000),
-      placeholderData: 'keepPrevious', // Use the previous data while fetching
+      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 5,
+      retry: 3
     },
   },
 });
 
-// Create a session context to share session state across components
+// Create a session context with minimal functionality
 export const SessionContext = createContext<{
   session: Session | null;
   loading: boolean;
@@ -38,12 +36,12 @@ export const SessionContext = createContext<{
   refreshSession: async () => {} 
 });
 
-// Auth-aware route component
+// Simple protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Function to refresh the session
+  // Simple function to refresh the session
   const refreshSession = async () => {
     try {
       const { data } = await supabase.auth.getSession();
@@ -54,57 +52,17 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // Get initial session
+    // Get initial session on component mount only
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("Initial session check:", session ? "Signed in" : "No session");
       setSession(session);
       setLoading(false);
     });
 
-    // Set up auth state change listener
+    // Simple auth listener that only handles sign out
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth state change event:", event);
-        
-        if (event === 'SIGNED_IN' && session) {
-          const email = session.user?.email;
-          
-          if (email && !email.endsWith('@neu.edu.ph')) {
-            console.log("Non-NEU email detected:", email);
-            toast.error("Only @neu.edu.ph email addresses are allowed to access this system.");
-            await supabase.auth.signOut();
-            setSession(null);
-          } else {
-            // Check if this user has a profile in the database
-            const { data, error } = await supabase
-              .from('profiles')
-              .select('id')
-              .eq('id', session.user.id)
-              .maybeSingle();
-
-            if (error) {
-              console.error("Error checking user profile:", error);
-              toast.error("An error occurred while verifying your account.");
-              await supabase.auth.signOut();
-              setSession(null);
-            } else {
-              setSession(session);
-              toast.success(`Welcome ${session.user.user_metadata.name || session.user.email}`);
-            }
-          }
-        } else if (event === 'SIGNED_OUT') {
-          setSession(null);
-          toast.info("You have been signed out.");
-          // When signing out, invalidate all queries to force a refetch when signing back in
-          queryClient.invalidateQueries();
-        } else if (event === 'TOKEN_REFRESHED') {
-          // Update the session when the token is refreshed
-          console.log("Token refreshed, updating session");
-          setSession(session);
-        } else {
-          setSession(session);
-        }
-        setLoading(false);
+      async (_event, session) => {
+        // Only update session, nothing else
+        setSession(session);
       }
     );
 
@@ -135,25 +93,17 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-// For public routes that redirect to dashboard when authenticated
+// Simple public route
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Only check session once on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
     });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setLoading(false);
-      }
-    );
-
-    return () => subscription.unsubscribe();
   }, []);
 
   if (loading) {
