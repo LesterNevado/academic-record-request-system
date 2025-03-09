@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
@@ -22,7 +21,7 @@ import { TablesInsert } from "@/integrations/supabase/types";
 const RequestForm: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { session } = useContext(SessionContext);
+  const { session, refreshSession } = useContext(SessionContext);
   const [userProfile, setUserProfile] = useState<{
     name: string | null;
     email: string | null;
@@ -165,6 +164,9 @@ const RequestForm: React.FC = () => {
       };
       
       console.log("Submitting request data:", requestData);
+      
+      // Refresh session before submitting
+      await refreshSession();
       
       // Submit to Supabase
       const { error, data } = await supabase

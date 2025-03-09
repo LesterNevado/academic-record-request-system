@@ -30,7 +30,7 @@ type Request = Tables<"requests"> & {
 
 const Requests: React.FC = () => {
   const navigate = useNavigate();
-  const { session } = useContext(SessionContext);
+  const { session, refreshSession } = useContext(SessionContext);
   const [userProfile, setUserProfile] = useState<{
     name: string | null;
     email: string | null;
@@ -67,24 +67,34 @@ const Requests: React.FC = () => {
   const { data: requests = [], isLoading, error, refetch } = useQuery({
     queryKey: ['requests', session?.user?.id],
     queryFn: async () => {
-      if (!session?.user?.id) return [];
-      
-      const { data, error } = await supabase
-        .from('requests')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error("Error fetching requests:", error);
-        throw error;
+      if (!session?.user?.id) {
+        console.log("No user ID found for requests query");
+        return [];
       }
       
-      return data as Request[];
+      try {
+        console.log("Fetching requests for user:", session.user.id);
+        const { data, error } = await supabase
+          .from('requests')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          console.error("Error fetching requests:", error);
+          throw error;
+        }
+        
+        console.log("Requests data:", data);
+        return (data || []) as Request[];
+      } catch (err) {
+        console.error("Failed to fetch requests:", err);
+        toast.error("Failed to load your requests. Please try again.");
+        return [];
+      }
     },
     enabled: !!session?.user?.id,
-    refetchOnWindowFocus: true,
-    staleTime: 30000 // Consider data stale after 30 seconds
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 
   // Handle errors from React Query
@@ -136,12 +146,26 @@ const Requests: React.FC = () => {
     });
   };
 
-  // Filter requests based on search term
-  const filteredRequests = requests.filter(request => 
-    request.student_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    getRequestType(request).toLowerCase().includes(searchTerm.toLowerCase()) ||
-    request.student_number.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter requests based on search term - safely check for arrays and objects
+  const filteredRequests = Array.isArray(requests) 
+    ? requests.filter(request => 
+        request.student_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        getRequestType(request).toLowerCase().includes(searchTerm.toLowerCase()) ||
+        request.student_number.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : [];
+
+  // Add a manual refresh function
+  const handleManualRefresh = async () => {
+    try {
+      await refreshSession();
+      refetch();
+      toast.success("Refreshed successfully");
+    } catch (err) {
+      console.error("Failed to refresh:", err);
+      toast.error("Failed to refresh. Please try again.");
+    }
+  };
 
   return (
     <div className="min-h-screen flex">
@@ -206,13 +230,22 @@ const Requests: React.FC = () => {
         <header className="mb-8">
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold">My Requests</h1>
-            <Button 
-              onClick={() => navigate("/request")} 
-              className="bg-[#0047AB] hover:bg-[#00377e]"
-            >
-              <PlusCircle className="w-4 h-4 mr-2" />
-              New Request
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleManualRefresh} 
+                variant="outline"
+                className="mr-2"
+              >
+                Refresh
+              </Button>
+              <Button 
+                onClick={() => navigate("/request")} 
+                className="bg-[#0047AB] hover:bg-[#00377e]"
+              >
+                <PlusCircle className="w-4 h-4 mr-2" />
+                New Request
+              </Button>
+            </div>
           </div>
           <p className="text-gray-600 mt-2">View and manage your academic record requests</p>
         </header>
@@ -243,6 +276,20 @@ const Requests: React.FC = () => {
         {isLoading ? (
           <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
             <p>Loading your requests...</p>
+          </div>
+        ) : error ? (
+          <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
+            <div className="text-red-500 mb-4">
+              <XCircle className="w-16 h-16 mx-auto" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Error loading requests</h3>
+            <p className="text-gray-600 mb-6">There was a problem loading your requests.</p>
+            <Button 
+              onClick={() => refetch()} 
+              className="bg-[#0047AB] hover:bg-[#00377e]"
+            >
+              Try Again
+            </Button>
           </div>
         ) : filteredRequests.length > 0 ? (
           <div className="grid grid-cols-1 gap-4">

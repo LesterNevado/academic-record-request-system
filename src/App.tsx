@@ -14,14 +14,15 @@ import RequestForm from "./pages/RequestForm";
 import Requests from "./pages/Requests";
 import { toast } from "sonner";
 
-// Create a more persistent query client with longer caching
+// Create a reliable query client with moderate caching
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: true,
+      refetchOnWindowFocus: false, // Don't refetch on window focus
       staleTime: 1000 * 60 * 5, // 5 minutes
       retry: 3,
       retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 30 * 1000),
+      placeholderData: 'keepPrevious', // Use the previous data while fetching
     },
   },
 });
@@ -30,12 +31,27 @@ const queryClient = new QueryClient({
 export const SessionContext = createContext<{
   session: Session | null;
   loading: boolean;
-}>({ session: null, loading: true });
+  refreshSession: () => Promise<void>;
+}>({ 
+  session: null, 
+  loading: true,
+  refreshSession: async () => {} 
+});
 
 // Auth-aware route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Function to refresh the session
+  const refreshSession = async () => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+    } catch (error) {
+      console.error("Error refreshing session:", error);
+    }
+  };
 
   useEffect(() => {
     // Get initial session
@@ -92,26 +108,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
-    // Add a periodic session refresh check every 3 minutes
-    const refreshInterval = setInterval(async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (data.session) {
-          console.log("Periodic session refresh check");
-          setSession(data.session);
-        } else {
-          console.log("No session found during periodic check");
-          // If we suddenly don't have a session, make sure we update state correctly
-          setSession(null);
-        }
-      } catch (error) {
-        console.error("Error during session refresh:", error);
-      }
-    }, 3 * 60 * 1000);
-
     return () => {
       subscription.unsubscribe();
-      clearInterval(refreshInterval);
     };
   }, []);
 
@@ -131,7 +129,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <SessionContext.Provider value={{ session, loading }}>
+    <SessionContext.Provider value={{ session, loading, refreshSession }}>
       {children}
     </SessionContext.Provider>
   );
