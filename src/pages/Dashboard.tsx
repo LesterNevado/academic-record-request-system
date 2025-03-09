@@ -1,20 +1,13 @@
 
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { SessionContext } from "../App";
-import { 
-  LayoutDashboard, 
-  User, 
-  FileText, 
-  LogOut 
-} from "lucide-react";
+import { LayoutDashboard, User, FileText, LogOut } from "lucide-react";
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { session } = useContext(SessionContext);
   const [userProfile, setUserProfile] = useState<{
     name: string | null;
     email: string | null;
@@ -27,29 +20,37 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const updateUserProfile = () => {
-      if (!session) {
+    // Simple function to get session once
+    const getSession = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) {
+          navigate('/');
+          return;
+        }
+
+        // Get user metadata from session
+        const { user } = data.session;
+        const name = user.user_metadata.name || user.user_metadata.full_name;
+        const email = user.email;
+        const avatarUrl = user.user_metadata.avatar_url;
+
+        // Set user profile
+        setUserProfile({
+          name,
+          email,
+          avatarUrl
+        });
+      } catch (error) {
+        console.error("Error getting session:", error);
         navigate('/');
-        return;
+      } finally {
+        setLoading(false);
       }
-
-      // Get user metadata from session
-      const { user } = session;
-      const name = user.user_metadata.name || user.user_metadata.full_name;
-      const email = user.email;
-      const avatarUrl = user.user_metadata.avatar_url;
-
-      // Set user profile
-      setUserProfile({
-        name,
-        email,
-        avatarUrl
-      });
-      setLoading(false);
     };
 
-    updateUserProfile();
-  }, [session, navigate]);
+    getSession();
+  }, [navigate]);
 
   const handleSignOut = async () => {
     try {
@@ -68,6 +69,17 @@ const Dashboard: React.FC = () => {
       setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0047AB] mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex">
