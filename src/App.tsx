@@ -22,7 +22,7 @@ const queryClient = new QueryClient({
       retry: 3,
       retryDelay: attempt => Math.min(attempt > 1 ? 2 ** attempt * 1000 : 1000, 30 * 1000),
       refetchOnReconnect: true,
-      keepPreviousData: true,
+      placeholderData: 'keepPrevious',
     },
   },
 });
