@@ -1,3 +1,4 @@
+
 import { LoginLayout } from "@/components/login/LoginLayout";
 
 const Index = () => {
