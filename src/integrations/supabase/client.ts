@@ -16,17 +16,6 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   global: {
     headers: {
       'Content-Type': 'application/json' // Always set Content-Type header
-    },
-    fetch: (url, options = {}) => {
-      return fetch(url, {
-        ...options,
-        headers: {
-          ...(options.headers || {}),
-          'Content-Type': 'application/json' // Ensure Content-Type is always set
-        },
-        // Add a reasonable timeout
-        signal: AbortSignal.timeout(30000) // 30 seconds timeout
-      });
     }
   }
 });
