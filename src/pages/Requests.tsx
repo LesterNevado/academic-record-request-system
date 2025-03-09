@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -30,7 +29,7 @@ type Request = Tables<"requests"> & {
 
 const Requests: React.FC = () => {
   const navigate = useNavigate();
-  const { session, refreshSession } = useContext(SessionContext);
+  const { session } = useContext(SessionContext);
   const [userProfile, setUserProfile] = useState<{
     name: string | null;
     email: string | null;
@@ -158,7 +157,6 @@ const Requests: React.FC = () => {
   // Add a manual refresh function
   const handleManualRefresh = async () => {
     try {
-      await refreshSession();
       refetch();
       toast.success("Refreshed successfully");
     } catch (err) {
