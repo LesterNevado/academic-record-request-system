@@ -27,9 +27,9 @@ serve(async (req) => {
   }
 
   try {
-    const { requestId, requestDetails, redirectUrl } = await req.json();
+    const { formData, redirectUrl } = await req.json();
     
-    if (!requestId || !redirectUrl) {
+    if (!formData || !redirectUrl) {
       return new Response(
         JSON.stringify({ error: "Missing required parameters" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -41,8 +41,8 @@ serve(async (req) => {
     const lineItems = [];
 
     // Add line items based on request types
-    if (requestDetails.transcript_selected) {
-      const transcriptCopies = requestDetails.transcript_copies || 1;
+    if (formData.requestTypes.transcript.selected) {
+      const transcriptCopies = formData.requestTypes.transcript.copies || 1;
       const transcriptPrice = 100; // ₱100 per copy
       totalAmount += transcriptPrice * transcriptCopies;
       
@@ -56,8 +56,8 @@ serve(async (req) => {
       });
     }
 
-    if (requestDetails.certificate_selected) {
-      const certificateCopies = requestDetails.certificate_copies || 1;
+    if (formData.requestTypes.certificate.selected) {
+      const certificateCopies = formData.requestTypes.certificate.copies || 1;
       const certificatePrice = 100; // ₱100 per copy
       totalAmount += certificatePrice * certificateCopies;
       
@@ -71,8 +71,8 @@ serve(async (req) => {
       });
     }
 
-    if (requestDetails.certification_selected) {
-      const certificationCopies = requestDetails.certification_copies || 1;
+    if (formData.requestTypes.certification.selected) {
+      const certificationCopies = formData.requestTypes.certification.copies || 1;
       const certificationPrice = 100; // ₱100 per copy
       totalAmount += certificationPrice * certificationCopies;
       
@@ -86,8 +86,8 @@ serve(async (req) => {
       });
     }
 
-    if (requestDetails.others_selected) {
-      const othersCopies = requestDetails.others_copies || 1;
+    if (formData.requestTypes.others.selected) {
+      const othersCopies = formData.requestTypes.others.copies || 1;
       const othersPrice = 100; // ₱100 per copy
       totalAmount += othersPrice * othersCopies;
       
@@ -114,10 +114,13 @@ serve(async (req) => {
       payment_method_types: ["card"],
       line_items: lineItems,
       mode: "payment",
-      success_url: `${redirectUrl}?success=true&session_id={CHECKOUT_SESSION_ID}&request_id=${requestId}`,
-      cancel_url: `${redirectUrl}?canceled=true&request_id=${requestId}`,
+      success_url: `${redirectUrl}?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${redirectUrl}?canceled=true`,
       metadata: {
-        requestId,
+        formData: JSON.stringify({ 
+          studentName: formData.studentName,
+          studentNumber: formData.studentNumber
+        })
       },
     });
 

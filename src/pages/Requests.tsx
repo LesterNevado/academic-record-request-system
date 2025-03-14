@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -16,7 +17,8 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  ArrowUpDown
+  ArrowUpDown,
+  Package
 } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 
@@ -308,6 +310,12 @@ const Requests: React.FC = () => {
                       <span className="flex items-center text-amber-600">
                         <Clock className="w-4 h-4 mr-1" />
                         Pending
+                      </span>
+                    )}
+                    {request.status === 'awaiting_pickup' && (
+                      <span className="flex items-center text-green-600">
+                        <Package className="w-4 h-4 mr-1" />
+                        Payment Successful, Awaiting Pickup
                       </span>
                     )}
                     {request.status === 'approved' && (

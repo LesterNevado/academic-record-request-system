@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
@@ -15,13 +16,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useQueryClient } from "@tanstack/react-query";
-import { TablesInsert } from "@/integrations/supabase/types";
 import { PaymentButton } from "@/components/payment/PaymentButton";
 
 const RequestForm: React.FC = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { session } = useContext(SessionContext);
   const [userProfile, setUserProfile] = useState<{
     name: string | null;
@@ -53,7 +51,7 @@ const RequestForm: React.FC = () => {
     certificationDetails: false,
     othersDetails: false
   });
-  const [submittedRequest, setSubmittedRequest] = useState<{id: string, details: any} | null>(null);
+  const [showPayment, setShowPayment] = useState(false);
 
   useEffect(() => {
     const updateUserProfile = () => {
@@ -223,76 +221,12 @@ const RequestForm: React.FC = () => {
         return;
       }
       
-      // Prepare request data for submission to Supabase
-      const requestData: TablesInsert<"requests"> = {
-        user_id: session.user.id,
-        student_name: formData.studentName,
-        student_number: formData.studentNumber,
-        contact_number: formData.contactNumber,
-        home_address: formData.homeAddress,
-        purpose: formData.purpose,
-        
-        transcript_selected: formData.requestTypes.transcript.selected,
-        transcript_copies: formData.requestTypes.transcript.selected ? formData.requestTypes.transcript.copies : null,
-        
-        certificate_selected: formData.requestTypes.certificate.selected,
-        certificate_copies: formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.copies : null,
-        
-        certification_selected: formData.requestTypes.certification.selected,
-        certification_copies: formData.requestTypes.certification.selected ? formData.requestTypes.certification.copies : null,
-        certification_details: formData.requestTypes.certification.selected ? formData.requestTypes.certification.details : null,
-        
-        others_selected: formData.requestTypes.others.selected,
-        others_copies: formData.requestTypes.others.selected ? formData.requestTypes.others.copies : null,
-        others_details: formData.requestTypes.others.selected ? formData.requestTypes.others.details : null,
-        
-        status: 'pending'
-      };
+      // Show payment section instead of submitting to database
+      setShowPayment(true);
       
-      console.log("Submitting request data:", requestData);
-      
-      // Submit to Supabase
-      const { error, data } = await supabase
-        .from('requests')
-        .insert(requestData)
-        .select();
-      
-      if (error) {
-        console.error("Supabase error:", error);
-        throw error;
-      }
-      
-      console.log("Request submitted successfully:", data);
-      
-      // Invalidate requests query to refresh data
-      queryClient.invalidateQueries({ queryKey: ['requests'] });
-      
-      toast.success("Request submitted successfully!");
-      
-      // Store the submitted request data for the payment step
-      if (data && data.length > 0) {
-        // Extract request details for payment
-        const requestDetails = {
-          transcript_selected: data[0].transcript_selected,
-          transcript_copies: data[0].transcript_copies,
-          certificate_selected: data[0].certificate_selected,
-          certificate_copies: data[0].certificate_copies,
-          certification_selected: data[0].certification_selected,
-          certification_copies: data[0].certification_copies,
-          certification_details: data[0].certification_details,
-          others_selected: data[0].others_selected,
-          others_copies: data[0].others_copies,
-          others_details: data[0].others_details
-        };
-        
-        setSubmittedRequest({
-          id: data[0].id,
-          details: requestDetails
-        });
-      }
     } catch (error: any) {
-      console.error("Error submitting request:", error);
-      toast.error(`Failed to submit request: ${error.message || "Please try again."}`);
+      console.error("Error preparing request:", error);
+      toast.error(`Failed to prepare request: ${error.message || "Please try again."}`);
     } finally {
       setSubmitting(false);
     }
@@ -388,36 +322,35 @@ const RequestForm: React.FC = () => {
           </Button>
         </div>
         
-        {submittedRequest ? (
+        {showPayment ? (
           <div className="bg-white rounded-lg shadow p-8 border border-gray-200">
             <h2 className="text-2xl font-semibold mb-6">Complete Your Payment</h2>
-            <p className="mb-6">Your request has been submitted successfully. Please complete the payment to process your request.</p>
+            <p className="mb-6">Please complete the payment to process your request.</p>
             
             <div className="p-4 bg-gray-50 rounded-lg mb-6">
               <h3 className="font-medium mb-3">Request Summary:</h3>
               <ul className="space-y-2">
-                {submittedRequest.details.transcript_selected && (
-                  <li>Transcript of Records (TOR): {submittedRequest.details.transcript_copies} {submittedRequest.details.transcript_copies > 1 ? 'copies' : 'copy'}</li>
+                {formData.requestTypes.transcript.selected && (
+                  <li>Transcript of Records (TOR): {formData.requestTypes.transcript.copies} {formData.requestTypes.transcript.copies > 1 ? 'copies' : 'copy'}</li>
                 )}
                 
-                {submittedRequest.details.certificate_selected && (
-                  <li>Certificate of Grades (COG): {submittedRequest.details.certificate_copies} {submittedRequest.details.certificate_copies > 1 ? 'copies' : 'copy'}</li>
+                {formData.requestTypes.certificate.selected && (
+                  <li>Certificate of Grades (COG): {formData.requestTypes.certificate.copies} {formData.requestTypes.certificate.copies > 1 ? 'copies' : 'copy'}</li>
                 )}
                 
-                {submittedRequest.details.certification_selected && (
-                  <li>Certification ({submittedRequest.details.certification_details}): {submittedRequest.details.certification_copies} {submittedRequest.details.certification_copies > 1 ? 'copies' : 'copy'}</li>
+                {formData.requestTypes.certification.selected && (
+                  <li>Certification ({formData.requestTypes.certification.details}): {formData.requestTypes.certification.copies} {formData.requestTypes.certification.copies > 1 ? 'copies' : 'copy'}</li>
                 )}
                 
-                {submittedRequest.details.others_selected && (
-                  <li>Others ({submittedRequest.details.others_details}): {submittedRequest.details.others_copies} {submittedRequest.details.others_copies > 1 ? 'copies' : 'copy'}</li>
+                {formData.requestTypes.others.selected && (
+                  <li>Others ({formData.requestTypes.others.details}): {formData.requestTypes.others.copies} {formData.requestTypes.others.copies > 1 ? 'copies' : 'copy'}</li>
                 )}
               </ul>
             </div>
             
             <div className="flex justify-end">
               <PaymentButton 
-                requestId={submittedRequest.id} 
-                requestDetails={submittedRequest.details}
+                requestFormData={formData}
                 className="bg-[#0047AB] hover:bg-[#00377e] text-white"
               />
             </div>
@@ -628,7 +561,7 @@ const RequestForm: React.FC = () => {
                     className="bg-[#0047AB] hover:bg-[#00377e]"
                     disabled={submitting}
                   >
-                    {submitting ? "Submitting..." : "Submit Request"}
+                    {submitting ? "Processing..." : "Submit Request"}
                   </Button>
                 </div>
               </form>

@@ -5,16 +5,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface PaymentButtonProps {
-  requestId: string;
-  requestDetails: any;
+  requestFormData: any;
   label?: string;
   className?: string;
   disabled?: boolean;
 }
 
 export const PaymentButton: React.FC<PaymentButtonProps> = ({
-  requestId,
-  requestDetails,
+  requestFormData,
   label = "Proceed to Payment",
   className = "",
   disabled = false,
@@ -29,8 +27,7 @@ export const PaymentButton: React.FC<PaymentButtonProps> = ({
       // Call Supabase Edge Function to create checkout session
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: {
-          requestId,
-          requestDetails,
+          formData: requestFormData,
           redirectUrl,
         },
       });
@@ -40,6 +37,9 @@ export const PaymentButton: React.FC<PaymentButtonProps> = ({
       }
 
       if (data?.url) {
+        // Store form data in localStorage for use after payment
+        localStorage.setItem('pendingRequestData', JSON.stringify(requestFormData));
+        
         // Redirect to Stripe Checkout
         window.location.href = data.url;
       } else {
