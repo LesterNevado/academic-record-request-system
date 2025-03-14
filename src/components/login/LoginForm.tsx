@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
 // Stripe publishable key - this is safe to include in frontend code
-const STRIPE_PUBLISHABLE_KEY = "pk_test_51PV1RcAsxEoA7iWVoIIGdbYcSZRnZoBmWxRVSIHxqrKpYYapfGDG7RcIVpOu1tg6aXydDpgDPtPPRqYw3F9Qh1gH00B0Sm1lU2";
+const STRIPE_PUBLISHABLE_KEY = "pk_test_51R2SPX4SH5jlvHudJgu05MgpuZ4xIV5RO5YlmQfbkXgpN4BpkDIwAKOicjXtmB6sw0nubD1hafbVS4E0qCppW5Eu00JgZ4yPGS";
 
 export const LoginForm: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
