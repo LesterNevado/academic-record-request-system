@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
@@ -85,6 +86,43 @@ const RequestForm: React.FC = () => {
     setFormData({
       ...formData,
       [name]: value
+    });
+  };
+
+  // Handle student number input with format XX-XXXXX-XXX
+  const handleStudentNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^\d-]/g, '');
+    
+    // Format as XX-XXXXX-XXX
+    let formattedValue = value;
+    if (value.length > 0) {
+      formattedValue = value.replace(/-/g, ''); // Remove existing hyphens
+      
+      if (formattedValue.length > 2) {
+        formattedValue = formattedValue.substring(0, 2) + '-' + formattedValue.substring(2);
+      }
+      
+      if (formattedValue.length > 8) {
+        formattedValue = formattedValue.substring(0, 8) + '-' + formattedValue.substring(8);
+      }
+      
+      // Limit to format length (10 digits + 2 hyphens = 12 characters)
+      formattedValue = formattedValue.substring(0, 12);
+    }
+    
+    setFormData({
+      ...formData,
+      studentNumber: formattedValue
+    });
+  };
+
+  // Handle contact number input - only allow numbers
+  const handleContactNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, ''); // Remove all non-digits
+    
+    setFormData({
+      ...formData,
+      contactNumber: value
     });
   };
 
@@ -302,23 +340,25 @@ const RequestForm: React.FC = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="studentNumber">Student Number*</Label>
+                <Label htmlFor="studentNumber">Student Number* (Format: XX-XXXXX-XXX)</Label>
                 <Input
                   id="studentNumber"
                   name="studentNumber"
                   value={formData.studentNumber}
-                  onChange={handleInputChange}
+                  onChange={handleStudentNumberChange}
+                  placeholder="XX-XXXXX-XXX"
                   required
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="contactNumber">Contact Number*</Label>
+                <Label htmlFor="contactNumber">Contact Number* (Numbers only)</Label>
                 <Input
                   id="contactNumber"
                   name="contactNumber"
                   value={formData.contactNumber}
-                  onChange={handleInputChange}
+                  onChange={handleContactNumberChange}
+                  placeholder="e.g., 09123456789"
                   required
                 />
               </div>
