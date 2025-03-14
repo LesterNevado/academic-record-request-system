@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
@@ -18,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQueryClient } from "@tanstack/react-query";
 import { TablesInsert } from "@/integrations/supabase/types";
+import { PaymentButton } from "@/components/payment/PaymentButton";
 
 const RequestForm: React.FC = () => {
   const navigate = useNavigate();
@@ -53,6 +53,7 @@ const RequestForm: React.FC = () => {
     certificationDetails: false,
     othersDetails: false
   });
+  const [submittedRequest, setSubmittedRequest] = useState<{id: string, details: any} | null>(null);
 
   useEffect(() => {
     const updateUserProfile = () => {
@@ -93,7 +94,6 @@ const RequestForm: React.FC = () => {
     });
   };
 
-  // Handle student number input with format XX-XXXXX-XXX
   const handleStudentNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/[^\d-]/g, '');
     
@@ -120,7 +120,6 @@ const RequestForm: React.FC = () => {
     });
   };
 
-  // Handle contact number input - only allow numbers and limit to 11 digits
   const handleContactNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, ''); // Remove all non-digits
     const limitedValue = value.substring(0, 11); // Limit to 11 digits
@@ -269,7 +268,28 @@ const RequestForm: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['requests'] });
       
       toast.success("Request submitted successfully!");
-      navigate("/requests");
+      
+      // Store the submitted request data for the payment step
+      if (data && data.length > 0) {
+        // Extract request details for payment
+        const requestDetails = {
+          transcript_selected: data[0].transcript_selected,
+          transcript_copies: data[0].transcript_copies,
+          certificate_selected: data[0].certificate_selected,
+          certificate_copies: data[0].certificate_copies,
+          certification_selected: data[0].certification_selected,
+          certification_copies: data[0].certification_copies,
+          certification_details: data[0].certification_details,
+          others_selected: data[0].others_selected,
+          others_copies: data[0].others_copies,
+          others_details: data[0].others_details
+        };
+        
+        setSubmittedRequest({
+          id: data[0].id,
+          details: requestDetails
+        });
+      }
     } catch (error: any) {
       console.error("Error submitting request:", error);
       toast.error(`Failed to submit request: ${error.message || "Please try again."}`);
@@ -296,12 +316,10 @@ const RequestForm: React.FC = () => {
     }
   };
 
-  // CSS for required field marker
   const requiredFieldStyle = "text-[#ea384c]";
 
   return (
     <div className="min-h-screen flex">
-      {/* Sidebar */}
       <div className="w-64 bg-[#0047AB] text-white p-6 flex flex-col">
         <div className="flex items-center mb-10">
           <img
@@ -312,7 +330,6 @@ const RequestForm: React.FC = () => {
           <h1 className="text-xl font-bold">NEU ARRS</h1>
         </div>
         
-        {/* User Profile Section */}
         <div className="mb-6 flex flex-col items-center">
           {userProfile.avatarUrl ? (
             <img 
@@ -359,7 +376,6 @@ const RequestForm: React.FC = () => {
         </div>
       </div>
       
-      {/* Main Content */}
       <div className="flex-1 p-10">
         <div className="mb-6 flex items-center">
           <Button 
@@ -372,216 +388,253 @@ const RequestForm: React.FC = () => {
           </Button>
         </div>
         
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold">Request Record Form</h1>
-          <p className="text-gray-600 mt-2">Fill out the form below to request your academic records</p>
-        </header>
-        
-        <div className="bg-white rounded-lg shadow p-8 border border-gray-200">
-          <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div className="space-y-2">
-                <Label htmlFor="studentName">Student Name <span className={requiredFieldStyle}>*</span></Label>
-                <Input
-                  id="studentName"
-                  name="studentName"
-                  value={formData.studentName}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="studentNumber">Student Number <span className={requiredFieldStyle}>*</span> (Format: XX-XXXXX-XXX)</Label>
-                <Input
-                  id="studentNumber"
-                  name="studentNumber"
-                  value={formData.studentNumber}
-                  onChange={handleStudentNumberChange}
-                  placeholder="XX-XXXXX-XXX"
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="contactNumber">Contact Number <span className={requiredFieldStyle}>*</span> (11 digits only)</Label>
-                <Input
-                  id="contactNumber"
-                  name="contactNumber"
-                  value={formData.contactNumber}
-                  onChange={handleContactNumberChange}
-                  placeholder="e.g., 09123456789"
-                  maxLength={11}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="homeAddress">Home Address</Label>
-                <Input
-                  id="homeAddress"
-                  name="homeAddress"
-                  value={formData.homeAddress}
-                  onChange={handleInputChange}
-                />
-              </div>
-              
-              <div className="space-y-3 md:col-span-2">
-                <Label className="text-lg font-semibold">APPLICATION FOR: <span className={requiredFieldStyle}>*</span></Label>
+        {submittedRequest ? (
+          <div className="bg-white rounded-lg shadow p-8 border border-gray-200">
+            <h2 className="text-2xl font-semibold mb-6">Complete Your Payment</h2>
+            <p className="mb-6">Your request has been submitted successfully. Please complete the payment to process your request.</p>
+            
+            <div className="p-4 bg-gray-50 rounded-lg mb-6">
+              <h3 className="font-medium mb-3">Request Summary:</h3>
+              <ul className="space-y-2">
+                {submittedRequest.details.transcript_selected && (
+                  <li>Transcript of Records (TOR): {submittedRequest.details.transcript_copies} {submittedRequest.details.transcript_copies > 1 ? 'copies' : 'copy'}</li>
+                )}
                 
-                {/* Reorganized layout for application types */}
-                <div className="mt-4 space-y-4">
-                  <div className="grid grid-cols-12 gap-4">
-                    <div className="col-span-8 flex items-center space-x-2">
-                      <Checkbox 
-                        id="transcript" 
-                        checked={formData.requestTypes.transcript.selected}
-                        onCheckedChange={() => handleCheckboxChange('transcript')}
-                      />
-                      <Label htmlFor="transcript" className="font-normal">Transcript of Records (TOR)</Label>
-                    </div>
-                    
-                    <div className="col-span-4">
-                      <Label htmlFor="transcriptCopies" className="text-sm block mb-1 text-center">No. of Copies</Label>
-                      <Input
-                        id="transcriptCopies"
-                        type="number"
-                        min="1"
-                        value={formData.requestTypes.transcript.copies}
-                        onChange={(e) => handleCopiesChange('transcript', parseInt(e.target.value) || 1)}
-                        className="text-center"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-12 gap-4">
-                    <div className="col-span-8 flex items-center space-x-2">
-                      <Checkbox 
-                        id="certificate" 
-                        checked={formData.requestTypes.certificate.selected}
-                        onCheckedChange={() => handleCheckboxChange('certificate')}
-                      />
-                      <Label htmlFor="certificate" className="font-normal">Certificate of Grades (COG)</Label>
-                    </div>
-                    
-                    <div className="col-span-4">
-                      <Label htmlFor="certificateCopies" className="text-sm block mb-1 text-center">No. of Copies</Label>
-                      <Input
-                        id="certificateCopies"
-                        type="number"
-                        min="1"
-                        value={formData.requestTypes.certificate.copies}
-                        onChange={(e) => handleCopiesChange('certificate', parseInt(e.target.value) || 1)}
-                        className="text-center"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-12 gap-4">
-                    <div className="col-span-8 flex items-start space-x-2">
-                      <Checkbox 
-                        id="certification" 
-                        checked={formData.requestTypes.certification.selected}
-                        onCheckedChange={() => handleCheckboxChange('certification')}
-                        className="mt-2"
-                      />
-                      <div className="flex-1">
-                        <Label htmlFor="certification" className="font-normal">Certification</Label>
-                        <Input
-                          className={`mt-2 ${formErrors.certificationDetails ? 'border-[#ea384c] focus-visible:ring-[#ea384c]' : ''}`}
-                          value={formData.requestTypes.certification.details}
-                          onChange={(e) => handleDetailsChange('certification', e.target.value)}
-                          placeholder="Please specify"
-                          required={formData.requestTypes.certification.selected}
-                        />
-                        {formErrors.certificationDetails && (
-                          <p className="text-[#ea384c] text-xs mt-1">This field is required when Certification is selected</p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="col-span-4">
-                      <Label htmlFor="certificationCopies" className="text-sm block mb-1 text-center">No. of Copies</Label>
-                      <Input
-                        id="certificationCopies"
-                        type="number"
-                        min="1"
-                        value={formData.requestTypes.certification.copies}
-                        onChange={(e) => handleCopiesChange('certification', parseInt(e.target.value) || 1)}
-                        className="text-center"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-12 gap-4">
-                    <div className="col-span-8 flex items-start space-x-2">
-                      <Checkbox 
-                        id="others" 
-                        checked={formData.requestTypes.others.selected}
-                        onCheckedChange={() => handleCheckboxChange('others')}
-                        className="mt-2"
-                      />
-                      <div className="flex-1">
-                        <Label htmlFor="others" className="font-normal">Others (Please Specify)</Label>
-                        <Input
-                          className={`mt-2 ${formErrors.othersDetails ? 'border-[#ea384c] focus-visible:ring-[#ea384c]' : ''}`}
-                          value={formData.requestTypes.others.details}
-                          onChange={(e) => handleDetailsChange('others', e.target.value)}
-                          placeholder="Please specify"
-                          required={formData.requestTypes.others.selected}
-                        />
-                        {formErrors.othersDetails && (
-                          <p className="text-[#ea384c] text-xs mt-1">This field is required when Others is selected</p>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="col-span-4">
-                      <Label htmlFor="othersCopies" className="text-sm block mb-1 text-center">No. of Copies</Label>
-                      <Input
-                        id="othersCopies"
-                        type="number"
-                        min="1"
-                        value={formData.requestTypes.others.copies}
-                        onChange={(e) => handleCopiesChange('others', parseInt(e.target.value) || 1)}
-                        className="text-center"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="purpose">Purpose <span className={requiredFieldStyle}>*</span></Label>
-                <Textarea
-                  id="purpose"
-                  name="purpose"
-                  value={formData.purpose}
-                  onChange={handleInputChange}
-                  required
-                  rows={3}
-                />
-              </div>
+                {submittedRequest.details.certificate_selected && (
+                  <li>Certificate of Grades (COG): {submittedRequest.details.certificate_copies} {submittedRequest.details.certificate_copies > 1 ? 'copies' : 'copy'}</li>
+                )}
+                
+                {submittedRequest.details.certification_selected && (
+                  <li>Certification ({submittedRequest.details.certification_details}): {submittedRequest.details.certification_copies} {submittedRequest.details.certification_copies > 1 ? 'copies' : 'copy'}</li>
+                )}
+                
+                {submittedRequest.details.others_selected && (
+                  <li>Others ({submittedRequest.details.others_details}): {submittedRequest.details.others_copies} {submittedRequest.details.others_copies > 1 ? 'copies' : 'copy'}</li>
+                )}
+              </ul>
             </div>
             
-            <div className="flex justify-end space-x-4 mt-8">
-              <Button 
-                type="button" 
-                variant="outline"
-                onClick={() => navigate('/dashboard')}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                className="bg-[#0047AB] hover:bg-[#00377e]"
-                disabled={submitting}
-              >
-                {submitting ? "Submitting..." : "Submit Request"}
-              </Button>
+            <div className="flex justify-end">
+              <PaymentButton 
+                requestId={submittedRequest.id} 
+                requestDetails={submittedRequest.details}
+                className="bg-[#0047AB] hover:bg-[#00377e] text-white"
+              />
             </div>
-          </form>
-        </div>
+          </div>
+        ) : (
+          <>
+            <header className="mb-8">
+              <h1 className="text-3xl font-bold">Request Record Form</h1>
+              <p className="text-gray-600 mt-2">Fill out the form below to request your academic records</p>
+            </header>
+            
+            <div className="bg-white rounded-lg shadow p-8 border border-gray-200">
+              <form onSubmit={handleSubmit}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="studentName">Student Name <span className={requiredFieldStyle}>*</span></Label>
+                    <Input
+                      id="studentName"
+                      name="studentName"
+                      value={formData.studentName}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="studentNumber">Student Number <span className={requiredFieldStyle}>*</span> (Format: XX-XXXXX-XXX)</Label>
+                    <Input
+                      id="studentNumber"
+                      name="studentNumber"
+                      value={formData.studentNumber}
+                      onChange={handleStudentNumberChange}
+                      placeholder="XX-XXXXX-XXX"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="contactNumber">Contact Number <span className={requiredFieldStyle}>*</span> (11 digits only)</Label>
+                    <Input
+                      id="contactNumber"
+                      name="contactNumber"
+                      value={formData.contactNumber}
+                      onChange={handleContactNumberChange}
+                      placeholder="e.g., 09123456789"
+                      maxLength={11}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="homeAddress">Home Address</Label>
+                    <Input
+                      id="homeAddress"
+                      name="homeAddress"
+                      value={formData.homeAddress}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  
+                  <div className="space-y-3 md:col-span-2">
+                    <Label className="text-lg font-semibold">APPLICATION FOR: <span className={requiredFieldStyle}>*</span></Label>
+                    
+                    <div className="mt-4 space-y-4">
+                      <div className="grid grid-cols-12 gap-4">
+                        <div className="col-span-8 flex items-center space-x-2">
+                          <Checkbox 
+                            id="transcript" 
+                            checked={formData.requestTypes.transcript.selected}
+                            onCheckedChange={() => handleCheckboxChange('transcript')}
+                          />
+                          <Label htmlFor="transcript" className="font-normal">Transcript of Records (TOR)</Label>
+                        </div>
+                        
+                        <div className="col-span-4">
+                          <Label htmlFor="transcriptCopies" className="text-sm block mb-1 text-center">No. of Copies</Label>
+                          <Input
+                            id="transcriptCopies"
+                            type="number"
+                            min="1"
+                            value={formData.requestTypes.transcript.copies}
+                            onChange={(e) => handleCopiesChange('transcript', parseInt(e.target.value) || 1)}
+                            className="text-center"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-12 gap-4">
+                        <div className="col-span-8 flex items-center space-x-2">
+                          <Checkbox 
+                            id="certificate" 
+                            checked={formData.requestTypes.certificate.selected}
+                            onCheckedChange={() => handleCheckboxChange('certificate')}
+                          />
+                          <Label htmlFor="certificate" className="font-normal">Certificate of Grades (COG)</Label>
+                        </div>
+                        
+                        <div className="col-span-4">
+                          <Label htmlFor="certificateCopies" className="text-sm block mb-1 text-center">No. of Copies</Label>
+                          <Input
+                            id="certificateCopies"
+                            type="number"
+                            min="1"
+                            value={formData.requestTypes.certificate.copies}
+                            onChange={(e) => handleCopiesChange('certificate', parseInt(e.target.value) || 1)}
+                            className="text-center"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-12 gap-4">
+                        <div className="col-span-8 flex items-start space-x-2">
+                          <Checkbox 
+                            id="certification" 
+                            checked={formData.requestTypes.certification.selected}
+                            onCheckedChange={() => handleCheckboxChange('certification')}
+                            className="mt-2"
+                          />
+                          <div className="flex-1">
+                            <Label htmlFor="certification" className="font-normal">Certification</Label>
+                            <Input
+                              className={`mt-2 ${formErrors.certificationDetails ? 'border-[#ea384c] focus-visible:ring-[#ea384c]' : ''}`}
+                              value={formData.requestTypes.certification.details}
+                              onChange={(e) => handleDetailsChange('certification', e.target.value)}
+                              placeholder="Please specify"
+                              required={formData.requestTypes.certification.selected}
+                            />
+                            {formErrors.certificationDetails && (
+                              <p className="text-[#ea384c] text-xs mt-1">This field is required when Certification is selected</p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="col-span-4">
+                          <Label htmlFor="certificationCopies" className="text-sm block mb-1 text-center">No. of Copies</Label>
+                          <Input
+                            id="certificationCopies"
+                            type="number"
+                            min="1"
+                            value={formData.requestTypes.certification.copies}
+                            onChange={(e) => handleCopiesChange('certification', parseInt(e.target.value) || 1)}
+                            className="text-center"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-12 gap-4">
+                        <div className="col-span-8 flex items-start space-x-2">
+                          <Checkbox 
+                            id="others" 
+                            checked={formData.requestTypes.others.selected}
+                            onCheckedChange={() => handleCheckboxChange('others')}
+                            className="mt-2"
+                          />
+                          <div className="flex-1">
+                            <Label htmlFor="others" className="font-normal">Others (Please Specify)</Label>
+                            <Input
+                              className={`mt-2 ${formErrors.othersDetails ? 'border-[#ea384c] focus-visible:ring-[#ea384c]' : ''}`}
+                              value={formData.requestTypes.others.details}
+                              onChange={(e) => handleDetailsChange('others', e.target.value)}
+                              placeholder="Please specify"
+                              required={formData.requestTypes.others.selected}
+                            />
+                            {formErrors.othersDetails && (
+                              <p className="text-[#ea384c] text-xs mt-1">This field is required when Others is selected</p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="col-span-4">
+                          <Label htmlFor="othersCopies" className="text-sm block mb-1 text-center">No. of Copies</Label>
+                          <Input
+                            id="othersCopies"
+                            type="number"
+                            min="1"
+                            value={formData.requestTypes.others.copies}
+                            onChange={(e) => handleCopiesChange('others', parseInt(e.target.value) || 1)}
+                            className="text-center"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="purpose">Purpose <span className={requiredFieldStyle}>*</span></Label>
+                    <Textarea
+                      id="purpose"
+                      name="purpose"
+                      value={formData.purpose}
+                      onChange={handleInputChange}
+                      required
+                      rows={3}
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex justify-end space-x-4 mt-8">
+                  <Button 
+                    type="button" 
+                    variant="outline"
+                    onClick={() => navigate('/dashboard')}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    className="bg-[#0047AB] hover:bg-[#00377e]"
+                    disabled={submitting}
+                  >
+                    {submitting ? "Submitting..." : "Submit Request"}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

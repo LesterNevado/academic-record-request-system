@@ -24,7 +24,7 @@ export const PaymentButton: React.FC<PaymentButtonProps> = ({
   const handlePayment = async () => {
     try {
       setIsLoading(true);
-      const redirectUrl = `${window.location.origin}/requests`;
+      const redirectUrl = `${window.location.origin}/payment-status`;
 
       // Call Supabase Edge Function to create checkout session
       const { data, error } = await supabase.functions.invoke("create-checkout", {
