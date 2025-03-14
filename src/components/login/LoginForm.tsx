@@ -4,6 +4,9 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
+// Stripe publishable key - this is safe to include in frontend code
+const STRIPE_PUBLISHABLE_KEY = "pk_test_51PV1RcAsxEoA7iWVoIIGdbYcSZRnZoBmWxRVSIHxqrKpYYapfGDG7RcIVpOu1tg6aXydDpgDPtPPRqYw3F9Qh1gH00B0Sm1lU2";
+
 export const LoginForm: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -34,6 +37,11 @@ export const LoginForm: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  // Make Stripe publishable key available globally
+  if (typeof window !== "undefined") {
+    window.STRIPE_PUBLISHABLE_KEY = STRIPE_PUBLISHABLE_KEY;
+  }
 
   return (
     <section className="w-6/12 max-md:w-full relative min-h-screen" aria-label="Login form">
