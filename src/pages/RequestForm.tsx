@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
@@ -48,6 +49,10 @@ const RequestForm: React.FC = () => {
   
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [formErrors, setFormErrors] = useState({
+    certificationDetails: false,
+    othersDetails: false
+  });
 
   useEffect(() => {
     const updateUserProfile = () => {
@@ -127,6 +132,13 @@ const RequestForm: React.FC = () => {
   };
 
   const handleCheckboxChange = (type: string) => {
+    // Reset detail field errors when unchecking checkboxes
+    if (type === 'certification' && formData.requestTypes.certification.selected) {
+      setFormErrors(prev => ({ ...prev, certificationDetails: false }));
+    } else if (type === 'others' && formData.requestTypes.others.selected) {
+      setFormErrors(prev => ({ ...prev, othersDetails: false }));
+    }
+
     setFormData({
       ...formData,
       requestTypes: {
@@ -153,6 +165,13 @@ const RequestForm: React.FC = () => {
   };
 
   const handleDetailsChange = (type: string, value: string) => {
+    // Clear error when user types in details
+    if (type === 'certification') {
+      setFormErrors(prev => ({ ...prev, certificationDetails: false }));
+    } else if (type === 'others') {
+      setFormErrors(prev => ({ ...prev, othersDetails: false }));
+    }
+
     setFormData({
       ...formData,
       requestTypes: {
@@ -165,8 +184,38 @@ const RequestForm: React.FC = () => {
     });
   };
 
+  const validateForm = () => {
+    let isValid = true;
+    const newErrors = {
+      certificationDetails: false,
+      othersDetails: false
+    };
+
+    // Check if certification is selected but details are empty
+    if (formData.requestTypes.certification.selected && !formData.requestTypes.certification.details.trim()) {
+      newErrors.certificationDetails = true;
+      isValid = false;
+    }
+
+    // Check if others is selected but details are empty
+    if (formData.requestTypes.others.selected && !formData.requestTypes.others.details.trim()) {
+      newErrors.othersDetails = true;
+      isValid = false;
+    }
+
+    setFormErrors(newErrors);
+    return isValid;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate form before submission
+    if (!validateForm()) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    
     setSubmitting(true);
     
     try {
@@ -439,11 +488,15 @@ const RequestForm: React.FC = () => {
                       <div className="flex-1">
                         <Label htmlFor="certification" className="font-normal">Certification</Label>
                         <Input
-                          className="mt-2"
+                          className={`mt-2 ${formErrors.certificationDetails ? 'border-[#ea384c] focus-visible:ring-[#ea384c]' : ''}`}
                           value={formData.requestTypes.certification.details}
                           onChange={(e) => handleDetailsChange('certification', e.target.value)}
                           placeholder="Please specify"
+                          required={formData.requestTypes.certification.selected}
                         />
+                        {formErrors.certificationDetails && (
+                          <p className="text-[#ea384c] text-xs mt-1">This field is required when Certification is selected</p>
+                        )}
                       </div>
                     </div>
                     
@@ -471,11 +524,15 @@ const RequestForm: React.FC = () => {
                       <div className="flex-1">
                         <Label htmlFor="others" className="font-normal">Others (Please Specify)</Label>
                         <Input
-                          className="mt-2"
+                          className={`mt-2 ${formErrors.othersDetails ? 'border-[#ea384c] focus-visible:ring-[#ea384c]' : ''}`}
                           value={formData.requestTypes.others.details}
                           onChange={(e) => handleDetailsChange('others', e.target.value)}
                           placeholder="Please specify"
+                          required={formData.requestTypes.others.selected}
                         />
+                        {formErrors.othersDetails && (
+                          <p className="text-[#ea384c] text-xs mt-1">This field is required when Others is selected</p>
+                        )}
                       </div>
                     </div>
                     
