@@ -39,9 +39,10 @@ export const LoginForm: React.FC = () => {
   };
 
   // Make Stripe publishable key available globally
-  if (typeof window !== "undefined") {
-    window.STRIPE_PUBLISHABLE_KEY = STRIPE_PUBLISHABLE_KEY;
-  }
+  React.useEffect(() => {
+    // Use type assertion to avoid TypeScript error
+    (window as any).STRIPE_PUBLISHABLE_KEY = STRIPE_PUBLISHABLE_KEY;
+  }, []);
 
   return (
     <section className="w-6/12 max-md:w-full relative min-h-screen" aria-label="Login form">
