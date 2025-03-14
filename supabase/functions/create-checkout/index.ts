@@ -7,6 +7,14 @@ const stripe = new Stripe(stripeSecretKey, {
   apiVersion: "2023-10-16",
 });
 
+// Product IDs for each document type
+const PRODUCT_IDS = {
+  TRANSCRIPT: "prod_RwLCH4NZ06JAwf",     // TOR
+  CERTIFICATE: "prod_RwMfUjiS0c3VHH",    // COG
+  CERTIFICATION: "prod_RwMgZPEEMBDHlQ",  // Certification
+  OTHERS: "prod_RwMgmzeBE2urMr",         // Others
+};
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -41,10 +49,7 @@ serve(async (req) => {
       lineItems.push({
         price_data: {
           currency: "php",
-          product_data: {
-            name: "Transcript of Records",
-            description: `${transcriptCopies} ${transcriptCopies > 1 ? "copies" : "copy"}`,
-          },
+          product: PRODUCT_IDS.TRANSCRIPT,
           unit_amount: transcriptPrice * 100, // Amount in cents
         },
         quantity: transcriptCopies,
@@ -59,10 +64,7 @@ serve(async (req) => {
       lineItems.push({
         price_data: {
           currency: "php",
-          product_data: {
-            name: "Certificate of Graduation",
-            description: `${certificateCopies} ${certificateCopies > 1 ? "copies" : "copy"}`,
-          },
+          product: PRODUCT_IDS.CERTIFICATE,
           unit_amount: certificatePrice * 100, // Amount in cents
         },
         quantity: certificateCopies,
@@ -77,10 +79,7 @@ serve(async (req) => {
       lineItems.push({
         price_data: {
           currency: "php",
-          product_data: {
-            name: "Certification",
-            description: `${requestDetails.certification_details} - ${certificationCopies} ${certificationCopies > 1 ? "copies" : "copy"}`,
-          },
+          product: PRODUCT_IDS.CERTIFICATION,
           unit_amount: certificationPrice * 100, // Amount in cents
         },
         quantity: certificationCopies,
@@ -95,10 +94,7 @@ serve(async (req) => {
       lineItems.push({
         price_data: {
           currency: "php",
-          product_data: {
-            name: "Other Document",
-            description: `${requestDetails.others_details} - ${othersCopies} ${othersCopies > 1 ? "copies" : "copy"}`,
-          },
+          product: PRODUCT_IDS.OTHERS,
           unit_amount: othersPrice * 100, // Amount in cents
         },
         quantity: othersCopies,
