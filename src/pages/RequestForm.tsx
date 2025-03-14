@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
@@ -116,13 +115,14 @@ const RequestForm: React.FC = () => {
     });
   };
 
-  // Handle contact number input - only allow numbers
+  // Handle contact number input - only allow numbers and limit to 11 digits
   const handleContactNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, ''); // Remove all non-digits
+    const limitedValue = value.substring(0, 11); // Limit to 11 digits
     
     setFormData({
       ...formData,
-      contactNumber: value
+      contactNumber: limitedValue
     });
   };
 
@@ -247,6 +247,9 @@ const RequestForm: React.FC = () => {
     }
   };
 
+  // CSS for required field marker
+  const requiredFieldStyle = "text-[#ea384c]";
+
   return (
     <div className="min-h-screen flex">
       {/* Sidebar */}
@@ -329,7 +332,7 @@ const RequestForm: React.FC = () => {
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="space-y-2">
-                <Label htmlFor="studentName">Student Name*</Label>
+                <Label htmlFor="studentName">Student Name <span className={requiredFieldStyle}>*</span></Label>
                 <Input
                   id="studentName"
                   name="studentName"
@@ -340,7 +343,7 @@ const RequestForm: React.FC = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="studentNumber">Student Number* (Format: XX-XXXXX-XXX)</Label>
+                <Label htmlFor="studentNumber">Student Number <span className={requiredFieldStyle}>*</span> (Format: XX-XXXXX-XXX)</Label>
                 <Input
                   id="studentNumber"
                   name="studentNumber"
@@ -352,33 +355,35 @@ const RequestForm: React.FC = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="contactNumber">Contact Number* (Numbers only)</Label>
+                <Label htmlFor="contactNumber">Contact Number <span className={requiredFieldStyle}>*</span> (11 digits only)</Label>
                 <Input
                   id="contactNumber"
                   name="contactNumber"
                   value={formData.contactNumber}
                   onChange={handleContactNumberChange}
                   placeholder="e.g., 09123456789"
+                  maxLength={11}
                   required
                 />
               </div>
               
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="homeAddress">Home Address*</Label>
+                <Label htmlFor="homeAddress">Home Address</Label>
                 <Input
                   id="homeAddress"
                   name="homeAddress"
                   value={formData.homeAddress}
                   onChange={handleInputChange}
-                  required
                 />
               </div>
               
               <div className="space-y-3 md:col-span-2">
-                <Label className="text-lg font-semibold">APPLICATION FOR:*</Label>
+                <Label className="text-lg font-semibold">APPLICATION FOR: <span className={requiredFieldStyle}>*</span></Label>
+                
+                {/* Reorganized layout for application types */}
                 <div className="mt-4 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="col-span-2 flex items-center space-x-2">
+                  <div className="grid grid-cols-12 gap-4">
+                    <div className="col-span-8 flex items-center space-x-2">
                       <Checkbox 
                         id="transcript" 
                         checked={formData.requestTypes.transcript.selected}
@@ -386,21 +391,22 @@ const RequestForm: React.FC = () => {
                       />
                       <Label htmlFor="transcript" className="font-normal">Transcript of Records (TOR)</Label>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Label htmlFor="transcriptCopies" className="text-sm whitespace-nowrap">Number of Copies:</Label>
+                    
+                    <div className="col-span-4">
+                      <Label htmlFor="transcriptCopies" className="text-sm block mb-1 text-center">No. of Copies</Label>
                       <Input
                         id="transcriptCopies"
                         type="number"
                         min="1"
                         value={formData.requestTypes.transcript.copies}
                         onChange={(e) => handleCopiesChange('transcript', parseInt(e.target.value) || 1)}
-                        className="w-20"
+                        className="text-center"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="col-span-2 flex items-center space-x-2">
+                  <div className="grid grid-cols-12 gap-4">
+                    <div className="col-span-8 flex items-center space-x-2">
                       <Checkbox 
                         id="certificate" 
                         checked={formData.requestTypes.certificate.selected}
@@ -408,21 +414,22 @@ const RequestForm: React.FC = () => {
                       />
                       <Label htmlFor="certificate" className="font-normal">Certificate of Grades (COG)</Label>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Label htmlFor="certificateCopies" className="text-sm whitespace-nowrap">Number of Copies:</Label>
+                    
+                    <div className="col-span-4">
+                      <Label htmlFor="certificateCopies" className="text-sm block mb-1 text-center">No. of Copies</Label>
                       <Input
                         id="certificateCopies"
                         type="number"
                         min="1"
                         value={formData.requestTypes.certificate.copies}
                         onChange={(e) => handleCopiesChange('certificate', parseInt(e.target.value) || 1)}
-                        className="w-20"
+                        className="text-center"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="md:col-span-2 flex items-start space-x-2">
+                  <div className="grid grid-cols-12 gap-4">
+                    <div className="col-span-8 flex items-start space-x-2">
                       <Checkbox 
                         id="certification" 
                         checked={formData.requestTypes.certification.selected}
@@ -439,21 +446,22 @@ const RequestForm: React.FC = () => {
                         />
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Label htmlFor="certificationCopies" className="text-sm whitespace-nowrap">Number of Copies:</Label>
+                    
+                    <div className="col-span-4">
+                      <Label htmlFor="certificationCopies" className="text-sm block mb-1 text-center">No. of Copies</Label>
                       <Input
                         id="certificationCopies"
                         type="number"
                         min="1"
                         value={formData.requestTypes.certification.copies}
                         onChange={(e) => handleCopiesChange('certification', parseInt(e.target.value) || 1)}
-                        className="w-20"
+                        className="text-center"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="md:col-span-2 flex items-start space-x-2">
+                  <div className="grid grid-cols-12 gap-4">
+                    <div className="col-span-8 flex items-start space-x-2">
                       <Checkbox 
                         id="others" 
                         checked={formData.requestTypes.others.selected}
@@ -470,15 +478,16 @@ const RequestForm: React.FC = () => {
                         />
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Label htmlFor="othersCopies" className="text-sm whitespace-nowrap">Number of Copies:</Label>
+                    
+                    <div className="col-span-4">
+                      <Label htmlFor="othersCopies" className="text-sm block mb-1 text-center">No. of Copies</Label>
                       <Input
                         id="othersCopies"
                         type="number"
                         min="1"
                         value={formData.requestTypes.others.copies}
                         onChange={(e) => handleCopiesChange('others', parseInt(e.target.value) || 1)}
-                        className="w-20"
+                        className="text-center"
                       />
                     </div>
                   </div>
@@ -486,7 +495,7 @@ const RequestForm: React.FC = () => {
               </div>
               
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="purpose">Purpose*</Label>
+                <Label htmlFor="purpose">Purpose <span className={requiredFieldStyle}>*</span></Label>
                 <Textarea
                   id="purpose"
                   name="purpose"
