@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { LayoutDashboard, User, FileText, LogOut } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ const Dashboard: React.FC = () => {
     avatarUrl: null
   });
   const [loading, setLoading] = useState(true);
+  const [requestCount, setRequestCount] = useState(0);
 
   useEffect(() => {
     // Simple function to get session once
@@ -41,6 +43,18 @@ const Dashboard: React.FC = () => {
           email,
           avatarUrl
         });
+
+        // Fetch request count
+        const { count, error } = await supabase
+          .from('requests')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+        
+        if (error) {
+          console.error("Error fetching requests:", error);
+        } else {
+          setRequestCount(count || 0);
+        }
       } catch (error) {
         console.error("Error getting session:", error);
         navigate('/');
@@ -147,34 +161,30 @@ const Dashboard: React.FC = () => {
           <p className="text-gray-600 mt-2">Manage and track your academic record requests</p>
         </header>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Pending Requests</h2>
-              <div className="bg-blue-100 text-blue-800 rounded-full w-8 h-8 flex items-center justify-center font-bold">0</div>
-            </div>
-            <p className="text-gray-600">You have no pending requests</p>
-            <Button 
-              onClick={() => navigate("/request")} 
-              className="mt-4 w-full bg-[#0047AB] hover:bg-[#00377e]"
-            >
-              New Request
-            </Button>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Approved Requests</h2>
-              <div className="bg-green-100 text-green-800 rounded-full w-8 h-8 flex items-center justify-center font-bold">0</div>
-            </div>
-            <p className="text-gray-600">You have no approved requests</p>
-            <Button 
-              onClick={() => navigate("/requests")} 
-              className="mt-4 w-full bg-[#0047AB] hover:bg-[#00377e]"
-            >
-              View All Requests
-            </Button>
-          </div>
+        <div className="grid grid-cols-1 gap-6">
+          <Card className="border border-gray-200 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">My Requests</h2>
+                <div className="bg-blue-100 text-blue-800 rounded-full w-8 h-8 flex items-center justify-center font-bold">
+                  {requestCount}
+                </div>
+              </div>
+              
+              <p className="text-gray-600">
+                {requestCount > 0 
+                  ? `You have ${requestCount} request${requestCount !== 1 ? 's' : ''}`
+                  : "You have no requests yet"}
+              </p>
+              
+              <Button 
+                onClick={() => navigate("/request")} 
+                className="mt-4 w-full bg-[#0047AB] hover:bg-[#00377e]"
+              >
+                New Request
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
