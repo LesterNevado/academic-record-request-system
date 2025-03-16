@@ -313,9 +313,10 @@ const Requests: React.FC = () => {
                       </span>
                     )}
                     {request.status === 'awaiting_pickup' && (
-                      <span className="flex items-center text-green-600">
-                        <Package className="w-4 h-4 mr-1" />
-                        Payment Successful, Awaiting Pickup
+                      <span className="flex flex-col items-end text-yellow-600">
+                        <Package className="w-4 h-4 mb-1" />
+                        <span>Payment Successful</span>
+                        <span>Waiting for Approval</span>
                       </span>
                     )}
                     {request.status === 'approved' && (

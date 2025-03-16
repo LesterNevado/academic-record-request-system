@@ -115,7 +115,7 @@ export const PaymentStatus: React.FC = () => {
           <CheckCircle className="h-5 w-5 text-green-600" />
           <AlertTitle>Payment Successful</AlertTitle>
           <AlertDescription>
-            Your payment has been processed successfully. Your academic records request is awaiting pickup.
+            Your payment has been processed successfully. Your academic records request is waiting for approval.
           </AlertDescription>
         </Alert>
       ) : (

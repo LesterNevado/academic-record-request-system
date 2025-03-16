@@ -161,7 +161,7 @@ const Dashboard: React.FC = () => {
           <p className="text-gray-600 mt-2">Manage and track your academic record requests</p>
         </header>
         
-        <div className="grid grid-cols-1 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="border border-gray-200 shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
