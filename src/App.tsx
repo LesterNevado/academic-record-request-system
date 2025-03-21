@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,10 +11,10 @@ import Dashboard from "./pages/Dashboard";
 import RequestForm from "./pages/RequestForm";
 import Requests from "./pages/Requests";
 import FacultyPortal from "./pages/FacultyPortal";
+import AdminPage from "./pages/AdminPage";
 import { supabase } from "./integrations/supabase/client";
 import { PaymentStatus } from "./components/payment/PaymentStatus";
 
-// Create a simple query client 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -26,17 +25,13 @@ const queryClient = new QueryClient({
   },
 });
 
-// Create a session context with minimal functionality
 export const SessionContext = createContext<{
   session: Session | null;
 }>({ 
   session: null
 });
 
-// Simple protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  // We're deliberately not using any auth state checks here
-  // Just render children directly to avoid issues with tab switching
   return children;
 };
 
@@ -44,7 +39,6 @@ const App = () => {
   const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
-    // Simple session check on mount
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
       setSession(data.session);
@@ -66,6 +60,7 @@ const App = () => {
               <Route path="/request" element={<ProtectedRoute><RequestForm /></ProtectedRoute>} />
               <Route path="/requests" element={<ProtectedRoute><Requests /></ProtectedRoute>} />
               <Route path="/faculty" element={<ProtectedRoute><FacultyPortal /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
               <Route path="/payment-status" element={<ProtectedRoute><PaymentStatus /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>

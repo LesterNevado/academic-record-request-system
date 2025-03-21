@@ -1,0 +1,145 @@
+
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Tables } from "@/integrations/supabase/types";
+
+interface UserProfile {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+}
+
+export const UserRoleManager: React.FC = () => {
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string>("student");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [roleLoading, setRoleLoading] = useState<boolean>(false);
+  
+  // Fetch users from profiles table
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, full_name')
+        .order('email');
+      
+      if (error) {
+        toast.error("Failed to load users");
+        console.error("Error fetching users:", error);
+      } else {
+        setUsers(data as UserProfile[]);
+      }
+      setLoading(false);
+    };
+    
+    fetchUsers();
+  }, []);
+  
+  // Assign role to user
+  const assignRole = async () => {
+    if (!selectedUser) {
+      toast.error("Please select a user");
+      return;
+    }
+    
+    setRoleLoading(true);
+    
+    try {
+      // First check if the user already has this role
+      const { data: existingRole } = await supabase
+        .from('user_roles')
+        .select('id')
+        .eq('user_id', selectedUser)
+        .eq('role', selectedRole)
+        .maybeSingle();
+      
+      if (existingRole) {
+        toast.info(`User already has the ${selectedRole} role`);
+        setRoleLoading(false);
+        return;
+      }
+      
+      // Add the role
+      const { error } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: selectedUser,
+          role: selectedRole
+        });
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast.success(`Successfully assigned ${selectedRole} role to user`);
+    } catch (error) {
+      console.error("Error assigning role:", error);
+      toast.error("Failed to assign role");
+    } finally {
+      setRoleLoading(false);
+    }
+  };
+
+  return (
+    <Card className="w-full max-w-2xl mx-auto">
+      <CardHeader>
+        <CardTitle>User Role Management</CardTitle>
+        <CardDescription>
+          Assign roles to users in the system
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Select User</label>
+          <Select
+            disabled={loading || users.length === 0}
+            value={selectedUser || undefined}
+            onValueChange={setSelectedUser}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a user" />
+            </SelectTrigger>
+            <SelectContent>
+              {users.map((user) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.full_name || user.email || user.id.substring(0, 8)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Select Role</label>
+          <Select
+            value={selectedRole} 
+            onValueChange={setSelectedRole}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="student">Student</SelectItem>
+              <SelectItem value="faculty">Faculty</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <Button 
+          className="w-full" 
+          onClick={assignRole} 
+          disabled={!selectedUser || roleLoading}
+        >
+          {roleLoading ? "Assigning..." : "Assign Role"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+};
