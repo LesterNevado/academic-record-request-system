@@ -55,7 +55,9 @@ const Dashboard: React.FC = () => {
         
         if (rolesError) {
           console.error("Error fetching roles:", rolesError);
+          toast.error(`Error fetching roles: ${rolesError.message}`);
         } else {
+          console.log("User roles:", roles);
           setUserRoles(roles || []);
         }
 

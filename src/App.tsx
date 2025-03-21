@@ -64,6 +64,7 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
             toast.error(`Error checking role: ${error.message}`);
             setHasRole(false);
           } else {
+            console.log(`Has ${requiredRole} role:`, data);
             setHasRole(!!data);
           }
         } else if (!requiredRole) {
