@@ -13,10 +13,13 @@ interface UserProfile {
   full_name: string | null;
 }
 
+// Define the role type explicitly to match the database enum
+type UserRole = 'student' | 'faculty' | 'admin';
+
 export const UserRoleManager: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState<string>("student");
+  const [selectedRole, setSelectedRole] = useState<UserRole>("student");
   const [loading, setLoading] = useState<boolean>(false);
   const [roleLoading, setRoleLoading] = useState<boolean>(false);
   
@@ -119,7 +122,7 @@ export const UserRoleManager: React.FC = () => {
           <label className="text-sm font-medium">Select Role</label>
           <Select
             value={selectedRole} 
-            onValueChange={setSelectedRole}
+            onValueChange={(value: UserRole) => setSelectedRole(value)}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select a role" />
