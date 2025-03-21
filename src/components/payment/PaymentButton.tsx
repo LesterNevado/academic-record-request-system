@@ -24,11 +24,35 @@ export const PaymentButton: React.FC<PaymentButtonProps> = ({
       setIsLoading(true);
       const redirectUrl = `${window.location.origin}/payment-status`;
 
+      // Get total amount from form data
+      let totalAmount = 0;
+      
+      if (requestFormData.requestTypes.transcript.selected) {
+        const copies = requestFormData.requestTypes.transcript.copies || 1;
+        totalAmount += 100 * copies; // ₱100 per copy
+      }
+      
+      if (requestFormData.requestTypes.certificate.selected) {
+        const copies = requestFormData.requestTypes.certificate.copies || 1;
+        totalAmount += 100 * copies; // ₱100 per copy
+      }
+      
+      if (requestFormData.requestTypes.certification.selected) {
+        const copies = requestFormData.requestTypes.certification.copies || 1;
+        totalAmount += 100 * copies; // ₱100 per copy
+      }
+      
+      if (requestFormData.requestTypes.others.selected) {
+        const copies = requestFormData.requestTypes.others.copies || 1;
+        totalAmount += 100 * copies; // ₱100 per copy
+      }
+
       // Call Supabase Edge Function to create checkout session
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: {
           formData: requestFormData,
           redirectUrl,
+          totalAmount,
         },
       });
 
@@ -39,6 +63,8 @@ export const PaymentButton: React.FC<PaymentButtonProps> = ({
       if (data?.url) {
         // Store form data in localStorage for use after payment
         localStorage.setItem('pendingRequestData', JSON.stringify(requestFormData));
+        localStorage.setItem('pendingPaymentAmount', totalAmount.toString());
+        localStorage.setItem('pendingSessionId', data.sessionId);
         
         // Redirect to Stripe Checkout
         window.location.href = data.url;

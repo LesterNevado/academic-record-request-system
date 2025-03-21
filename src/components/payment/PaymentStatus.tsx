@@ -24,12 +24,14 @@ export const PaymentStatus: React.FC = () => {
         if (isSuccess && sessionId) {
           // Get stored form data
           const storedFormData = localStorage.getItem('pendingRequestData');
+          const storedAmount = localStorage.getItem('pendingPaymentAmount');
           
           if (!storedFormData) {
             throw new Error("Request data not found");
           }
           
           const formData = JSON.parse(storedFormData);
+          const paymentAmount = storedAmount ? parseFloat(storedAmount) : 0;
           
           // Check if session has a user
           const { data: { session } } = await supabase.auth.getSession();
@@ -64,17 +66,40 @@ export const PaymentStatus: React.FC = () => {
             status: 'awaiting_pickup'
           };
           
-          // Submit to Supabase
-          const { error } = await supabase
+          // Submit request to Supabase
+          const { data: requestResult, error: requestError } = await supabase
             .from('requests')
-            .insert(requestData);
+            .insert(requestData)
+            .select('id')
+            .single();
           
-          if (error) {
-            throw error;
+          if (requestError) {
+            throw requestError;
+          }
+          
+          // Record transaction in the transactions table
+          const transactionData = {
+            user_id: session.user.id,
+            request_id: requestResult.id,
+            amount: paymentAmount,
+            payment_status: 'successful',
+            payment_method: 'card',
+            stripe_session_id: sessionId
+          };
+          
+          const { error: transactionError } = await supabase
+            .from('transactions')
+            .insert(transactionData);
+            
+          if (transactionError) {
+            console.error("Error recording transaction:", transactionError);
+            // Continue despite transaction recording error, as the request was created
           }
           
           // Clear stored form data
           localStorage.removeItem('pendingRequestData');
+          localStorage.removeItem('pendingPaymentAmount');
+          localStorage.removeItem('pendingSessionId');
           
           setSuccess(true);
           toast.success("Payment successful! Your request has been created.");

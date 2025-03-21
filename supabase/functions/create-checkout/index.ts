@@ -27,7 +27,7 @@ serve(async (req) => {
   }
 
   try {
-    const { formData, redirectUrl } = await req.json();
+    const { formData, redirectUrl, totalAmount } = await req.json();
     
     if (!formData || !redirectUrl) {
       return new Response(
@@ -36,15 +36,41 @@ serve(async (req) => {
       );
     }
 
-    // Calculate price based on number of copies
-    let totalAmount = 0;
+    // Calculate price based on number of copies if totalAmount isn't provided
+    let calculatedTotalAmount = totalAmount || 0;
     const lineItems = [];
+
+    if (!totalAmount) {
+      // Add line items based on request types
+      if (formData.requestTypes.transcript.selected) {
+        const transcriptCopies = formData.requestTypes.transcript.copies || 1;
+        const transcriptPrice = 100; // ₱100 per copy
+        calculatedTotalAmount += transcriptPrice * transcriptCopies;
+      }
+
+      if (formData.requestTypes.certificate.selected) {
+        const certificateCopies = formData.requestTypes.certificate.copies || 1;
+        const certificatePrice = 100; // ₱100 per copy
+        calculatedTotalAmount += certificatePrice * certificateCopies;
+      }
+
+      if (formData.requestTypes.certification.selected) {
+        const certificationCopies = formData.requestTypes.certification.copies || 1;
+        const certificationPrice = 100; // ₱100 per copy
+        calculatedTotalAmount += certificationPrice * certificationCopies;
+      }
+
+      if (formData.requestTypes.others.selected) {
+        const othersCopies = formData.requestTypes.others.copies || 1;
+        const othersPrice = 100; // ₱100 per copy
+        calculatedTotalAmount += othersPrice * othersCopies;
+      }
+    }
 
     // Add line items based on request types
     if (formData.requestTypes.transcript.selected) {
       const transcriptCopies = formData.requestTypes.transcript.copies || 1;
       const transcriptPrice = 100; // ₱100 per copy
-      totalAmount += transcriptPrice * transcriptCopies;
       
       lineItems.push({
         price_data: {
@@ -59,7 +85,6 @@ serve(async (req) => {
     if (formData.requestTypes.certificate.selected) {
       const certificateCopies = formData.requestTypes.certificate.copies || 1;
       const certificatePrice = 100; // ₱100 per copy
-      totalAmount += certificatePrice * certificateCopies;
       
       lineItems.push({
         price_data: {
@@ -74,7 +99,6 @@ serve(async (req) => {
     if (formData.requestTypes.certification.selected) {
       const certificationCopies = formData.requestTypes.certification.copies || 1;
       const certificationPrice = 100; // ₱100 per copy
-      totalAmount += certificationPrice * certificationCopies;
       
       lineItems.push({
         price_data: {
@@ -89,7 +113,6 @@ serve(async (req) => {
     if (formData.requestTypes.others.selected) {
       const othersCopies = formData.requestTypes.others.copies || 1;
       const othersPrice = 100; // ₱100 per copy
-      totalAmount += othersPrice * othersCopies;
       
       lineItems.push({
         price_data: {
@@ -119,13 +142,14 @@ serve(async (req) => {
       metadata: {
         formData: JSON.stringify({ 
           studentName: formData.studentName,
-          studentNumber: formData.studentNumber
+          studentNumber: formData.studentNumber,
+          totalAmount: calculatedTotalAmount
         })
       },
     });
 
     return new Response(
-      JSON.stringify({ id: session.id, url: session.url }),
+      JSON.stringify({ id: session.id, url: session.url, sessionId: session.id }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
