@@ -11,6 +11,7 @@ import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import RequestForm from "./pages/RequestForm";
 import Requests from "./pages/Requests";
+import FacultyPortal from "./pages/FacultyPortal";
 import { supabase } from "./integrations/supabase/client";
 import { PaymentStatus } from "./components/payment/PaymentStatus";
 
@@ -64,6 +65,7 @@ const App = () => {
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/request" element={<ProtectedRoute><RequestForm /></ProtectedRoute>} />
               <Route path="/requests" element={<ProtectedRoute><Requests /></ProtectedRoute>} />
+              <Route path="/faculty" element={<ProtectedRoute><FacultyPortal /></ProtectedRoute>} />
               <Route path="/payment-status" element={<ProtectedRoute><PaymentStatus /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>

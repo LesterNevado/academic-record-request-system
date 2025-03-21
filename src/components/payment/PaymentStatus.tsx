@@ -63,7 +63,10 @@ export const PaymentStatus: React.FC = () => {
             others_copies: formData.requestTypes.others.selected ? formData.requestTypes.others.copies : null,
             others_details: formData.requestTypes.others.selected ? formData.requestTypes.others.details : null,
             
-            status: 'awaiting_pickup'
+            status: 'awaiting_pickup',
+            pickup_date: null,
+            processed_by: null,
+            notes: null
           };
           
           // Submit request to Supabase
@@ -102,7 +105,7 @@ export const PaymentStatus: React.FC = () => {
           localStorage.removeItem('pendingSessionId');
           
           setSuccess(true);
-          toast.success("Payment successful! Your request has been created.");
+          toast.success("Payment successful! Your request is waiting for faculty approval.");
         } else {
           toast.error("Payment was canceled or unsuccessful.");
         }
@@ -140,7 +143,7 @@ export const PaymentStatus: React.FC = () => {
           <CheckCircle className="h-5 w-5 text-green-600" />
           <AlertTitle>Payment Successful</AlertTitle>
           <AlertDescription>
-            Your payment has been processed successfully. Your academic records request is waiting for approval.
+            Your payment has been processed successfully. Your academic records request will be processed by a faculty member who will schedule a pickup date.
           </AlertDescription>
         </Alert>
       ) : (

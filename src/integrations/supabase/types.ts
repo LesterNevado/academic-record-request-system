@@ -53,9 +53,12 @@ export type Database = {
           created_at: string
           home_address: string
           id: string
+          notes: string | null
           others_copies: number | null
           others_details: string | null
           others_selected: boolean
+          pickup_date: string | null
+          processed_by: string | null
           purpose: string
           status: string
           student_name: string
@@ -75,9 +78,12 @@ export type Database = {
           created_at?: string
           home_address: string
           id?: string
+          notes?: string | null
           others_copies?: number | null
           others_details?: string | null
           others_selected?: boolean
+          pickup_date?: string | null
+          processed_by?: string | null
           purpose: string
           status?: string
           student_name: string
@@ -97,9 +103,12 @@ export type Database = {
           created_at?: string
           home_address?: string
           id?: string
+          notes?: string | null
           others_copies?: number | null
           others_details?: string | null
           others_selected?: boolean
+          pickup_date?: string | null
+          processed_by?: string | null
           purpose?: string
           status?: string
           student_name?: string
@@ -166,15 +175,51 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_roles: {
+        Args: {
+          user_id: string
+        }
+        Returns: Database["public"]["Enums"]["app_role"][]
+      }
+      has_role: {
+        Args: {
+          user_id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "student" | "faculty"
     }
     CompositeTypes: {
       [_ in never]: never
