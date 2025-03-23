@@ -18,20 +18,24 @@ import {
   CheckCircle,
   XCircle,
   ArrowUpDown,
-  Package
+  Package,
+  Calendar,
+  MessageCircle
 } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
+import { Sidebar } from "@/components/layout/Sidebar";
 
 type Request = Tables<"requests"> & {
   transcript_selected: boolean;
   certificate_selected: boolean;
   certification_selected: boolean;
   others_selected: boolean;
+  processor_name?: string | null;
 };
 
 const Requests: React.FC = () => {
   const navigate = useNavigate();
-  const { session } = useContext(SessionContext);
+  const { session, userRoles = [] } = useContext(SessionContext);
   const [userProfile, setUserProfile] = useState<{
     name: string | null;
     email: string | null;
@@ -42,6 +46,7 @@ const Requests: React.FC = () => {
     avatarUrl: null
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   // Update user profile whenever session changes
   useEffect(() => {
@@ -65,7 +70,7 @@ const Requests: React.FC = () => {
   }, [session, navigate]);
 
   // Use React Query to fetch requests, which handles caching and refetching
-  const { data: requests = [], isLoading, error, refetch } = useQuery({
+  const { data: requests = [], isLoading: requestsLoading, error, refetch } = useQuery({
     queryKey: ['requests', session?.user?.id],
     queryFn: async () => {
       if (!session?.user?.id) {
@@ -86,8 +91,20 @@ const Requests: React.FC = () => {
           throw error;
         }
         
-        console.log("Requests data:", data);
-        return (data || []) as Request[];
+        // Get processor names for approved requests
+        const requestsWithProcessorNames = await Promise.all((data || []).map(async (request) => {
+          if (request.processed_by) {
+            const { data: processorName } = await supabase.rpc(
+              'get_processor_name',
+              { processor_id: request.processed_by }
+            );
+            return { ...request, processor_name: processorName };
+          }
+          return request;
+        }));
+        
+        console.log("Requests data:", requestsWithProcessorNames);
+        return (requestsWithProcessorNames || []) as Request[];
       } catch (err) {
         console.error("Failed to fetch requests:", err);
         toast.error("Failed to load your requests. Please try again.");
@@ -110,21 +127,6 @@ const Requests: React.FC = () => {
   useEffect(() => {
     refetch();
   }, [refetch]);
-
-  const handleSignOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        toast.error(`Logout failed: ${error.message}`);
-      } else {
-        toast.success("Successfully logged out");
-        navigate("/");
-      }
-    } catch (err) {
-      console.error("Unexpected error during logout:", err);
-      toast.error("An unexpected error occurred. Please try again.");
-    }
-  };
 
   // Get request type as a formatted string
   const getRequestType = (request: Request): string => {
@@ -169,61 +171,12 @@ const Requests: React.FC = () => {
 
   return (
     <div className="min-h-screen flex">
-      {/* Sidebar */}
-      <div className="w-64 bg-[#0047AB] text-white p-6 flex flex-col">
-        <div className="flex items-center mb-10">
-          <img
-            src="https://cdn.builder.io/api/v1/image/assets/e3c6b0ec50df45b58e99e24af78e19b0/496ecc137f8c0eeb6c4acc7eae1c9701ab567695346929631763cd049528af73?placeholderIfAbsent=true"
-            alt="NEU Logo"
-            className="w-12 h-12 mr-3"
-          />
-          <h1 className="text-xl font-bold">NEU ARRS</h1>
-        </div>
-        
-        {/* User Profile Section */}
-        <div className="mb-6 flex flex-col items-center">
-          {userProfile.avatarUrl ? (
-            <img 
-              src={userProfile.avatarUrl} 
-              alt="Profile" 
-              className="w-16 h-16 rounded-full mb-2 border-2 border-white"
-            />
-          ) : (
-            <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-2">
-              <User className="w-8 h-8" />
-            </div>
-          )}
-          <p className="text-sm font-semibold text-center">{userProfile.name || "User"}</p>
-          <p className="text-xs text-white/70 text-center">{userProfile.email}</p>
-        </div>
-        
-        <nav className="flex-1">
-          <ul className="space-y-4">
-            <li>
-              <Link to="/dashboard" className="flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors">
-                <LayoutDashboard className="w-5 h-5 mr-3" />
-                Dashboard
-              </Link>
-            </li>
-            <li>
-              <Link to="/requests" className="flex items-center p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
-                <FileText className="w-5 h-5 mr-3" />
-                Requests
-              </Link>
-            </li>
-          </ul>
-        </nav>
-        
-        <div className="mt-auto">
-          <Button 
-            onClick={handleSignOut}
-            className="w-full flex items-center justify-center text-white bg-[#0047AB] border-2 border-white hover:bg-[#003d91]"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
-        </div>
-      </div>
+      {/* Sidebar using the new component */}
+      <Sidebar 
+        userProfile={userProfile} 
+        userRoles={userRoles} 
+        loading={isLoading} 
+      />
       
       {/* Main Content */}
       <div className="flex-1 p-10">
@@ -273,7 +226,7 @@ const Requests: React.FC = () => {
         </div>
 
         {/* Request Cards */}
-        {isLoading ? (
+        {requestsLoading ? (
           <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
             <p>Loading your requests...</p>
           </div>
@@ -299,13 +252,31 @@ const Requests: React.FC = () => {
                 className="bg-white rounded-lg shadow p-6 border border-gray-200 hover:border-[#0047AB] transition-colors"
               >
                 <div className="flex justify-between">
-                  <div>
+                  <div className="flex-1">
                     <h3 className="text-lg font-semibold">{request.student_name}</h3>
                     <p className="text-gray-600 text-sm">Type: {getRequestType(request)}</p>
                     <p className="text-gray-600 text-sm">Student Number: {request.student_number}</p>
                     <p className="text-gray-600 text-sm">Submitted: {formatDate(request.created_at)}</p>
+                    
+                    {/* Show processor info and pickup date for approved requests */}
+                    {request.status === 'approved' && (
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        <p className="text-gray-600 text-sm"><span className="font-medium">Processed by:</span> {request.processor_name || 'Staff Member'}</p>
+                        {request.pickup_date && (
+                          <p className="text-gray-600 text-sm"><span className="font-medium">Pickup Date:</span> {formatDate(request.pickup_date)}</p>
+                        )}
+                        {request.notes && (
+                          <div className="mt-2">
+                            <p className="text-gray-600 text-sm font-medium flex items-center">
+                              <MessageCircle className="w-3 h-3 mr-1" /> Notes:
+                            </p>
+                            <p className="text-gray-600 text-sm pl-4 mt-1 italic">{request.notes}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center">
+                  <div className="flex items-start ml-4">
                     {request.status === 'pending' && (
                       <span className="flex items-center text-amber-600">
                         <Clock className="w-4 h-4 mr-1" />

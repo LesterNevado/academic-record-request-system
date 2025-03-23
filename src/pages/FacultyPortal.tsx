@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useContext } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -13,10 +13,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { SessionContext } from "../App";
 import { useQuery } from "@tanstack/react-query";
 import { 
-  LayoutDashboard, 
-  User, 
-  FileText, 
-  LogOut,
   Package,
   Calendar as CalendarIcon,
   CheckCircle,
@@ -26,6 +22,7 @@ import {
   Filter,
   ArrowUpDown
 } from "lucide-react";
+import { Sidebar } from "@/components/layout/Sidebar";
 
 // Type for request with related transaction
 type RequestWithTransaction = {
@@ -58,17 +55,15 @@ type RequestWithTransaction = {
 
 const FacultyPortal: React.FC = () => {
   const navigate = useNavigate();
-  const { session } = useContext(SessionContext);
+  const { session, userRoles = [] } = useContext(SessionContext);
   const [userProfile, setUserProfile] = useState<{
     name: string | null;
     email: string | null;
     avatarUrl: string | null;
-    isFaculty: boolean;
   }>({
     name: null,
     email: null,
-    avatarUrl: null,
-    isFaculty: false
+    avatarUrl: null
   });
   
   const [searchTerm, setSearchTerm] = useState("");
@@ -76,6 +71,7 @@ const FacultyPortal: React.FC = () => {
   const [pickupDate, setPickupDate] = useState<Date | undefined>(undefined);
   const [processingNotes, setProcessingNotes] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Check if user is faculty
   useEffect(() => {
@@ -85,6 +81,7 @@ const FacultyPortal: React.FC = () => {
     }
 
     const checkUserRole = async () => {
+      setIsLoading(true);
       const { user } = session;
       
       // Get user metadata from session
@@ -117,16 +114,16 @@ const FacultyPortal: React.FC = () => {
       setUserProfile({
         name,
         email,
-        avatarUrl,
-        isFaculty
+        avatarUrl
       });
+      setIsLoading(false);
     };
     
     checkUserRole();
   }, [session, navigate]);
 
   // Fetch requests with payment status "awaiting_pickup"
-  const { data: requests = [], isLoading, error, refetch } = useQuery({
+  const { data: requests = [], isLoading: requestsLoading, error, refetch } = useQuery({
     queryKey: ['faculty-requests'],
     queryFn: async () => {
       try {
@@ -164,7 +161,7 @@ const FacultyPortal: React.FC = () => {
         return [];
       }
     },
-    enabled: !!userProfile.isFaculty,
+    enabled: !!session?.user?.id,
     refetchOnWindowFocus: false,
   });
 
@@ -180,21 +177,6 @@ const FacultyPortal: React.FC = () => {
   useEffect(() => {
     refetch();
   }, [refetch]);
-
-  const handleSignOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        toast.error(`Logout failed: ${error.message}`);
-      } else {
-        toast.success("Successfully logged out");
-        navigate("/");
-      }
-    } catch (err) {
-      console.error("Unexpected error during logout:", err);
-      toast.error("An unexpected error occurred. Please try again.");
-    }
-  };
 
   // Format date to a more readable format
   const formatDate = (dateString: string): string => {
@@ -262,74 +244,14 @@ const FacultyPortal: React.FC = () => {
     }
   };
 
-  if (!userProfile.isFaculty) {
-    return <div>Checking faculty access...</div>;
-  }
-
   return (
     <div className="min-h-screen flex">
-      {/* Sidebar */}
-      <div className="w-64 bg-[#0047AB] text-white p-6 flex flex-col">
-        <div className="flex items-center mb-10">
-          <img
-            src="https://cdn.builder.io/api/v1/image/assets/e3c6b0ec50df45b58e99e24af78e19b0/496ecc137f8c0eeb6c4acc7eae1c9701ab567695346929631763cd049528af73?placeholderIfAbsent=true"
-            alt="NEU Logo"
-            className="w-12 h-12 mr-3"
-          />
-          <h1 className="text-xl font-bold">NEU ARRS</h1>
-        </div>
-        
-        {/* User Profile Section */}
-        <div className="mb-6 flex flex-col items-center">
-          {userProfile.avatarUrl ? (
-            <img 
-              src={userProfile.avatarUrl} 
-              alt="Profile" 
-              className="w-16 h-16 rounded-full mb-2 border-2 border-white"
-            />
-          ) : (
-            <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-2">
-              <User className="w-8 h-8" />
-            </div>
-          )}
-          <p className="text-sm font-semibold text-center">{userProfile.name || "User"}</p>
-          <p className="text-xs text-white/70 text-center">{userProfile.email}</p>
-          <span className="mt-1 px-2 py-1 bg-amber-500 text-xs rounded-full">Faculty</span>
-        </div>
-        
-        <nav className="flex-1">
-          <ul className="space-y-4">
-            <li>
-              <Link to="/dashboard" className="flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors">
-                <LayoutDashboard className="w-5 h-5 mr-3" />
-                Dashboard
-              </Link>
-            </li>
-            <li>
-              <Link to="/faculty" className="flex items-center p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
-                <Package className="w-5 h-5 mr-3" />
-                Faculty Portal
-              </Link>
-            </li>
-            <li>
-              <Link to="/requests" className="flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors">
-                <FileText className="w-5 h-5 mr-3" />
-                My Requests
-              </Link>
-            </li>
-          </ul>
-        </nav>
-        
-        <div className="mt-auto">
-          <Button 
-            onClick={handleSignOut}
-            className="w-full flex items-center justify-center text-white bg-[#0047AB] border-2 border-white hover:bg-[#003d91]"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
-        </div>
-      </div>
+      {/* Use the Sidebar component */}
+      <Sidebar 
+        userProfile={userProfile}
+        userRoles={userRoles}
+        loading={isLoading}
+      />
       
       {/* Main Content */}
       <div className="flex-1 p-10">
@@ -372,7 +294,7 @@ const FacultyPortal: React.FC = () => {
         </div>
 
         {/* Request Cards */}
-        {isLoading ? (
+        {requestsLoading ? (
           <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
             <p>Loading requests...</p>
           </div>

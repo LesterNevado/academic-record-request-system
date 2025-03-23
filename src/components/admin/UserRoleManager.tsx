@@ -21,6 +21,7 @@ export const UserRoleManager: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<UserRole>("student");
   const [loading, setLoading] = useState<boolean>(false);
   const [roleLoading, setRoleLoading] = useState<boolean>(false);
+  const [userRoles, setUserRoles] = useState<{[key: string]: UserRole[]}>({});
   
   // Fetch users from profiles table
   useEffect(() => {
@@ -36,12 +37,41 @@ export const UserRoleManager: React.FC = () => {
         console.error("Error fetching users:", error);
       } else {
         setUsers(data as UserProfile[]);
+        
+        // Fetch existing roles for all users
+        await fetchAllUserRoles(data as UserProfile[]);
       }
       setLoading(false);
     };
     
     fetchUsers();
   }, []);
+  
+  // Fetch roles for all users
+  const fetchAllUserRoles = async (userProfiles: UserProfile[]) => {
+    const userIds = userProfiles.map(user => user.id);
+    const roles: {[key: string]: UserRole[]} = {};
+    
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('user_id, role')
+      .in('user_id', userIds);
+    
+    if (error) {
+      console.error("Error fetching user roles:", error);
+      return;
+    }
+    
+    // Group roles by user
+    data.forEach(item => {
+      if (!roles[item.user_id]) {
+        roles[item.user_id] = [];
+      }
+      roles[item.user_id].push(item.role as UserRole);
+    });
+    
+    setUserRoles(roles);
+  };
   
   // Assign role to user
   const assignRole = async () => {
@@ -67,7 +97,7 @@ export const UserRoleManager: React.FC = () => {
         return;
       }
       
-      // Add the role
+      // Add the role - admin can manage roles due to the RLS policy we added
       const { error } = await supabase
         .from('user_roles')
         .insert({
@@ -79,6 +109,14 @@ export const UserRoleManager: React.FC = () => {
         throw error;
       }
       
+      // Update the local state
+      const updatedRoles = { ...userRoles };
+      if (!updatedRoles[selectedUser]) {
+        updatedRoles[selectedUser] = [];
+      }
+      updatedRoles[selectedUser].push(selectedRole);
+      setUserRoles(updatedRoles);
+      
       toast.success(`Successfully assigned ${selectedRole} role to user`);
     } catch (error) {
       console.error("Error assigning role:", error);
@@ -86,6 +124,11 @@ export const UserRoleManager: React.FC = () => {
     } finally {
       setRoleLoading(false);
     }
+  };
+
+  // Get user's existing roles
+  const getUserRoles = (userId: string): UserRole[] => {
+    return userRoles[userId] || [];
   };
 
   return (
@@ -116,6 +159,23 @@ export const UserRoleManager: React.FC = () => {
             </SelectContent>
           </Select>
         </div>
+        
+        {selectedUser && (
+          <div className="bg-gray-50 p-3 rounded-md">
+            <p className="text-sm font-medium mb-1">Current Roles:</p>
+            {getUserRoles(selectedUser).length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {getUserRoles(selectedUser).map((role, idx) => (
+                  <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                    {role}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">No roles assigned</p>
+            )}
+          </div>
+        )}
         
         <div className="space-y-2">
           <label className="text-sm font-medium">Select Role</label>
