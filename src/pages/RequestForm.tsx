@@ -1,14 +1,7 @@
-
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
-import { 
-  LayoutDashboard, 
-  User, 
-  FileText, 
-  LogOut,
-  ArrowLeft 
-} from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SessionContext } from "../App";
 import { toast } from "sonner";
@@ -17,10 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PaymentButton } from "@/components/payment/PaymentButton";
+import { Sidebar } from "@/components/layout/Sidebar";
 
 const RequestForm: React.FC = () => {
   const navigate = useNavigate();
-  const { session } = useContext(SessionContext);
+  const { session, userRoles: contextRoles } = useContext(SessionContext);
   const [userProfile, setUserProfile] = useState<{
     name: string | null;
     email: string | null;
@@ -30,6 +24,8 @@ const RequestForm: React.FC = () => {
     email: null,
     avatarUrl: null
   });
+  
+  const [userRoles, setUserRoles] = useState<string[]>(contextRoles || []);
   
   const [formData, setFormData] = useState({
     studentName: "",
@@ -54,7 +50,7 @@ const RequestForm: React.FC = () => {
   const [showPayment, setShowPayment] = useState(false);
 
   useEffect(() => {
-    const updateUserProfile = () => {
+    const updateUserProfile = async () => {
       if (!session) {
         navigate('/');
         return;
@@ -79,10 +75,39 @@ const RequestForm: React.FC = () => {
           studentName: name
         }));
       }
+      
+      // If roles aren't provided from context, fetch them
+      if (!contextRoles || contextRoles.length === 0) {
+        // Fetch user roles
+        const { data: roles, error: rolesError } = await supabase.rpc(
+          'get_user_roles',
+          { user_id: user.id }
+        );
+        
+        if (rolesError) {
+          console.error("Error fetching roles:", rolesError);
+          toast.error(`Error fetching roles: ${rolesError.message}`);
+        } else {
+          console.log("User roles:", roles);
+          setUserRoles(roles || []);
+          
+          // Check if user is faculty or admin, redirect if so
+          if (roles && (roles.includes('faculty') || roles.includes('admin'))) {
+            toast.error('Faculty and Admin users cannot create requests');
+            navigate('/dashboard');
+          }
+        }
+      } else {
+        // If user is faculty or admin, redirect to dashboard
+        if (contextRoles.includes('faculty') || contextRoles.includes('admin')) {
+          toast.error('Faculty and Admin users cannot create requests');
+          navigate('/dashboard');
+        }
+      }
     };
 
     updateUserProfile();
-  }, [session, navigate]);
+  }, [session, navigate, contextRoles]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -232,85 +257,17 @@ const RequestForm: React.FC = () => {
     }
   };
 
-  const handleSignOut = async () => {
-    try {
-      setLoading(true);
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        toast.error(`Logout failed: ${error.message}`);
-      } else {
-        toast.success("Successfully logged out");
-        navigate("/");
-      }
-    } catch (err) {
-      console.error("Unexpected error during logout:", err);
-      toast.error("An unexpected error occurred. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const requiredFieldStyle = "text-[#ea384c]";
 
   return (
     <div className="min-h-screen flex">
-      <div className="w-64 bg-[#0047AB] text-white p-6 flex flex-col">
-        <div className="flex items-center mb-10">
-          <img
-            src="https://cdn.builder.io/api/v1/image/assets/e3c6b0ec50df45b58e99e24af78e19b0/496ecc137f8c0eeb6c4acc7eae1c9701ab567695346929631763cd049528af73?placeholderIfAbsent=true"
-            alt="NEU Logo"
-            className="w-12 h-12 mr-3"
-          />
-          <h1 className="text-xl font-bold">NEU ARRS</h1>
-        </div>
-        
-        <div className="mb-6 flex flex-col items-center">
-          {userProfile.avatarUrl ? (
-            <img 
-              src={userProfile.avatarUrl} 
-              alt="Profile" 
-              className="w-16 h-16 rounded-full mb-2 border-2 border-white"
-            />
-          ) : (
-            <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-2">
-              <User className="w-8 h-8" />
-            </div>
-          )}
-          <p className="text-sm font-semibold text-center">{userProfile.name || "User"}</p>
-          <p className="text-xs text-white/70 text-center">{userProfile.email}</p>
-        </div>
-        
-        <nav className="flex-1">
-          <ul className="space-y-4">
-            <li>
-              <Link to="/dashboard" className="flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors">
-                <LayoutDashboard className="w-5 h-5 mr-3" />
-                Dashboard
-              </Link>
-            </li>
-            <li>
-              <Link to="/requests" className="flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors">
-                <FileText className="w-5 h-5 mr-3" />
-                Requests
-              </Link>
-            </li>
-          </ul>
-        </nav>
-        
-        <div className="mt-auto">
-          <Button 
-            onClick={handleSignOut}
-            variant="outline"
-            className="w-full flex items-center justify-center text-white bg-[#0047AB] border-2 border-white hover:bg-[#003d91]"
-            disabled={loading}
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            {loading ? "Signing out..." : "Sign Out"}
-          </Button>
-        </div>
-      </div>
+      <Sidebar 
+        userProfile={userProfile}
+        userRoles={userRoles}
+        loading={loading}
+      />
       
-      <div className="flex-1 p-10">
+      <div className="flex-1 p-10 overflow-y-auto">
         <div className="mb-6 flex items-center">
           <Button 
             variant="ghost" 

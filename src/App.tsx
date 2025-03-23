@@ -27,21 +27,27 @@ const queryClient = new QueryClient({
   },
 });
 
+export type UserRole = 'student' | 'faculty' | 'admin';
+
 export const SessionContext = createContext<{
   session: Session | null;
+  userRoles?: UserRole[];
 }>({ 
   session: null
 });
 
 type ProtectedRouteProps = {
   children: React.ReactNode;
-  requiredRole?: 'faculty' | 'admin'; // Optional role requirement
+  requiredRole?: UserRole; // Optional role requirement
+  restrictedRoles?: UserRole[]; // Optional roles to restrict
 };
 
-const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ children, requiredRole, restrictedRoles }: ProtectedRouteProps) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [hasRole, setHasRole] = useState<boolean | null>(null);
+  const [isRestricted, setIsRestricted] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   
   useEffect(() => {
     const checkAuth = async () => {
@@ -52,36 +58,62 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
         const isAuth = !!sessionData.session;
         setIsAuthenticated(isAuth);
         
-        // If a specific role is required and user is authenticated, check for that role
-        if (requiredRole && isAuth && sessionData.session) {
-          const { data, error } = await supabase.rpc(
-            'has_role',
-            { user_id: sessionData.session.user.id, role: requiredRole }
+        if (isAuth && sessionData.session) {
+          // Fetch all user roles
+          const { data: roles, error: rolesError } = await supabase.rpc(
+            'get_user_roles',
+            { user_id: sessionData.session.user.id }
           );
           
-          if (error) {
-            console.error("Error checking role:", error);
-            toast.error(`Error checking role: ${error.message}`);
-            setHasRole(false);
+          if (rolesError) {
+            console.error("Error fetching roles:", rolesError);
+            toast.error(`Error fetching roles: ${rolesError.message}`);
+            setUserRoles([]);
           } else {
-            console.log(`Has ${requiredRole} role:`, data);
-            setHasRole(!!data);
+            console.log("User roles for route protection:", roles);
+            setUserRoles(roles || []);
           }
-        } else if (!requiredRole) {
-          // If no specific role is required, set hasRole to true
-          setHasRole(true);
+          
+          // Check if specific role is required
+          if (requiredRole) {
+            const { data, error } = await supabase.rpc(
+              'has_role',
+              { user_id: sessionData.session.user.id, role: requiredRole }
+            );
+            
+            if (error) {
+              console.error("Error checking role:", error);
+              toast.error(`Error checking role: ${error.message}`);
+              setHasRole(false);
+            } else {
+              console.log(`Has ${requiredRole} role:`, data);
+              setHasRole(!!data);
+            }
+          } else {
+            // If no specific role is required, set hasRole to true
+            setHasRole(true);
+          }
+          
+          // Check if user has any restricted roles
+          if (restrictedRoles && restrictedRoles.length > 0) {
+            const hasRestrictedRole = roles ? restrictedRoles.some(role => roles.includes(role)) : false;
+            setIsRestricted(hasRestrictedRole);
+          } else {
+            setIsRestricted(false);
+          }
         }
       } catch (error) {
         console.error("Auth check error:", error);
         setIsAuthenticated(false);
         setHasRole(false);
+        setIsRestricted(false);
       } finally {
         setIsLoading(false);
       }
     };
     
     checkAuth();
-  }, [requiredRole]);
+  }, [requiredRole, restrictedRoles]);
   
   if (isLoading) {
     return (
@@ -103,23 +135,43 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
     return <Navigate to="/dashboard" />;
   }
   
+  if (isRestricted) {
+    toast.error(`This page is not accessible with your current role`);
+    return <Navigate to="/dashboard" />;
+  }
+  
   return <>{children}</>;
 };
 
 const App = () => {
   const [session, setSession] = useState<Session | null>(null);
+  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
 
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
       setSession(data.session);
+      
+      if (data.session) {
+        // Fetch user roles
+        const { data: roles, error } = await supabase.rpc(
+          'get_user_roles',
+          { user_id: data.session.user.id }
+        );
+        
+        if (error) {
+          console.error("Error fetching roles:", error);
+        } else {
+          setUserRoles(roles || []);
+        }
+      }
     };
     
     checkSession();
   }, []);
 
   return (
-    <SessionContext.Provider value={{ session }}>
+    <SessionContext.Provider value={{ session, userRoles }}>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />
@@ -128,11 +180,23 @@ const App = () => {
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/request" element={<ProtectedRoute><RequestForm /></ProtectedRoute>} />
-              <Route path="/requests" element={<ProtectedRoute><Requests /></ProtectedRoute>} />
+              <Route path="/request" element={
+                <ProtectedRoute restrictedRoles={['faculty', 'admin']}>
+                  <RequestForm />
+                </ProtectedRoute>
+              } />
+              <Route path="/requests" element={
+                <ProtectedRoute restrictedRoles={['faculty', 'admin']}>
+                  <Requests />
+                </ProtectedRoute>
+              } />
               <Route path="/faculty" element={<ProtectedRoute requiredRole="faculty"><FacultyPortal /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute>} />
-              <Route path="/payment-status" element={<ProtectedRoute><PaymentStatus /></ProtectedRoute>} />
+              <Route path="/payment-status" element={
+                <ProtectedRoute restrictedRoles={['faculty', 'admin']}>
+                  <PaymentStatus />
+                </ProtectedRoute>
+              } />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

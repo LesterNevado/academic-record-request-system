@@ -61,16 +61,18 @@ const Dashboard: React.FC = () => {
           setUserRoles(roles || []);
         }
 
-        // Fetch request count
-        const { count, error } = await supabase
-          .from('requests')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-        
-        if (error) {
-          console.error("Error fetching requests:", error);
-        } else {
-          setRequestCount(count || 0);
+        // Only fetch request count for students
+        if (!roles || !roles.includes('faculty') && !roles.includes('admin')) {
+          const { count, error } = await supabase
+            .from('requests')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id);
+          
+          if (error) {
+            console.error("Error fetching requests:", error);
+          } else {
+            setRequestCount(count || 0);
+          }
         }
       } catch (error) {
         console.error("Error getting session:", error);
@@ -100,6 +102,9 @@ const Dashboard: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Check if user is a student (no special roles or only has 'student' role)
+  const isStudent = userRoles.length === 0 || (userRoles.length === 1 && userRoles.includes('student'));
 
   if (loading) {
     return (
@@ -140,6 +145,8 @@ const Dashboard: React.FC = () => {
           )}
           <p className="text-sm font-semibold text-center">{userProfile.name || "User"}</p>
           <p className="text-xs text-white/70 text-center">{userProfile.email}</p>
+          
+          {/* Role badges - Always displayed */}
           <div className="mt-2 flex flex-wrap gap-1 justify-center">
             {userRoles.map((role) => (
               <span key={role} className={`px-2 py-1 text-xs rounded-full ${
@@ -185,12 +192,15 @@ const Dashboard: React.FC = () => {
               </li>
             )}
             
-            <li>
-              <Link to="/requests" className="flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors">
-                <FileText className="w-5 h-5 mr-3" />
-                Requests
-              </Link>
-            </li>
+            {/* Only show Requests link for students */}
+            {isStudent && (
+              <li>
+                <Link to="/requests" className="flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors">
+                  <FileText className="w-5 h-5 mr-3" />
+                  Requests
+                </Link>
+              </li>
+            )}
           </ul>
         </nav>
         
@@ -210,33 +220,40 @@ const Dashboard: React.FC = () => {
       <div className="flex-1 p-10">
         <header className="mb-10">
           <h1 className="text-3xl font-bold">Welcome{userProfile.name ? `, ${userProfile.name.split(' ')[0]}` : ''}!</h1>
-          <p className="text-gray-600 mt-2">Manage and track your academic record requests</p>
+          <p className="text-gray-600 mt-2">
+            {userRoles.includes('admin') ? 'Manage users and view requests in the system' :
+             userRoles.includes('faculty') ? 'Process and verify student requests' :
+             'Manage and track your academic record requests'}
+          </p>
         </header>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="border border-gray-200 shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">My Requests</h2>
-                <div className="bg-blue-100 text-blue-800 rounded-full w-8 h-8 flex items-center justify-center font-bold">
-                  {requestCount}
+          {/* Only show Requests card for students */}
+          {isStudent && (
+            <Card className="border border-gray-200 shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold">My Requests</h2>
+                  <div className="bg-blue-100 text-blue-800 rounded-full w-8 h-8 flex items-center justify-center font-bold">
+                    {requestCount}
+                  </div>
                 </div>
-              </div>
-              
-              <p className="text-gray-600">
-                {requestCount > 0 
-                  ? `You have ${requestCount} request${requestCount !== 1 ? 's' : ''}`
-                  : "You have no requests yet"}
-              </p>
-              
-              <Button 
-                onClick={() => navigate("/request")} 
-                className="mt-4 w-full bg-[#0047AB] hover:bg-[#00377e]"
-              >
-                New Request
-              </Button>
-            </CardContent>
-          </Card>
+                
+                <p className="text-gray-600">
+                  {requestCount > 0 
+                    ? `You have ${requestCount} request${requestCount !== 1 ? 's' : ''}`
+                    : "You have no requests yet"}
+                </p>
+                
+                <Button 
+                  onClick={() => navigate("/request")} 
+                  className="mt-4 w-full bg-[#0047AB] hover:bg-[#00377e]"
+                >
+                  New Request
+                </Button>
+              </CardContent>
+            </Card>
+          )}
           
           {/* Role-specific cards */}
           {userRoles.includes('faculty') && (
