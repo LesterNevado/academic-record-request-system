@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 interface UserProfile {
   id: string;
@@ -21,7 +23,7 @@ export const UserRoleManager: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<UserRole>("student");
   const [loading, setLoading] = useState<boolean>(false);
   const [roleLoading, setRoleLoading] = useState<boolean>(false);
-  const [userRoles, setUserRoles] = useState<{[key: string]: UserRole[]}>({});
+  const [userRoles, setUserRoles] = useState<{[key: string]: UserRole}>({});
   
   // Fetch users from profiles table
   useEffect(() => {
@@ -47,33 +49,31 @@ export const UserRoleManager: React.FC = () => {
     fetchUsers();
   }, []);
   
-  // Fetch roles for all users
+  // Fetch roles for all users - modified to get only the most recent role
   const fetchAllUserRoles = async (userProfiles: UserProfile[]) => {
     const userIds = userProfiles.map(user => user.id);
-    const roles: {[key: string]: UserRole[]} = {};
+    const roles: {[key: string]: UserRole} = {};
     
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('user_id, role')
-      .in('user_id', userIds);
-    
-    if (error) {
-      console.error("Error fetching user roles:", error);
-      return;
-    }
-    
-    // Group roles by user
-    data.forEach(item => {
-      if (!roles[item.user_id]) {
-        roles[item.user_id] = [];
+    // For each user, get their role (there should be only one per user with our new approach)
+    for (const userId of userIds) {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(1);
+      
+      if (error) {
+        console.error(`Error fetching role for user ${userId}:`, error);
+      } else if (data && data.length > 0) {
+        roles[userId] = data[0].role as UserRole;
       }
-      roles[item.user_id].push(item.role as UserRole);
-    });
+    }
     
     setUserRoles(roles);
   };
   
-  // Assign role to user
+  // Assign or update role for user
   const assignRole = async () => {
     if (!selectedUser) {
       toast.error("Please select a user");
@@ -83,41 +83,71 @@ export const UserRoleManager: React.FC = () => {
     setRoleLoading(true);
     
     try {
-      // First check if the user already has this role
-      const { data: existingRole } = await supabase
-        .from('user_roles')
-        .select('id')
-        .eq('user_id', selectedUser)
-        .eq('role', selectedRole)
-        .maybeSingle();
+      const currentRole = userRoles[selectedUser];
       
-      if (existingRole) {
+      if (currentRole === selectedRole) {
         toast.info(`User already has the ${selectedRole} role`);
         setRoleLoading(false);
         return;
       }
       
-      // Add the role - admin can manage roles due to the RLS policy we added
-      const { error } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: selectedUser,
-          role: selectedRole
-        });
-      
-      if (error) {
-        throw error;
+      if (currentRole) {
+        // User already has a role, so we need to update their existing role
+        // First, get the current role entry
+        const { data: existingRoleData, error: fetchError } = await supabase
+          .from('user_roles')
+          .select('id')
+          .eq('user_id', selectedUser)
+          .order('updated_at', { ascending: false })
+          .limit(1);
+        
+        if (fetchError) {
+          throw fetchError;
+        }
+        
+        if (existingRoleData && existingRoleData.length > 0) {
+          // Update the existing role
+          const { error: updateError } = await supabase
+            .from('user_roles')
+            .update({ 
+              role: selectedRole,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingRoleData[0].id);
+          
+          if (updateError) {
+            throw updateError;
+          }
+        } else {
+          // This should not happen, but if for some reason we can't find the role record,
+          // create a new one
+          const { error } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: selectedUser,
+              role: selectedRole
+            });
+          
+          if (error) throw error;
+        }
+      } else {
+        // User has no role yet, create a new one
+        const { error } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: selectedUser,
+            role: selectedRole
+          });
+        
+        if (error) throw error;
       }
       
       // Update the local state
       const updatedRoles = { ...userRoles };
-      if (!updatedRoles[selectedUser]) {
-        updatedRoles[selectedUser] = [];
-      }
-      updatedRoles[selectedUser].push(selectedRole);
+      updatedRoles[selectedUser] = selectedRole;
       setUserRoles(updatedRoles);
       
-      toast.success(`Successfully assigned ${selectedRole} role to user`);
+      toast.success(`Successfully updated user to ${selectedRole} role`);
     } catch (error) {
       console.error("Error assigning role:", error);
       toast.error("Failed to assign role");
@@ -126,9 +156,9 @@ export const UserRoleManager: React.FC = () => {
     }
   };
 
-  // Get user's existing roles
-  const getUserRoles = (userId: string): UserRole[] => {
-    return userRoles[userId] || [];
+  // Get user's current role
+  const getUserRole = (userId: string): UserRole | null => {
+    return userRoles[userId] || null;
   };
 
   return (
@@ -145,7 +175,14 @@ export const UserRoleManager: React.FC = () => {
           <Select
             disabled={loading || users.length === 0}
             value={selectedUser || undefined}
-            onValueChange={setSelectedUser}
+            onValueChange={(value) => {
+              setSelectedUser(value);
+              // Set the selected role to match the user's current role, if they have one
+              const userRole = userRoles[value];
+              if (userRole) {
+                setSelectedRole(userRole);
+              }
+            }}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select a user" />
@@ -162,36 +199,39 @@ export const UserRoleManager: React.FC = () => {
         
         {selectedUser && (
           <div className="bg-gray-50 p-3 rounded-md">
-            <p className="text-sm font-medium mb-1">Current Roles:</p>
-            {getUserRoles(selectedUser).length > 0 ? (
+            <p className="text-sm font-medium mb-1">Current Role:</p>
+            {getUserRole(selectedUser) ? (
               <div className="flex flex-wrap gap-1">
-                {getUserRoles(selectedUser).map((role, idx) => (
-                  <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                    {role}
-                  </span>
-                ))}
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                  {getUserRole(selectedUser)}
+                </span>
               </div>
             ) : (
-              <p className="text-sm text-gray-500">No roles assigned</p>
+              <p className="text-sm text-gray-500">No role assigned</p>
             )}
           </div>
         )}
         
         <div className="space-y-2">
           <label className="text-sm font-medium">Select Role</label>
-          <Select
+          <RadioGroup 
             value={selectedRole} 
             onValueChange={(value: UserRole) => setSelectedRole(value)}
+            className="flex flex-col space-y-2 mt-2"
           >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select a role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="student">Student</SelectItem>
-              <SelectItem value="faculty">Faculty</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
-            </SelectContent>
-          </Select>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="student" id="student" />
+              <Label htmlFor="student">Student</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="faculty" id="faculty" />
+              <Label htmlFor="faculty">Faculty</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="admin" id="admin" />
+              <Label htmlFor="admin">Admin</Label>
+            </div>
+          </RadioGroup>
         </div>
         
         <Button 
@@ -199,7 +239,7 @@ export const UserRoleManager: React.FC = () => {
           onClick={assignRole} 
           disabled={!selectedUser || roleLoading}
         >
-          {roleLoading ? "Assigning..." : "Assign Role"}
+          {roleLoading ? "Updating..." : "Update Role"}
         </Button>
       </CardContent>
     </Card>
