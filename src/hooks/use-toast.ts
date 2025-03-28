@@ -196,6 +196,13 @@ toast.dismiss = (toastId?: string) => {
   dispatch({ type: "DISMISS_TOAST", toastId })
 }
 
+// Make dismiss method explicitly available on the toast function
+Object.defineProperty(toast, 'dismiss', {
+  value: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+  writable: false,
+  configurable: false,
+})
+
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
 
