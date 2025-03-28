@@ -115,125 +115,17 @@ serve(async (req) => {
       );
     }
     
-    // Email template based on the provided design
-    const logoUrl = "https://raw.githubusercontent.com/lnevado2/ARRS/main/src/assets/neu-logo.svg";
+    // Simple plain text email content
     const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            font-size: 14px;
-          }
-          .email-container {
-            width: 450px;
-            margin: 0 auto;
-            border: 1px solid #000;
-            background-color: #ffffff;
-          }
-          .header {
-            background-color: #0047AB;
-            padding: 15px;
-            color: white;
-            text-align: center;
-            height: 100px;
-            position: relative;
-          }
-          .logo {
-            position: absolute;
-            left: 28px;
-            top: 10px;
-            width: 78px;
-            height: 78px;
-          }
-          .header-title {
-            font-size: 32px;
-            font-weight: 800;
-            margin-top: 10px;
-          }
-          .header-subtitle {
-            font-size: 16px;
-            font-weight: 500;
-            margin-top: 5px;
-          }
-          .content {
-            padding: 20px;
-          }
-          .date {
-            font-size: 12px;
-            color: #000;
-            margin-bottom: 15px;
-          }
-          .greeting {
-            margin-bottom: 20px;
-          }
-          .details-box {
-            background-color: #D9D9D9;
-            padding: 15px;
-            margin: 20px 0;
-          }
-          .details-title {
-            font-size: 14px;
-            font-weight: bold;
-          }
-          .details-item {
-            font-size: 12px;
-            margin-top: 5px;
-          }
-          .instructions {
-            font-size: 12px;
-            margin: 20px 0;
-          }
-          .footer {
-            background-color: #0047AB;
-            padding: 10px;
-            color: white;
-            text-align: center;
-            font-size: 12px;
-            height: 40px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="email-container">
-          <div class="header">
-            <img src="https://raw.githubusercontent.com/lnevado2/ARRS/93f1f6e9a0af9a61d3bd6a5e34c1183ae12aea01/src/assets/neu-logo.png" alt="New Era University Logo" class="logo">
-            <div class="header-title">NEU ARRS</div>
-            <div class="header-subtitle">Academic Record Request System</div>
-          </div>
-          
-          <div class="content">
-            <div class="date">Date: ${new Date().toLocaleDateString()}</div>
-            
-            <div class="greeting">
-              Hi ${studentName},<br><br>
-              Good news! Your document request has been approved and is scheduled for pickup.
-            </div>
-            
-            <div class="details-box">
-              <div class="details-title">Request Details:</div>
-              <div class="details-item"><strong>Document Type:</strong> ${requestTypeText}</div>
-              <div class="details-item"><strong>Pickup Date:</strong> ${pickupDate}</div>
-              ${requestData.notes ? `<div class="details-item"><strong>Notes:</strong> ${requestData.notes}</div>` : ''}
-            </div>
-            
-            <div class="instructions">
-              Please make sure to bring your ID for verification when you come to pick up your documents.<br><br>
-              Claim your documents at room #207 (temporary only).<br>
-              For Statement of Account (SOA), please proceed at the Accounting Office (Room 202)<br><br>
-              If you have any questions or need to reschedule, please contact the Admission, Scholarship and Financial Assistance Office.
-            </div>
-          </div>
-          
-          <div class="footer">
-            This is an automated message. Please do not reply to this email.
-          </div>
-        </div>
-      </body>
-      </html>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <p>Hello ${studentName},</p>
+        
+        <p>Good news! Your document request (${requestTypeText}) has been approved and is scheduled for pickup on ${pickupDate}.</p>
+        
+        <p>Please make sure to bring your ID when you come to pick up your documents at room #207.</p>
+        
+        <p>Regards,<br>New Era University</p>
+      </div>
     `;
     
     // Send the email
