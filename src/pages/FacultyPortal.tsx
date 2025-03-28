@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -20,11 +19,11 @@ import {
   Clock,
   Search,
   Filter,
-  ArrowUpDown
+  ArrowUpDown,
+  Mail
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 
-// Type for request with related transaction
 type RequestWithTransaction = {
   id: string;
   student_name: string;
@@ -43,7 +42,6 @@ type RequestWithTransaction = {
   certification_selected: boolean;
   others_selected: boolean;
   
-  // Transaction data
   transaction?: {
     id: string;
     amount: number;
@@ -73,7 +71,6 @@ const FacultyPortal: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Check if user is faculty
   useEffect(() => {
     if (!session) {
       navigate('/');
@@ -84,12 +81,10 @@ const FacultyPortal: React.FC = () => {
       setIsLoading(true);
       const { user } = session;
       
-      // Get user metadata from session
       const name = user.user_metadata.name || user.user_metadata.full_name;
       const email = user.email;
       const avatarUrl = user.user_metadata.avatar_url;
       
-      // Check if user has faculty role
       const { data, error } = await supabase.rpc(
         'has_role',
         { user_id: user.id, role: 'faculty' }
@@ -110,7 +105,6 @@ const FacultyPortal: React.FC = () => {
         return;
       }
       
-      // Set user profile
       setUserProfile({
         name,
         email,
@@ -122,7 +116,6 @@ const FacultyPortal: React.FC = () => {
     checkUserRole();
   }, [session, navigate]);
 
-  // Fetch requests with payment status "awaiting_pickup"
   const { data: requests = [], isLoading: requestsLoading, error, refetch } = useQuery({
     queryKey: ['faculty-requests'],
     queryFn: async () => {
@@ -135,7 +128,6 @@ const FacultyPortal: React.FC = () => {
         
         if (requestsError) throw requestsError;
         
-        // Fetch transactions for these requests
         const requestIds = requestsData.map(req => req.id);
         
         const { data: transactionsData, error: transactionsError } = await supabase
@@ -145,7 +137,6 @@ const FacultyPortal: React.FC = () => {
         
         if (transactionsError) throw transactionsError;
         
-        // Combine requests with their transactions
         const requestsWithTransactions = requestsData.map(request => {
           const transaction = transactionsData.find(t => t.request_id === request.id);
           return {
@@ -165,7 +156,6 @@ const FacultyPortal: React.FC = () => {
     refetchOnWindowFocus: false,
   });
 
-  // Handle errors from React Query
   useEffect(() => {
     if (error) {
       toast.error("Failed to load requests. Please try again.");
@@ -173,12 +163,10 @@ const FacultyPortal: React.FC = () => {
     }
   }, [error]);
 
-  // Force refetch when visiting the page
   useEffect(() => {
     refetch();
   }, [refetch]);
 
-  // Format date to a more readable format
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { 
@@ -188,7 +176,6 @@ const FacultyPortal: React.FC = () => {
     });
   };
 
-  // Get request type as a formatted string
   const getRequestType = (request: RequestWithTransaction): string => {
     const types = [];
     if (request.transcript_selected) types.push("Transcript of Records");
@@ -199,14 +186,12 @@ const FacultyPortal: React.FC = () => {
     return types.join(", ");
   };
 
-  // Filter requests based on search term
   const filteredRequests = requests.filter(request => 
     request.student_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     getRequestType(request).toLowerCase().includes(searchTerm.toLowerCase()) ||
     request.student_number.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Handle processing a request
   const processRequest = (request: RequestWithTransaction) => {
     setSelectedRequest(request);
     setProcessingNotes("");
@@ -214,7 +199,6 @@ const FacultyPortal: React.FC = () => {
     setDialogOpen(true);
   };
 
-  // Handle confirming the pickup date and processing
   const confirmProcessing = async () => {
     if (!selectedRequest || !pickupDate) {
       toast.error("Please select a pickup date");
@@ -222,7 +206,6 @@ const FacultyPortal: React.FC = () => {
     }
 
     try {
-      // Update the request status
       const { error } = await supabase
         .from('requests')
         .update({
@@ -235,6 +218,14 @@ const FacultyPortal: React.FC = () => {
       
       if (error) throw error;
       
+      const emailPromise = sendApprovalEmail(selectedRequest.id);
+      
+      toast.promise(emailPromise, {
+        loading: "Sending email notification...",
+        success: "Email notification sent successfully",
+        error: "Failed to send email notification"
+      });
+      
       toast.success("Request processed successfully");
       setDialogOpen(false);
       refetch();
@@ -244,16 +235,28 @@ const FacultyPortal: React.FC = () => {
     }
   };
 
+  const sendApprovalEmail = async (requestId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-approval-email', {
+        body: { requestId }
+      });
+      
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error("Failed to send email notification:", err);
+      throw err;
+    }
+  };
+
   return (
     <div className="min-h-screen flex">
-      {/* Use the Sidebar component */}
       <Sidebar 
         userProfile={userProfile}
         userRoles={userRoles}
         loading={isLoading}
       />
       
-      {/* Main Content */}
       <div className="flex-1 p-10">
         <header className="mb-8">
           <div className="flex justify-between items-center">
@@ -271,7 +274,6 @@ const FacultyPortal: React.FC = () => {
           <p className="text-gray-600 mt-2">Process and schedule pickups for student record requests</p>
         </header>
 
-        {/* Search and filter */}
         <div className="mb-6 flex space-x-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -293,7 +295,6 @@ const FacultyPortal: React.FC = () => {
           </Button>
         </div>
 
-        {/* Request Cards */}
         {requestsLoading ? (
           <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
             <p>Loading requests...</p>
@@ -378,7 +379,6 @@ const FacultyPortal: React.FC = () => {
         )}
       </div>
 
-      {/* Processing Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -420,6 +420,11 @@ const FacultyPortal: React.FC = () => {
                 value={processingNotes}
                 onChange={(e) => setProcessingNotes(e.target.value)}
               />
+            </div>
+            
+            <div className="text-sm text-gray-500 flex items-center mt-2">
+              <Mail className="w-4 h-4 mr-2" />
+              An email notification will be sent to the student when approved.
             </div>
           </div>
           <DialogFooter>
