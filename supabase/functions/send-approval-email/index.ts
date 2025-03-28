@@ -153,7 +153,9 @@ serve(async (req) => {
         "Content-Type": "text/html; charset=UTF-8",
         "X-Priority": "1",
         "X-MSMail-Priority": "High",
-        "Importance": "High"
+        "Importance": "High",
+        "X-Mailer": "NEU Document Request System",
+        "MIME-Version": "1.0"
       }
     });
     
