@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { SessionContext } from "../App";
 import { useQuery } from "@tanstack/react-query";
@@ -201,7 +202,11 @@ const FacultyPortal: React.FC = () => {
 
   const confirmProcessing = async () => {
     if (!selectedRequest || !pickupDate) {
-      toast.error("Please select a pickup date");
+      toast({
+        title: "Error",
+        description: "Please select a pickup date",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -222,16 +227,30 @@ const FacultyPortal: React.FC = () => {
       
       toast.promise(emailPromise, {
         loading: "Sending email notification...",
-        success: "Email notification sent successfully",
-        error: "Failed to send email notification"
+        success: () => ({
+          title: "Success",
+          description: "Email notification sent successfully"
+        }),
+        error: () => ({
+          title: "Error",
+          description: "Failed to send email notification",
+          variant: "destructive"
+        })
       });
       
-      toast.success("Request processed successfully");
+      toast({
+        title: "Success",
+        description: "Request processed successfully"
+      });
       setDialogOpen(false);
       refetch();
     } catch (err) {
       console.error("Error processing request:", err);
-      toast.error("Failed to process request. Please try again.");
+      toast({
+        title: "Error",
+        description: "Failed to process request. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
