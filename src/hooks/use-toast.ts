@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import type {
@@ -166,6 +167,33 @@ function toast({ ...props }: Toast) {
     dismiss,
     update,
   }
+}
+
+// Add variant shortcuts for toast
+toast.error = (props: string | Omit<ToasterToast, "id" | "variant">) => {
+  if (typeof props === "string") {
+    return toast({ 
+      title: "Error", 
+      description: props, 
+      variant: "destructive" 
+    })
+  }
+  return toast({ ...props, variant: "destructive" })
+}
+
+toast.success = (props: string | Omit<ToasterToast, "id" | "variant">) => {
+  if (typeof props === "string") {
+    return toast({ 
+      title: "Success", 
+      description: props 
+    })
+  }
+  return toast(props)
+}
+
+// Add dismiss method for toast instance
+toast.dismiss = (toastId?: string) => {
+  dispatch({ type: "DISMISS_TOAST", toastId })
 }
 
 function useToast() {

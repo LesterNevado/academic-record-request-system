@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -93,11 +92,7 @@ const FacultyPortal: React.FC = () => {
       
       if (error) {
         console.error("Error checking faculty role:", error);
-        toast({
-          title: "Error",
-          description: "Failed to verify faculty access",
-          variant: "destructive"
-        });
+        toast.error("Failed to verify faculty access");
         navigate('/dashboard');
         return;
       }
@@ -105,11 +100,7 @@ const FacultyPortal: React.FC = () => {
       const isFaculty = data || false;
       
       if (!isFaculty) {
-        toast({
-          title: "Access Denied",
-          description: "You don't have faculty access",
-          variant: "destructive"
-        });
+        toast.error("You don't have faculty access");
         navigate('/dashboard');
         return;
       }
@@ -157,11 +148,7 @@ const FacultyPortal: React.FC = () => {
         return requestsWithTransactions as RequestWithTransaction[];
       } catch (err) {
         console.error("Failed to fetch faculty requests:", err);
-        toast({
-          title: "Error",
-          description: "Failed to load requests. Please try again.",
-          variant: "destructive"
-        });
+        toast.error("Failed to load requests. Please try again.");
         return [];
       }
     },
@@ -171,11 +158,7 @@ const FacultyPortal: React.FC = () => {
 
   useEffect(() => {
     if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load requests. Please try again.",
-        variant: "destructive"
-      });
+      toast.error("Failed to load requests. Please try again.");
       console.error("Request fetch error:", error);
     }
   }, [error]);
@@ -218,11 +201,7 @@ const FacultyPortal: React.FC = () => {
 
   const confirmProcessing = async () => {
     if (!selectedRequest || !pickupDate) {
-      toast({
-        title: "Error",
-        description: "Please select a pickup date",
-        variant: "destructive"
-      });
+      toast.error("Please select a pickup date");
       return;
     }
 
@@ -239,9 +218,9 @@ const FacultyPortal: React.FC = () => {
       
       if (error) throw error;
       
-      // We need to handle the email notification differently since we don't have toast.promise
+      // We need to handle the email notification differently since we're using a custom toast
       // First, let's display a loading toast
-      const loadingToastId = toast({
+      toast({
         title: "Sending email",
         description: "Sending email notification...",
       });
@@ -249,39 +228,19 @@ const FacultyPortal: React.FC = () => {
       try {
         await sendApprovalEmail(selectedRequest.id);
         
-        // Dismiss the loading toast
-        toast.dismiss(loadingToastId);
-        
         // Show success toast
-        toast({
-          title: "Success",
-          description: "Email notification sent successfully"
-        });
+        toast.success("Email notification sent successfully");
       } catch (err) {
-        // Dismiss the loading toast
-        toast.dismiss(loadingToastId);
-        
         // Show error toast
-        toast({
-          title: "Error",
-          description: "Failed to send email notification",
-          variant: "destructive"
-        });
+        toast.error("Failed to send email notification");
       }
       
-      toast({
-        title: "Success",
-        description: "Request processed successfully"
-      });
+      toast.success("Request processed successfully");
       setDialogOpen(false);
       refetch();
     } catch (err) {
       console.error("Error processing request:", err);
-      toast({
-        title: "Error",
-        description: "Failed to process request. Please try again.",
-        variant: "destructive"
-      });
+      toast.error("Failed to process request. Please try again.");
     }
   };
 
