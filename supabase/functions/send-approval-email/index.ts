@@ -134,7 +134,7 @@ serve(async (req) => {
           <p>Please make sure to bring your ID when you come to pick up your documents.</p>
           <p>If you have any questions or need to reschedule, please contact the registrar's office.</p>
           
-          <p>Thank you,<br>Northeastern University Document Request System</p>
+          <p>Thank you,<br>New Era University Document Request System</p>
         </div>
         <div style="background-color: #f5f5f5; padding: 10px; border-radius: 0 0 5px 5px; font-size: 12px; color: #666; text-align: center;">
           <p>This is an automated message. Please do not reply to this email.</p>
@@ -149,6 +149,12 @@ serve(async (req) => {
       subject: emailSubject,
       content: "Your document request has been approved!",
       html: emailHtml,
+      headers: {
+        "Content-Type": "text/html; charset=UTF-8",
+        "X-Priority": "1",
+        "X-MSMail-Priority": "High",
+        "Importance": "High"
+      }
     });
     
     // Close connection
