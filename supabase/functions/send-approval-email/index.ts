@@ -164,19 +164,14 @@ serve(async (req) => {
       </div>
     `;
     
-    // Send the email
+    // Send the email with correct content type and encoding
     await client.send({
       from: "New Era University <lester.nevado2@gmail.com>",
       to: studentEmail,
       subject: emailSubject,
-      content: "Your document request has been approved!",
       html: emailHtml,
       headers: {
         "Content-Type": "text/html; charset=UTF-8",
-        "X-Priority": "1",
-        "X-MSMail-Priority": "High",
-        "Importance": "High",
-        "X-Mailer": "New Era University Document Request System",
         "MIME-Version": "1.0"
       }
     });
