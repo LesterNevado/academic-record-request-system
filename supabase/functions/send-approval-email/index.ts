@@ -115,85 +115,82 @@ serve(async (req) => {
       );
     }
     
-    // Email template based on the provided design
-    const logoUrl = "https://raw.githubusercontent.com/lnevado2/ARRS/main/src/assets/neu-logo.svg";
+    // Email template based on the provided design image
     const emailHtml = `
       <!DOCTYPE html>
       <html>
       <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Document Request Approval</title>
         <style>
-          body {
-            font-family: Arial, sans-serif;
+          body, html {
             margin: 0;
             padding: 0;
+            font-family: Arial, sans-serif;
             font-size: 14px;
           }
           .email-container {
             width: 450px;
             margin: 0 auto;
             border: 1px solid #000;
-            background-color: #ffffff;
           }
           .header {
             background-color: #0047AB;
-            padding: 15px;
+            padding: 10px;
             color: white;
-            text-align: center;
-            height: 100px;
-            position: relative;
+            display: flex;
+            align-items: center;
           }
           .logo {
-            position: absolute;
-            left: 28px;
-            top: 10px;
-            width: 78px;
-            height: 78px;
+            width: 60px;
+            height: 60px;
+            margin-right: 10px;
+          }
+          .header-text {
+            display: flex;
+            flex-direction: column;
           }
           .header-title {
-            font-size: 32px;
-            font-weight: 800;
-            margin-top: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0;
           }
           .header-subtitle {
-            font-size: 16px;
-            font-weight: 500;
-            margin-top: 5px;
+            font-size: 14px;
+            margin: 0;
           }
           .content {
             padding: 20px;
           }
-          .date {
-            font-size: 12px;
-            color: #000;
+          .sender {
+            color: #666;
             margin-bottom: 15px;
           }
           .greeting {
             margin-bottom: 20px;
           }
           .details-box {
-            background-color: #D9D9D9;
+            background-color: #e0e0e0;
             padding: 15px;
-            margin: 20px 0;
+            margin-bottom: 20px;
           }
           .details-title {
-            font-size: 14px;
             font-weight: bold;
+            margin-bottom: 5px;
           }
           .details-item {
-            font-size: 12px;
-            margin-top: 5px;
+            margin-bottom: 5px;
           }
           .instructions {
-            font-size: 12px;
-            margin: 20px 0;
+            margin-bottom: 20px;
           }
           .footer {
             background-color: #0047AB;
-            padding: 10px;
             color: white;
+            padding: 10px;
             text-align: center;
             font-size: 12px;
-            height: 40px;
           }
         </style>
       </head>
@@ -201,30 +198,35 @@ serve(async (req) => {
         <div class="email-container">
           <div class="header">
             <img src="https://raw.githubusercontent.com/lnevado2/ARRS/93f1f6e9a0af9a61d3bd6a5e34c1183ae12aea01/src/assets/neu-logo.png" alt="New Era University Logo" class="logo">
-            <div class="header-title">NEU ARRS</div>
-            <div class="header-subtitle">Academic Record Request System</div>
+            <div class="header-text">
+              <h1 class="header-title">NEU ARRS</h1>
+              <p class="header-subtitle">Academic Record Request System</p>
+            </div>
           </div>
           
           <div class="content">
-            <div class="date">Date: ${new Date().toLocaleDateString()}</div>
+            <div class="sender">${studentEmail}</div>
             
             <div class="greeting">
-              Hi ${studentName},<br><br>
-              Good news! Your document request has been approved and is scheduled for pickup.
+              <p>Hi! ${studentName},</p>
+              
+              <p>Good news! your document request has been approved and is scheduled for pickup.</p>
             </div>
             
             <div class="details-box">
               <div class="details-title">Request Details:</div>
-              <div class="details-item"><strong>Document Type:</strong> ${requestTypeText}</div>
-              <div class="details-item"><strong>Pickup Date:</strong> ${pickupDate}</div>
-              ${requestData.notes ? `<div class="details-item"><strong>Notes:</strong> ${requestData.notes}</div>` : ''}
+              <div class="details-item">Document Type: ${requestTypeText}</div>
+              <div class="details-item">Pickup Date: ${pickupDate}</div>
+              ${requestData.notes ? `<div class="details-item">Notes: ${requestData.notes}</div>` : ''}
             </div>
             
             <div class="instructions">
-              Please make sure to bring your ID for verification when you come to pick up your documents.<br><br>
-              Claim your documents at room #207 (temporary only).<br>
-              For Statement of Account (SOA), please proceed at the Accounting Office (Room 202)<br><br>
-              If you have any questions or need to reschedule, please contact the Admission, Scholarship and Financial Assistance Office.
+              <p>Please make sure to bring your ID for verification when you come to pick up your documents.</p>
+              
+              <p>Claim your documents at room #207 (temporary only).<br>
+              For Statement of Account (SOA), please proceed at the Accounting Office (Room 202)</p>
+              
+              <p>If you have any questions or need to reschedule, please contact the Admission, Scholarship and Financial Assistance Office.</p>
             </div>
           </div>
           
