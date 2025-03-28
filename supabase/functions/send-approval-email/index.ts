@@ -93,7 +93,7 @@ serve(async (req) => {
           month: 'long',
           day: 'numeric'
         })
-      : "Not specified";
+      : "To be determined";
       
     // Get request type
     const requestTypes = [];
@@ -115,16 +115,35 @@ serve(async (req) => {
       );
     }
     
-    // Simple plain text email content
+    // Enhanced HTML email content with better styling
     const emailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <p>Hello ${studentName},</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img src="https://www.neu.edu.ph/main/wp-content/uploads/2018/06/neu-logo.png" alt="NEU Logo" style="max-width: 150px;">
+          <h2 style="color: #0047AB; margin-top: 10px;">Document Request Approved</h2>
+        </div>
         
-        <p>Good news! Your document request (${requestTypeText}) has been approved and is scheduled for pickup on ${pickupDate}.</p>
+        <p style="margin-bottom: 15px;">Hello <strong>${studentName}</strong>,</p>
         
-        <p>Please make sure to bring your ID when you come to pick up your documents at room #207.</p>
+        <p style="margin-bottom: 15px;">We are pleased to inform you that your document request has been approved by ${processorName}.</p>
         
-        <p>Regards,<br>New Era University</p>
+        <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+          <h3 style="color: #0047AB; margin-top: 0; font-size: 16px;">Request Details:</h3>
+          <ul style="padding-left: 20px;">
+            <li><strong>Documents:</strong> ${requestTypeText}</li>
+            <li><strong>Pickup Date:</strong> ${pickupDate}</li>
+            <li><strong>Pickup Location:</strong> Room #207, Records Office</li>
+          </ul>
+        </div>
+        
+        <p style="margin-bottom: 15px;">Please make sure to bring your <strong>valid ID</strong> when you come to pick up your documents.</p>
+        
+        <p style="margin-bottom: 15px;">If you have any questions, please contact our Records Office at <a href="mailto:records@neu.edu.ph" style="color: #0047AB;">records@neu.edu.ph</a>.</p>
+        
+        <div style="padding-top: 20px; border-top: 1px solid #e0e0e0; margin-top: 20px; font-size: 14px; color: #666;">
+          <p>Regards,<br>New Era University<br>Records Office</p>
+          <p style="font-size: 12px;">This is an automated email. Please do not reply to this message.</p>
+        </div>
       </div>
     `;
     
