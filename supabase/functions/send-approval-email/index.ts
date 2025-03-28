@@ -115,132 +115,58 @@ serve(async (req) => {
       );
     }
     
-    // Email template based on the provided design image
+    // Updated email template with a cleaner, more professional design
     const emailHtml = `
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Document Request Approval</title>
-        <style>
-          body, html {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-            font-size: 14px;
-          }
-          .email-container {
-            width: 450px;
-            margin: 0 auto;
-            border: 1px solid #000;
-          }
-          .header {
-            background-color: #0047AB;
-            padding: 10px;
-            color: white;
-            display: flex;
-            align-items: center;
-          }
-          .logo {
-            width: 60px;
-            height: 60px;
-            margin-right: 10px;
-          }
-          .header-text {
-            display: flex;
-            flex-direction: column;
-          }
-          .header-title {
-            font-size: 24px;
-            font-weight: bold;
-            margin: 0;
-          }
-          .header-subtitle {
-            font-size: 14px;
-            margin: 0;
-          }
-          .content {
-            padding: 20px;
-          }
-          .sender {
-            color: #666;
-            margin-bottom: 15px;
-          }
-          .greeting {
-            margin-bottom: 20px;
-          }
-          .details-box {
-            background-color: #e0e0e0;
-            padding: 15px;
-            margin-bottom: 20px;
-          }
-          .details-title {
-            font-weight: bold;
-            margin-bottom: 5px;
-          }
-          .details-item {
-            margin-bottom: 5px;
-          }
-          .instructions {
-            margin-bottom: 20px;
-          }
-          .footer {
-            background-color: #0047AB;
-            color: white;
-            padding: 10px;
-            text-align: center;
-            font-size: 12px;
-          }
-        </style>
+        <title>Request Approved</title>
       </head>
-      <body>
-        <div class="email-container">
-          <div class="header">
-            <img src="https://raw.githubusercontent.com/lnevado2/ARRS/93f1f6e9a0af9a61d3bd6a5e34c1183ae12aea01/src/assets/neu-logo.png" alt="New Era University Logo" class="logo">
-            <div class="header-text">
-              <h1 class="header-title">NEU ARRS</h1>
-              <p class="header-subtitle">Academic Record Request System</p>
-            </div>
-          </div>
-          
-          <div class="content">
-            <div class="sender">${studentEmail}</div>
-            
-            <div class="greeting">
-              <p>Hi! ${studentName},</p>
+      <body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5;">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          <tr>
+            <td style="background-color: #0047AB; padding: 24px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 24px;">Document Request Approved</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 30px;">
+              <p style="margin-bottom: 20px; font-size: 16px; color: #333;">Hello ${studentName},</p>
+              <p style="margin-bottom: 20px; font-size: 16px; color: #333;">Good news! ${processorName} has approved your document request and scheduled a pickup date.</p>
               
-              <p>Good news! your document request has been approved and is scheduled for pickup.</p>
-            </div>
-            
-            <div class="details-box">
-              <div class="details-title">Request Details:</div>
-              <div class="details-item">Document Type: ${requestTypeText}</div>
-              <div class="details-item">Pickup Date: ${pickupDate}</div>
-              ${requestData.notes ? `<div class="details-item">Notes: ${requestData.notes}</div>` : ''}
-            </div>
-            
-            <div class="instructions">
-              <p>Please make sure to bring your ID for verification when you come to pick up your documents.</p>
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f9f9f9; border-radius: 4px; margin: 20px 0; border: 1px solid #eeeeee;">
+                <tr>
+                  <td style="padding: 20px;">
+                    <h2 style="margin-top: 0; margin-bottom: 16px; font-size: 18px; color: #333; border-bottom: 1px solid #eeeeee; padding-bottom: 10px;">Request Details</h2>
+                    <p style="margin: 8px 0; font-size: 15px; color: #555;"><strong>Document Type:</strong> ${requestTypeText}</p>
+                    <p style="margin: 8px 0; font-size: 15px; color: #555;"><strong>Pickup Date:</strong> ${pickupDate}</p>
+                    ${requestData.notes ? `<p style="margin: 8px 0; font-size: 15px; color: #555;"><strong>Notes:</strong> ${requestData.notes}</p>` : ''}
+                  </td>
+                </tr>
+              </table>
               
-              <p>Claim your documents at room #207 (temporary only).<br>
-              For Statement of Account (SOA), please proceed at the Accounting Office (Room 202)</p>
+              <p style="margin-bottom: 10px; font-size: 16px; color: #333;">Please make sure to bring your ID when you come to pick up your documents.</p>
+              <p style="margin-bottom: 30px; font-size: 16px; color: #333;">If you have any questions or need to reschedule, please contact the registrar's office.</p>
               
-              <p>If you have any questions or need to reschedule, please contact the Admission, Scholarship and Financial Assistance Office.</p>
-            </div>
-          </div>
-          
-          <div class="footer">
-            This is an automated message. Please do not reply to this email.
-          </div>
-        </div>
+              <p style="margin-bottom: 5px; font-size: 16px; color: #333;">Thank you,</p>
+              <p style="margin-bottom: 20px; font-size: 16px; color: #333;">New Era University Document Request System</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f5f5f5; padding: 15px; text-align: center; color: #777; font-size: 13px; border-top: 1px solid #eeeeee;">
+              <p style="margin: 0;">This is an automated message. Please do not reply to this email.</p>
+            </td>
+          </tr>
+        </table>
       </body>
       </html>
     `;
     
     // Send the email
     await client.send({
-      from: "New Era University <lester.nevado2@gmail.com>",
+      from: "NEU Document Request <lester.nevado2@gmail.com>",
       to: studentEmail,
       subject: emailSubject,
       content: "Your document request has been approved!",
@@ -250,7 +176,7 @@ serve(async (req) => {
         "X-Priority": "1",
         "X-MSMail-Priority": "High",
         "Importance": "High",
-        "X-Mailer": "New Era University Document Request System",
+        "X-Mailer": "NEU Document Request System",
         "MIME-Version": "1.0"
       }
     });
