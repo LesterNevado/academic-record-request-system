@@ -115,61 +115,68 @@ serve(async (req) => {
       );
     }
     
-    // New HTML email content based on the provided design
-    const emailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; border: 1px solid #ccc;">
-        <!-- Header -->
-        <div style="background-color: #0047AB; color: white; padding: 15px; text-align: center;">
-          <table width="100%" cellpadding="0" cellspacing="0" border="0">
-            <tr>
-              <td width="80" style="vertical-align: middle;">
-                <img src="https://www.neu.edu.ph/main/wp-content/uploads/2018/06/neu-logo.png" alt="NEU Logo" style="width: 70px; height: auto;">
-              </td>
-              <td style="text-align: left; vertical-align: middle;">
-                <h1 style="margin: 0; padding: 0; font-size: 24px; font-weight: bold;">NEU ARRS</h1>
-                <p style="margin: 0; padding: 0; font-size: 14px;">Academic Record Request System</p>
-              </td>
-            </tr>
-          </table>
-        </div>
-        
-        <!-- Email Body -->
-        <div style="padding: 20px;">
-          <p style="color: #666; font-size: 14px;">${studentEmail}</p>
-          
-          <p style="margin-top: 15px;">Hi! ${studentName},</p>
-          
-          <p>Good news! your document request has been approved and is scheduled for pickup.</p>
-          
-          <!-- Request Details Box -->
-          <div style="background-color: #f0f0f0; padding: 15px; margin: 20px 0;">
-            <h3 style="margin-top: 0; font-size: 16px; margin-bottom: 10px;">Request Details:</h3>
-            <p style="margin: 5px 0;"><strong>Document Type:</strong> ${requestTypeText}</p>
-            <p style="margin: 5px 0;"><strong>Pickup Date:</strong> ${pickupDate}</p>
-            <p style="margin: 5px 0;"><strong>Notes:</strong> ${requestData.notes || 'None'}</p>
-          </div>
-          
-          <p>Please make sure to bring your ID for verification when you come to pick-up your documents.</p>
-          
-          <p>Claim your documents at room #207 (temporary only).<br>
-          For Statement of Account (SOA), please proceed at the <strong>Accounting Office</strong> (Room 202).</p>
-          
-          <p>If you have any questions or need to reschedule, please contact the Admission, Scholarship and Financial Assistance Office.</p>
-        </div>
-        
-        <!-- Footer -->
-        <div style="background-color: #0047AB; color: white; padding: 10px; text-align: center; font-size: 12px;">
-          <p style="margin: 0;">This is an automated message. Please do not reply to this email.</p>
-        </div>
-      </div>
-    `;
+    // Email HTML template - simplified and fixed for proper rendering
+    const emailHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Document Request Has Been Approved</title>
+</head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; border: 1px solid #ccc;">
+  <!-- Header -->
+  <div style="background-color: #0047AB; color: white; padding: 15px; text-align: center;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td width="80" style="vertical-align: middle;">
+          <img src="https://www.neu.edu.ph/main/wp-content/uploads/2018/06/neu-logo.png" alt="NEU Logo" style="width: 70px; height: auto;">
+        </td>
+        <td style="text-align: left; vertical-align: middle;">
+          <h1 style="margin: 0; padding: 0; font-size: 24px; font-weight: bold;">NEU ARRS</h1>
+          <p style="margin: 0; padding: 0; font-size: 14px;">Academic Record Request System</p>
+        </td>
+      </tr>
+    </table>
+  </div>
+  
+  <!-- Email Body -->
+  <div style="padding: 20px;">
+    <p style="color: #666; font-size: 14px;">${studentEmail}</p>
     
-    // Send the email with correct content type and encoding
+    <p style="margin-top: 15px;">Hi! ${studentName},</p>
+    
+    <p>Good news! your document request has been approved and is scheduled for pickup.</p>
+    
+    <!-- Request Details Box -->
+    <div style="background-color: #f0f0f0; padding: 15px; margin: 20px 0;">
+      <h3 style="margin-top: 0; font-size: 16px; margin-bottom: 10px;">Request Details:</h3>
+      <p style="margin: 5px 0;"><strong>Document Type:</strong> ${requestTypeText}</p>
+      <p style="margin: 5px 0;"><strong>Pickup Date:</strong> ${pickupDate}</p>
+      <p style="margin: 5px 0;"><strong>Notes:</strong> ${requestData.notes || 'None'}</p>
+    </div>
+    
+    <p>Please make sure to bring your ID for verification when you come to pick-up your documents.</p>
+    
+    <p>Claim your documents at room #207 (temporary only).<br>
+    For Statement of Account (SOA), please proceed at the <strong>Accounting Office</strong> (Room 202).</p>
+    
+    <p>If you have any questions or need to reschedule, please contact the Admission, Scholarship and Financial Assistance Office.</p>
+  </div>
+  
+  <!-- Footer -->
+  <div style="background-color: #0047AB; color: white; padding: 10px; text-align: center; font-size: 12px;">
+    <p style="margin: 0;">This is an automated message. Please do not reply to this email.</p>
+  </div>
+</body>
+</html>`;
+    
+    // Send the email with proper content type settings and no additional headers that might cause issues
     await client.send({
       from: "New Era University <lester.nevado2@gmail.com>",
       to: studentEmail,
       subject: emailSubject,
       html: emailHtml,
+      // Simplify headers to avoid encoding issues
       headers: {
         "Content-Type": "text/html; charset=UTF-8",
         "MIME-Version": "1.0"
