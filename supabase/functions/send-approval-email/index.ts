@@ -115,53 +115,37 @@ serve(async (req) => {
       );
     }
     
-    // Very simple email template with minimal HTML
-    const emailHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Your Document Request Has Been Approved</title>
-</head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="text-align: center; margin-bottom: 20px;">
-    <h1 style="color: #0047AB;">NEU ARRS</h1>
-    <p>Academic Record Request System</p>
-  </div>
-  
-  <p>Hi ${studentName},</p>
-  
-  <p>Good news! Your document request has been approved and is scheduled for pickup.</p>
-  
-  <div style="background-color: #f5f5f5; padding: 15px; margin: 15px 0;">
-    <p><strong>Document Type:</strong> ${requestTypeText}</p>
-    <p><strong>Pickup Date:</strong> ${pickupDate}</p>
-    <p><strong>Notes:</strong> ${requestData.notes || 'None'}</p>
-  </div>
-  
-  <p>Please bring your ID for verification when you come to pick up your documents.</p>
-  
-  <p>Claim your documents at room #207 (temporary only).<br>
-  For Statement of Account (SOA), please proceed at the Accounting Office (Room 202).</p>
-  
-  <p>If you have any questions or need to reschedule, please contact the Admission, Scholarship and Financial Assistance Office.</p>
-  
-  <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; text-align: center; font-size: 12px; color: #666;">
-    <p>This is an automated message. Please do not reply to this email.</p>
-  </div>
-</body>
-</html>`;
+    // Create a simple plain text email message
+    const plainTextEmail = `
+NEU ARRS - Academic Record Request System
+
+Hi ${studentName},
+
+Good news! Your document request has been approved and is scheduled for pickup.
+
+DOCUMENT TYPE: ${requestTypeText}
+PICKUP DATE: ${pickupDate}
+NOTES: ${requestData.notes || 'None'}
+
+Please bring your ID for verification when you come to pick up your documents.
+
+Claim your documents at room #207 (temporary only).
+For Statement of Account (SOA), please proceed at the Accounting Office (Room 202).
+
+If you have any questions or need to reschedule, please contact the Admission, Scholarship and Financial Assistance Office.
+
+This is an automated message. Please do not reply to this email.
+    `;
     
-    // Send the email with completely minimal headers to avoid encoding issues
+    // Send the email as plain text
     await client.send({
       from: "NEU ARRS <lester.nevado2@gmail.com>",
       to: studentEmail,
       subject: emailSubject,
-      html: emailHtml,
-      // Use only essential headers
+      content: plainTextEmail,
+      // Specify content type as plain text
       headers: {
-        "Content-Type": "text/html"
+        "Content-Type": "text/plain; charset=utf-8"
       }
     });
     
