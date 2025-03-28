@@ -115,34 +115,51 @@ serve(async (req) => {
       );
     }
     
-    // Enhanced HTML email content with better styling
+    // New HTML email content based on the provided design
     const emailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
-        <div style="text-align: center; margin-bottom: 20px;">
-          <img src="https://www.neu.edu.ph/main/wp-content/uploads/2018/06/neu-logo.png" alt="NEU Logo" style="max-width: 150px;">
-          <h2 style="color: #0047AB; margin-top: 10px;">Document Request Approved</h2>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; border: 1px solid #ccc;">
+        <!-- Header -->
+        <div style="background-color: #0047AB; color: white; padding: 15px; text-align: center;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td width="80" style="vertical-align: middle;">
+                <img src="https://www.neu.edu.ph/main/wp-content/uploads/2018/06/neu-logo.png" alt="NEU Logo" style="width: 70px; height: auto;">
+              </td>
+              <td style="text-align: left; vertical-align: middle;">
+                <h1 style="margin: 0; padding: 0; font-size: 24px; font-weight: bold;">NEU ARRS</h1>
+                <p style="margin: 0; padding: 0; font-size: 14px;">Academic Record Request System</p>
+              </td>
+            </tr>
+          </table>
         </div>
         
-        <p style="margin-bottom: 15px;">Hello <strong>${studentName}</strong>,</p>
-        
-        <p style="margin-bottom: 15px;">We are pleased to inform you that your document request has been approved by ${processorName}.</p>
-        
-        <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
-          <h3 style="color: #0047AB; margin-top: 0; font-size: 16px;">Request Details:</h3>
-          <ul style="padding-left: 20px;">
-            <li><strong>Documents:</strong> ${requestTypeText}</li>
-            <li><strong>Pickup Date:</strong> ${pickupDate}</li>
-            <li><strong>Pickup Location:</strong> Room #207, Records Office</li>
-          </ul>
+        <!-- Email Body -->
+        <div style="padding: 20px;">
+          <p style="color: #666; font-size: 14px;">${studentEmail}</p>
+          
+          <p style="margin-top: 15px;">Hi! ${studentName},</p>
+          
+          <p>Good news! your document request has been approved and is scheduled for pickup.</p>
+          
+          <!-- Request Details Box -->
+          <div style="background-color: #f0f0f0; padding: 15px; margin: 20px 0;">
+            <h3 style="margin-top: 0; font-size: 16px; margin-bottom: 10px;">Request Details:</h3>
+            <p style="margin: 5px 0;"><strong>Document Type:</strong> ${requestTypeText}</p>
+            <p style="margin: 5px 0;"><strong>Pickup Date:</strong> ${pickupDate}</p>
+            <p style="margin: 5px 0;"><strong>Notes:</strong> ${requestData.notes || 'None'}</p>
+          </div>
+          
+          <p>Please make sure to bring your ID for verification when you come to pick-up your documents.</p>
+          
+          <p>Claim your documents at room #207 (temporary only).<br>
+          For Statement of Account (SOA), please proceed at the <strong>Accounting Office</strong> (Room 202).</p>
+          
+          <p>If you have any questions or need to reschedule, please contact the Admission, Scholarship and Financial Assistance Office.</p>
         </div>
         
-        <p style="margin-bottom: 15px;">Please make sure to bring your <strong>valid ID</strong> when you come to pick up your documents.</p>
-        
-        <p style="margin-bottom: 15px;">If you have any questions, please contact our Records Office at <a href="mailto:records@neu.edu.ph" style="color: #0047AB;">records@neu.edu.ph</a>.</p>
-        
-        <div style="padding-top: 20px; border-top: 1px solid #e0e0e0; margin-top: 20px; font-size: 14px; color: #666;">
-          <p>Regards,<br>New Era University<br>Records Office</p>
-          <p style="font-size: 12px;">This is an automated email. Please do not reply to this message.</p>
+        <!-- Footer -->
+        <div style="background-color: #0047AB; color: white; padding: 10px; text-align: center; font-size: 12px;">
+          <p style="margin: 0;">This is an automated message. Please do not reply to this email.</p>
         </div>
       </div>
     `;
