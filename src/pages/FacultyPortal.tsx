@@ -93,7 +93,11 @@ const FacultyPortal: React.FC = () => {
       
       if (error) {
         console.error("Error checking faculty role:", error);
-        toast.error("Failed to verify faculty access");
+        toast({
+          title: "Error",
+          description: "Failed to verify faculty access",
+          variant: "destructive"
+        });
         navigate('/dashboard');
         return;
       }
@@ -101,7 +105,11 @@ const FacultyPortal: React.FC = () => {
       const isFaculty = data || false;
       
       if (!isFaculty) {
-        toast.error("You don't have faculty access");
+        toast({
+          title: "Access Denied",
+          description: "You don't have faculty access",
+          variant: "destructive"
+        });
         navigate('/dashboard');
         return;
       }
@@ -149,7 +157,11 @@ const FacultyPortal: React.FC = () => {
         return requestsWithTransactions as RequestWithTransaction[];
       } catch (err) {
         console.error("Failed to fetch faculty requests:", err);
-        toast.error("Failed to load requests. Please try again.");
+        toast({
+          title: "Error",
+          description: "Failed to load requests. Please try again.",
+          variant: "destructive"
+        });
         return [];
       }
     },
@@ -159,7 +171,11 @@ const FacultyPortal: React.FC = () => {
 
   useEffect(() => {
     if (error) {
-      toast.error("Failed to load requests. Please try again.");
+      toast({
+        title: "Error",
+        description: "Failed to load requests. Please try again.",
+        variant: "destructive"
+      });
       console.error("Request fetch error:", error);
     }
   }, [error]);
@@ -223,20 +239,35 @@ const FacultyPortal: React.FC = () => {
       
       if (error) throw error;
       
-      const emailPromise = sendApprovalEmail(selectedRequest.id);
+      // We need to handle the email notification differently since we don't have toast.promise
+      // First, let's display a loading toast
+      const loadingToastId = toast({
+        title: "Sending email",
+        description: "Sending email notification...",
+      });
       
-      toast.promise(emailPromise, {
-        loading: "Sending email notification...",
-        success: () => ({
+      try {
+        await sendApprovalEmail(selectedRequest.id);
+        
+        // Dismiss the loading toast
+        toast.dismiss(loadingToastId);
+        
+        // Show success toast
+        toast({
           title: "Success",
           description: "Email notification sent successfully"
-        }),
-        error: () => ({
+        });
+      } catch (err) {
+        // Dismiss the loading toast
+        toast.dismiss(loadingToastId);
+        
+        // Show error toast
+        toast({
           title: "Error",
           description: "Failed to send email notification",
           variant: "destructive"
-        })
-      });
+        });
+      }
       
       toast({
         title: "Success",
