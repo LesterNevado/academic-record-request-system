@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,8 +12,14 @@ export const PaymentStatus: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const requestProcessedRef = useRef(false);
 
   useEffect(() => {
+    // Only proceed if we haven't processed this request yet
+    if (requestProcessedRef.current) {
+      return;
+    }
+
     const params = new URLSearchParams(location.search);
     const isSuccess = params.get("success") === "true";
     const sessionId = params.get("session_id");
@@ -22,6 +28,9 @@ export const PaymentStatus: React.FC = () => {
       try {
         // If payment was successful, create request in the database
         if (isSuccess && sessionId) {
+          // Mark as processed to prevent duplicate requests
+          requestProcessedRef.current = true;
+          
           // Get stored form data
           const storedFormData = localStorage.getItem('pendingRequestData');
           const storedAmount = localStorage.getItem('pendingPaymentAmount');
@@ -38,6 +47,31 @@ export const PaymentStatus: React.FC = () => {
           
           if (!session?.user) {
             throw new Error("User not authenticated");
+          }
+
+          // First check if transaction with this session ID already exists (to prevent duplicates)
+          const { data: existingTransaction } = await supabase
+            .from('transactions')
+            .select('id, request_id')
+            .eq('stripe_session_id', sessionId)
+            .single();
+
+          if (existingTransaction) {
+            console.log("Transaction already exists for this session ID:", existingTransaction);
+            // Transaction already exists, just set success state and show message
+            setSuccess(true);
+            toast.success("Payment successful! Your request is waiting for faculty approval.");
+            // Clear stored form data
+            localStorage.removeItem('pendingRequestData');
+            localStorage.removeItem('pendingPaymentAmount');
+            localStorage.removeItem('pendingSessionId');
+            setIsProcessing(false);
+            
+            // Redirect to requests page after 3 seconds
+            setTimeout(() => {
+              navigate("/requests");
+            }, 3000);
+            return;
           }
           
           // Prepare request data for submission to Supabase
