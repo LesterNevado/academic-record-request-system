@@ -14,26 +14,42 @@ export const PaymentStatus: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Extract query parameters
     const params = new URLSearchParams(location.search);
     const isSuccess = params.get("success") === "true";
     const sessionId = params.get("session_id");
     
-    // Add a flag to track if the request has been processed
-    let hasProcessedRequest = false;
+    // To prevent multiple executions during development with React.StrictMode
+    const processedRef = React.useRef(false);
 
     const createRequest = async () => {
+      // Only process if not already processed
+      if (processedRef.current) {
+        return;
+      }
+      
+      // Mark as processed immediately
+      processedRef.current = true;
+      
       try {
-        // If payment was successful, create request in the database
+        // If payment was successful and we have a session ID
         if (isSuccess && sessionId) {
-          // Check if this session has already been processed to prevent duplicates
+          console.log("Processing payment for session:", sessionId);
+          
+          // First check if this session has already been processed
           const { data: existingTransaction, error: checkError } = await supabase
             .from('transactions')
-            .select('id')
+            .select('id, request_id')
             .eq('stripe_session_id', sessionId)
-            .single();
+            .maybeSingle();
             
+          if (checkError) {
+            console.error("Error checking existing transaction:", checkError);
+          }
+          
+          // If transaction exists, use its data instead of creating a new request
           if (existingTransaction) {
-            console.log("This payment session has already been processed");
+            console.log("This payment session has already been processed:", existingTransaction);
             setSuccess(true);
             notify.success("Your request is being processed!");
             setIsProcessing(false);
@@ -63,63 +79,116 @@ export const PaymentStatus: React.FC = () => {
             throw new Error("User not authenticated");
           }
           
-          // Prepare request data for submission to Supabase
-          const requestData: TablesInsert<"requests"> = {
-            user_id: session.user.id,
-            student_name: formData.studentName,
-            student_number: formData.studentNumber,
-            contact_number: formData.contactNumber,
-            home_address: formData.homeAddress,
-            purpose: formData.purpose,
-            
-            transcript_selected: formData.requestTypes.transcript.selected,
-            transcript_copies: formData.requestTypes.transcript.selected ? formData.requestTypes.transcript.copies : null,
-            
-            certificate_selected: formData.requestTypes.certificate.selected,
-            certificate_copies: formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.copies : null,
-            
-            certification_selected: formData.requestTypes.certification.selected,
-            certification_copies: formData.requestTypes.certification.selected ? formData.requestTypes.certification.copies : null,
-            certification_details: formData.requestTypes.certification.selected ? formData.requestTypes.certification.details : null,
-            
-            others_selected: formData.requestTypes.others.selected,
-            others_copies: formData.requestTypes.others.selected ? formData.requestTypes.others.copies : null,
-            others_details: formData.requestTypes.others.selected ? formData.requestTypes.others.details : null,
-            
-            status: 'awaiting_pickup',
-            pickup_date: null,
-            processed_by: null,
-            notes: null
-          };
+          // Use a transaction to ensure atomicity
+          const { data: requestResult, error: requestError } = await supabase.rpc(
+            'create_request_with_transaction',
+            {
+              p_user_id: session.user.id,
+              p_student_name: formData.studentName,
+              p_student_number: formData.studentNumber,
+              p_contact_number: formData.contactNumber,
+              p_home_address: formData.homeAddress,
+              p_purpose: formData.purpose,
+              p_transcript_selected: formData.requestTypes.transcript.selected,
+              p_transcript_copies: formData.requestTypes.transcript.selected ? formData.requestTypes.transcript.copies : null,
+              p_certificate_selected: formData.requestTypes.certificate.selected,
+              p_certificate_copies: formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.copies : null,
+              p_certification_selected: formData.requestTypes.certification.selected,
+              p_certification_copies: formData.requestTypes.certification.selected ? formData.requestTypes.certification.copies : null,
+              p_certification_details: formData.requestTypes.certification.selected ? formData.requestTypes.certification.details : null,
+              p_others_selected: formData.requestTypes.others.selected,
+              p_others_copies: formData.requestTypes.others.selected ? formData.requestTypes.others.copies : null,
+              p_others_details: formData.requestTypes.others.selected ? formData.requestTypes.others.details : null,
+              p_amount: paymentAmount,
+              p_stripe_session_id: sessionId
+            }
+          );
           
-          // Submit request to Supabase
-          const { data: requestResult, error: requestError } = await supabase
-            .from('requests')
-            .insert(requestData)
-            .select('id')
-            .single();
-          
-          if (requestError) {
+          // If RPC function doesn't exist yet, use the original code path as fallback
+          if (requestError && requestError.message.includes('function "create_request_with_transaction" does not exist')) {
+            console.log("RPC function not available, using fallback method");
+            
+            // Check again if this session has already been processed (double-check to prevent race conditions)
+            const { data: doubleCheckTransaction } = await supabase
+              .from('transactions')
+              .select('id')
+              .eq('stripe_session_id', sessionId)
+              .single();
+              
+            if (doubleCheckTransaction) {
+              console.log("Transaction already exists (on double-check)");
+              setSuccess(true);
+              notify.success("Your request is being processed!");
+              setIsProcessing(false);
+              
+              // Redirect to requests page after 3 seconds
+              setTimeout(() => {
+                navigate("/requests");
+              }, 3000);
+              return;
+            }
+            
+            // Prepare request data for submission to Supabase
+            const requestData: TablesInsert<"requests"> = {
+              user_id: session.user.id,
+              student_name: formData.studentName,
+              student_number: formData.studentNumber,
+              contact_number: formData.contactNumber,
+              home_address: formData.homeAddress,
+              purpose: formData.purpose,
+              
+              transcript_selected: formData.requestTypes.transcript.selected,
+              transcript_copies: formData.requestTypes.transcript.selected ? formData.requestTypes.transcript.copies : null,
+              
+              certificate_selected: formData.requestTypes.certificate.selected,
+              certificate_copies: formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.copies : null,
+              
+              certification_selected: formData.requestTypes.certification.selected,
+              certification_copies: formData.requestTypes.certification.selected ? formData.requestTypes.certification.copies : null,
+              certification_details: formData.requestTypes.certification.selected ? formData.requestTypes.certification.details : null,
+              
+              others_selected: formData.requestTypes.others.selected,
+              others_copies: formData.requestTypes.others.selected ? formData.requestTypes.others.copies : null,
+              others_details: formData.requestTypes.others.selected ? formData.requestTypes.others.details : null,
+              
+              status: 'awaiting_pickup',
+              pickup_date: null,
+              processed_by: null,
+              notes: null
+            };
+            
+            // Submit request to Supabase
+            const { data: newRequestResult, error: newRequestError } = await supabase
+              .from('requests')
+              .insert(requestData)
+              .select('id')
+              .single();
+            
+            if (newRequestError) {
+              throw newRequestError;
+            }
+            
+            // Record transaction in the transactions table
+            const transactionData = {
+              user_id: session.user.id,
+              request_id: newRequestResult.id,
+              amount: paymentAmount,
+              payment_status: 'successful',
+              payment_method: 'card',
+              stripe_session_id: sessionId
+            };
+            
+            const { error: transactionError } = await supabase
+              .from('transactions')
+              .insert(transactionData);
+              
+            if (transactionError) {
+              console.error("Error recording transaction:", transactionError);
+              // Continue despite transaction recording error, as the request was created
+            }
+          } else if (requestError) {
+            // Handle any other RPC function errors
             throw requestError;
-          }
-          
-          // Record transaction in the transactions table
-          const transactionData = {
-            user_id: session.user.id,
-            request_id: requestResult.id,
-            amount: paymentAmount,
-            payment_status: 'successful',
-            payment_method: 'card',
-            stripe_session_id: sessionId
-          };
-          
-          const { error: transactionError } = await supabase
-            .from('transactions')
-            .insert(transactionData);
-            
-          if (transactionError) {
-            console.error("Error recording transaction:", transactionError);
-            // Continue despite transaction recording error, as the request was created
           }
           
           // Clear stored form data
@@ -145,11 +214,8 @@ export const PaymentStatus: React.FC = () => {
       }
     };
 
-    // Only process the request if it hasn't been processed already
-    if (!hasProcessedRequest) {
-      hasProcessedRequest = true;
-      createRequest();
-    }
+    // Only run once per component mount
+    createRequest();
   }, [location.search, navigate]);
 
   if (isProcessing) {
