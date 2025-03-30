@@ -1,11 +1,11 @@
 
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle, XCircle } from "lucide-react";
 import { TablesInsert } from "@/integrations/supabase/types";
+import { notify } from "@/utils/notifications";
 
 export const PaymentStatus: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(true);
@@ -17,11 +17,34 @@ export const PaymentStatus: React.FC = () => {
     const params = new URLSearchParams(location.search);
     const isSuccess = params.get("success") === "true";
     const sessionId = params.get("session_id");
+    
+    // Add a flag to track if the request has been processed
+    let hasProcessedRequest = false;
 
     const createRequest = async () => {
       try {
         // If payment was successful, create request in the database
         if (isSuccess && sessionId) {
+          // Check if this session has already been processed to prevent duplicates
+          const { data: existingTransaction, error: checkError } = await supabase
+            .from('transactions')
+            .select('id')
+            .eq('stripe_session_id', sessionId)
+            .single();
+            
+          if (existingTransaction) {
+            console.log("This payment session has already been processed");
+            setSuccess(true);
+            notify.success("Your request is being processed!");
+            setIsProcessing(false);
+            
+            // Redirect to requests page after 3 seconds
+            setTimeout(() => {
+              navigate("/requests");
+            }, 3000);
+            return;
+          }
+          
           // Get stored form data
           const storedFormData = localStorage.getItem('pendingRequestData');
           const storedAmount = localStorage.getItem('pendingPaymentAmount');
@@ -105,13 +128,13 @@ export const PaymentStatus: React.FC = () => {
           localStorage.removeItem('pendingSessionId');
           
           setSuccess(true);
-          toast.success("Payment successful! Your request is waiting for faculty approval.");
+          notify.success("Payment successful! Your request is waiting for faculty approval.");
         } else {
-          toast.error("Payment was canceled or unsuccessful.");
+          notify.error("Payment was canceled or unsuccessful.");
         }
       } catch (error) {
         console.error("Error creating request:", error);
-        toast.error("Error creating your request. Please contact support.");
+        notify.error("Error creating your request. Please contact support.");
       } finally {
         setIsProcessing(false);
         
@@ -122,7 +145,11 @@ export const PaymentStatus: React.FC = () => {
       }
     };
 
-    createRequest();
+    // Only process the request if it hasn't been processed already
+    if (!hasProcessedRequest) {
+      hasProcessedRequest = true;
+      createRequest();
+    }
   }, [location.search, navigate]);
 
   if (isProcessing) {
