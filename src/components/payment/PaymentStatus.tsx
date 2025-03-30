@@ -1,11 +1,11 @@
 
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle, XCircle } from "lucide-react";
 import { TablesInsert } from "@/integrations/supabase/types";
-import { notify } from "@/utils/notifications";
 
 export const PaymentStatus: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(true);
@@ -14,53 +14,14 @@ export const PaymentStatus: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Extract query parameters
     const params = new URLSearchParams(location.search);
     const isSuccess = params.get("success") === "true";
     const sessionId = params.get("session_id");
-    
-    // To prevent multiple executions during development with React.StrictMode
-    const processedRef = React.useRef(false);
 
     const createRequest = async () => {
-      // Only process if not already processed
-      if (processedRef.current) {
-        return;
-      }
-      
-      // Mark as processed immediately
-      processedRef.current = true;
-      
       try {
-        // If payment was successful and we have a session ID
+        // If payment was successful, create request in the database
         if (isSuccess && sessionId) {
-          console.log("Processing payment for session:", sessionId);
-          
-          // First check if this session has already been processed
-          const { data: existingTransaction, error: checkError } = await supabase
-            .from('transactions')
-            .select('id, request_id')
-            .eq('stripe_session_id', sessionId)
-            .maybeSingle();
-            
-          if (checkError) {
-            console.error("Error checking existing transaction:", checkError);
-          }
-          
-          // If transaction exists, use its data instead of creating a new request
-          if (existingTransaction) {
-            console.log("This payment session has already been processed:", existingTransaction);
-            setSuccess(true);
-            notify.success("Your request is being processed!");
-            setIsProcessing(false);
-            
-            // Redirect to requests page after 3 seconds
-            setTimeout(() => {
-              navigate("/requests");
-            }, 3000);
-            return;
-          }
-          
           // Get stored form data
           const storedFormData = localStorage.getItem('pendingRequestData');
           const storedAmount = localStorage.getItem('pendingPaymentAmount');
@@ -79,7 +40,6 @@ export const PaymentStatus: React.FC = () => {
             throw new Error("User not authenticated");
           }
           
-          // Since the RPC function may not exist yet or has type issues, let's use a direct approach
           // Prepare request data for submission to Supabase
           const requestData: TablesInsert<"requests"> = {
             user_id: session.user.id,
@@ -109,41 +69,21 @@ export const PaymentStatus: React.FC = () => {
             notes: null
           };
           
-          // Double-check if this session has already been processed (to prevent race conditions)
-          const { data: doubleCheckTransaction } = await supabase
-            .from('transactions')
-            .select('id')
-            .eq('stripe_session_id', sessionId)
-            .maybeSingle();
-            
-          if (doubleCheckTransaction) {
-            console.log("Transaction already exists (on double-check)");
-            setSuccess(true);
-            notify.success("Your request is being processed!");
-            setIsProcessing(false);
-            
-            // Redirect to requests page after 3 seconds
-            setTimeout(() => {
-              navigate("/requests");
-            }, 3000);
-            return;
-          }
-          
           // Submit request to Supabase
-          const { data: newRequestResult, error: newRequestError } = await supabase
+          const { data: requestResult, error: requestError } = await supabase
             .from('requests')
             .insert(requestData)
             .select('id')
             .single();
           
-          if (newRequestError) {
-            throw newRequestError;
+          if (requestError) {
+            throw requestError;
           }
           
           // Record transaction in the transactions table
           const transactionData = {
             user_id: session.user.id,
-            request_id: newRequestResult.id,
+            request_id: requestResult.id,
             amount: paymentAmount,
             payment_status: 'successful',
             payment_method: 'card',
@@ -165,15 +105,13 @@ export const PaymentStatus: React.FC = () => {
           localStorage.removeItem('pendingSessionId');
           
           setSuccess(true);
-          notify.success("Payment successful! Your request is waiting for faculty approval.");
+          toast.success("Payment successful! Your request is waiting for faculty approval.");
         } else {
-          setSuccess(false);
-          notify.error("Payment was canceled or unsuccessful.");
+          toast.error("Payment was canceled or unsuccessful.");
         }
       } catch (error) {
         console.error("Error creating request:", error);
-        notify.error("Error creating your request. Please contact support.");
-        setSuccess(false);
+        toast.error("Error creating your request. Please contact support.");
       } finally {
         setIsProcessing(false);
         
@@ -184,7 +122,6 @@ export const PaymentStatus: React.FC = () => {
       }
     };
 
-    // Only run once per component mount
     createRequest();
   }, [location.search, navigate]);
 
