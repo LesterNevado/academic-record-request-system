@@ -167,11 +167,13 @@ export const PaymentStatus: React.FC = () => {
           setSuccess(true);
           notify.success("Payment successful! Your request is waiting for faculty approval.");
         } else {
+          setSuccess(false);
           notify.error("Payment was canceled or unsuccessful.");
         }
       } catch (error) {
         console.error("Error creating request:", error);
         notify.error("Error creating your request. Please contact support.");
+        setSuccess(false);
       } finally {
         setIsProcessing(false);
         
