@@ -98,12 +98,27 @@ serve(async (req) => {
         })
       : "To be determined";
       
-    // Get request type
+    // Get request type and total number of copies
     const requestTypes = [];
-    if (requestData.transcript_selected) requestTypes.push("Transcript of Records");
-    if (requestData.certificate_selected) requestTypes.push("Certificate of Grades");
-    if (requestData.certification_selected) requestTypes.push("Certification");
-    if (requestData.others_selected) requestTypes.push("Others");
+    let totalCopies = 0;
+    
+    if (requestData.transcript_selected) {
+      requestTypes.push("Transcript of Records");
+      totalCopies += requestData.transcript_copies || 0;
+    }
+    if (requestData.certificate_selected) {
+      requestTypes.push("Certificate of Grades");
+      totalCopies += requestData.certificate_copies || 0;
+    }
+    if (requestData.certification_selected) {
+      requestTypes.push("Certification");
+      totalCopies += requestData.certification_copies || 0;
+    }
+    if (requestData.others_selected) {
+      requestTypes.push("Others");
+      totalCopies += requestData.others_copies || 0;
+    }
+    
     const requestTypeText = requestTypes.join(", ");
     
     // Create email content
@@ -124,6 +139,7 @@ serve(async (req) => {
       requestType: requestTypeText,
       pickupDate,
       notes: requestData.notes,
+      copies: totalCopies,
     };
     
     console.log("Rendering email template with props:", emailProps);
@@ -142,6 +158,7 @@ Hi ${studentName},
 Good news! Your document request has been approved and is scheduled for pickup.
 
 DOCUMENT TYPE: ${requestTypeText}
+NUMBER OF COPIES: ${totalCopies}
 PICKUP DATE: ${pickupDate}
 NOTES: ${requestData.notes || 'None'}
 

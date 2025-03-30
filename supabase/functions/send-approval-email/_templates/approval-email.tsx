@@ -22,6 +22,7 @@ interface ApprovalEmailProps {
   requestType: string;
   pickupDate: string;
   notes: string | null;
+  copies: number;
 }
 
 export const ApprovalEmail = ({
@@ -29,9 +30,10 @@ export const ApprovalEmail = ({
   requestType,
   pickupDate,
   notes,
+  copies,
 }: ApprovalEmailProps) => {
-  // Using a publicly accessible image URL that is guaranteed to work in emails
-  const logoUrl = 'https://neu-arrs.lovable.app/lovable-uploads/0ac23211-034e-49ba-bc13-57361f72db64.png';
+  // Using the provided logo URL
+  const logoUrl = 'https://cdn.builder.io/api/v1/image/assets/e3c6b0ec50df45b58e99e24af78e19b0/496ecc137f8c0eeb6c4acc7eae1c9701ab567695346929631763cd049528af73';
 
   return (
     <Html>
@@ -76,27 +78,35 @@ export const ApprovalEmail = ({
             
             <Section style={infoBox}>
               <Row>
-                <Column>
+                <Column style={leftColumn}>
                   <Text style={infoLabel}>DOCUMENT TYPE:</Text>
                 </Column>
-                <Column>
+                <Column style={rightColumn}>
                   <Text style={infoValue}>{requestType}</Text>
                 </Column>
               </Row>
               <Row>
-                <Column>
+                <Column style={leftColumn}>
+                  <Text style={infoLabel}>NUMBER OF COPIES:</Text>
+                </Column>
+                <Column style={rightColumn}>
+                  <Text style={infoValue}>{copies}</Text>
+                </Column>
+              </Row>
+              <Row>
+                <Column style={leftColumn}>
                   <Text style={infoLabel}>PICKUP DATE:</Text>
                 </Column>
-                <Column>
+                <Column style={rightColumn}>
                   <Text style={infoValue}>{pickupDate}</Text>
                 </Column>
               </Row>
               {notes && (
                 <Row>
-                  <Column>
+                  <Column style={leftColumn}>
                     <Text style={infoLabel}>NOTES:</Text>
                   </Column>
-                  <Column>
+                  <Column style={rightColumn}>
                     <Text style={infoValue}>{notes || 'None'}</Text>
                   </Column>
                 </Row>
@@ -215,11 +225,22 @@ const infoBox = {
   margin: '20px 0',
 };
 
+const leftColumn = {
+  width: '40%',
+  verticalAlign: 'top',
+};
+
+const rightColumn = {
+  width: '60%',
+  verticalAlign: 'top',
+};
+
 const infoLabel = {
   fontSize: '14px',
   fontWeight: 'bold',
   color: '#666',
   margin: '5px 0',
+  textAlign: 'left' as const,
 };
 
 const infoValue = {
@@ -227,6 +248,7 @@ const infoValue = {
   fontWeight: 'normal',
   color: '#333',
   margin: '5px 0',
+  textAlign: 'left' as const,
 };
 
 const footerText = {
