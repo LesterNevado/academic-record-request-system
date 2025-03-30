@@ -108,7 +108,7 @@ export const ApprovalEmail = ({
             <Hr style={divider} />
             
             <Text style={footerText}>
-              This is an automated message. Please do not reply to this email.
+              This is an automated email. Please do not reply to this email.
             </Text>
           </Section>
         </Container>
