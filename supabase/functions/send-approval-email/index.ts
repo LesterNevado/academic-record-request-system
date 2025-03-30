@@ -126,8 +126,12 @@ serve(async (req) => {
       notes: requestData.notes,
     };
     
+    console.log("Rendering email template with props:", emailProps);
+    
     // Render the React Email template to HTML
     const html = await renderAsync(React.createElement(ApprovalEmail, emailProps));
+    
+    console.log("Email HTML generated successfully");
     
     // Create a simple plain text version as fallback
     const plainText = `

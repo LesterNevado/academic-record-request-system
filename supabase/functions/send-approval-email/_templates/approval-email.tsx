@@ -30,8 +30,8 @@ export const ApprovalEmail = ({
   pickupDate,
   notes,
 }: ApprovalEmailProps) => {
-  const baseUrl = 'https://neu-arrs.lovable.app';
-  const logoUrl = `${baseUrl}/lovable-uploads/0ac23211-034e-49ba-bc13-57361f72db64.png`;
+  // Using a publicly accessible image URL that is guaranteed to work in emails
+  const logoUrl = 'https://neu-arrs.lovable.app/lovable-uploads/0ac23211-034e-49ba-bc13-57361f72db64.png';
 
   return (
     <Html>
