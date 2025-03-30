@@ -1,7 +1,10 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.33.1';
+import { renderAsync } from 'npm:@react-email/render@0.0.9';
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import React from 'npm:react@18.2.0';
+import { ApprovalEmail } from './_templates/approval-email.tsx';
 
 // CORS headers for browser requests
 const corsHeaders = {
@@ -115,8 +118,19 @@ serve(async (req) => {
       );
     }
     
-    // Create a simple plain text email message
-    const plainTextEmail = `
+    // Create React Email template with data
+    const emailProps = {
+      studentName,
+      requestType: requestTypeText,
+      pickupDate,
+      notes: requestData.notes,
+    };
+    
+    // Render the React Email template to HTML
+    const html = await renderAsync(React.createElement(ApprovalEmail, emailProps));
+    
+    // Create a simple plain text version as fallback
+    const plainText = `
 NEU ARRS - Academic Record Request System
 
 Hi ${studentName},
@@ -137,16 +151,13 @@ If you have any questions or need to reschedule, please contact the Admission, S
 This is an automated message. Please do not reply to this email.
     `;
     
-    // Send the email as plain text
+    // Send the email with HTML and plain text fallback
     await client.send({
       from: "NEU ARRS <lester.nevado2@gmail.com>",
       to: studentEmail,
       subject: emailSubject,
-      content: plainTextEmail,
-      // Specify content type as plain text
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8"
-      }
+      html: html,
+      content: plainText,
     });
     
     // Close connection
