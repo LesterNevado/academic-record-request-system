@@ -31,6 +31,7 @@ export const ApprovalEmail = ({
   notes,
 }: ApprovalEmailProps) => {
   const baseUrl = 'https://neu-arrs.lovable.app';
+  const logoUrl = `${baseUrl}/lovable-uploads/0ac23211-034e-49ba-bc13-57361f72db64.png`;
 
   return (
     <Html>
@@ -39,10 +40,23 @@ export const ApprovalEmail = ({
       <Body style={main}>
         <Container style={container}>
           <Section style={headerSection}>
-            <Heading as="h1" style={mainTitle}>
-              NEU ARRS
-            </Heading>
-            <Text style={subtitle}>Academic Record Request System</Text>
+            <Row style={{ alignItems: 'center' }}>
+              <Column style={{ width: '80px' }}>
+                <Img
+                  src={logoUrl}
+                  alt="NEU Logo"
+                  width="70"
+                  height="70"
+                  style={logo}
+                />
+              </Column>
+              <Column>
+                <Heading as="h1" style={mainTitle}>
+                  NEU ARRS
+                </Heading>
+                <Text style={subtitle}>Academic Record Request System</Text>
+              </Column>
+            </Row>
           </Section>
 
           <Hr style={divider} />
@@ -135,8 +149,13 @@ const container = {
 const headerSection = {
   backgroundColor: '#0047AB',
   padding: '20px',
-  textAlign: 'center' as const,
+  textAlign: 'left' as const,
   borderRadius: '4px 4px 0 0',
+};
+
+const logo = {
+  margin: '0',
+  padding: '0',
 };
 
 const mainTitle = {
@@ -145,12 +164,14 @@ const mainTitle = {
   fontWeight: 'bold',
   margin: '0',
   lineHeight: '1.3',
+  textAlign: 'left' as const,
 };
 
 const subtitle = {
   color: '#ffffff',
   fontSize: '16px',
   margin: '5px 0 0',
+  textAlign: 'left' as const,
 };
 
 const contentSection = {

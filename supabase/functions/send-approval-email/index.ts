@@ -148,7 +148,7 @@ For Statement of Account (SOA), please proceed at the Accounting Office (Room 20
 
 If you have any questions or need to reschedule, please contact the Admission, Scholarship and Financial Assistance Office.
 
-This is an automated message. Please do not reply to this email.
+This is an automated email. Please do not reply to this email.
     `;
     
     // Send the email with HTML and plain text fallback
