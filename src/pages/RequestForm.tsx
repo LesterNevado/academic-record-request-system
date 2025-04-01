@@ -37,7 +37,8 @@ const RequestForm: React.FC = () => {
       transcript: { selected: false, copies: 1 },
       certificate: { selected: false, copies: 1 },
       certification: { selected: false, copies: 1, details: "" },
-      others: { selected: false, copies: 1, details: "" }
+      others: { selected: false, copies: 1, details: "" },
+      soa: { selected: false, copies: 1 }
     }
   });
   
@@ -56,13 +57,11 @@ const RequestForm: React.FC = () => {
         return;
       }
 
-      // Get user metadata from session
       const { user } = session;
       const name = user.user_metadata.name || user.user_metadata.full_name;
       const email = user.email;
       const avatarUrl = user.user_metadata.avatar_url;
 
-      // Set user profile and pre-fill name if available
       setUserProfile({
         name,
         email,
@@ -76,9 +75,7 @@ const RequestForm: React.FC = () => {
         }));
       }
       
-      // If roles aren't provided from context, fetch them
       if (!contextRoles || contextRoles.length === 0) {
-        // Fetch user roles
         const { data: roles, error: rolesError } = await supabase.rpc(
           'get_user_roles',
           { user_id: user.id }
@@ -91,14 +88,12 @@ const RequestForm: React.FC = () => {
           console.log("User roles:", roles);
           setUserRoles(roles || []);
           
-          // Check if user is faculty or admin, redirect if so
           if (roles && (roles.includes('faculty') || roles.includes('admin'))) {
             toast.error('Faculty and Admin users cannot create requests');
             navigate('/dashboard');
           }
         }
       } else {
-        // If user is faculty or admin, redirect to dashboard
         if (contextRoles.includes('faculty') || contextRoles.includes('admin')) {
           toast.error('Faculty and Admin users cannot create requests');
           navigate('/dashboard');
@@ -120,10 +115,9 @@ const RequestForm: React.FC = () => {
   const handleStudentNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/[^\d-]/g, '');
     
-    // Format as XX-XXXXX-XXX
     let formattedValue = value;
     if (value.length > 0) {
-      formattedValue = value.replace(/-/g, ''); // Remove existing hyphens
+      formattedValue = value.replace(/-/g, '');
       
       if (formattedValue.length > 2) {
         formattedValue = formattedValue.substring(0, 2) + '-' + formattedValue.substring(2);
@@ -133,7 +127,6 @@ const RequestForm: React.FC = () => {
         formattedValue = formattedValue.substring(0, 8) + '-' + formattedValue.substring(8);
       }
       
-      // Limit to format length (10 digits + 2 hyphens = 12 characters)
       formattedValue = formattedValue.substring(0, 12);
     }
     
@@ -144,8 +137,8 @@ const RequestForm: React.FC = () => {
   };
 
   const handleContactNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, ''); // Remove all non-digits
-    const limitedValue = value.substring(0, 11); // Limit to 11 digits
+    const value = e.target.value.replace(/\D/g, '');
+    const limitedValue = value.substring(0, 11);
     
     setFormData({
       ...formData,
@@ -154,7 +147,6 @@ const RequestForm: React.FC = () => {
   };
 
   const handleCheckboxChange = (type: string) => {
-    // Reset detail field errors when unchecking checkboxes
     if (type === 'certification' && formData.requestTypes.certification.selected) {
       setFormErrors(prev => ({ ...prev, certificationDetails: false }));
     } else if (type === 'others' && formData.requestTypes.others.selected) {
@@ -180,14 +172,13 @@ const RequestForm: React.FC = () => {
         ...formData.requestTypes,
         [type]: {
           ...formData.requestTypes[type as keyof typeof formData.requestTypes],
-          copies: Math.max(1, value) // Ensure at least 1 copy
+          copies: Math.max(1, value)
         }
       }
     });
   };
 
   const handleDetailsChange = (type: string, value: string) => {
-    // Clear error when user types in details
     if (type === 'certification') {
       setFormErrors(prev => ({ ...prev, certificationDetails: false }));
     } else if (type === 'others') {
@@ -213,13 +204,11 @@ const RequestForm: React.FC = () => {
       othersDetails: false
     };
 
-    // Check if certification is selected but details are empty
     if (formData.requestTypes.certification.selected && !formData.requestTypes.certification.details.trim()) {
       newErrors.certificationDetails = true;
       isValid = false;
     }
 
-    // Check if others is selected but details are empty
     if (formData.requestTypes.others.selected && !formData.requestTypes.others.details.trim()) {
       newErrors.othersDetails = true;
       isValid = false;
@@ -232,7 +221,6 @@ const RequestForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form before submission
     if (!validateForm()) {
       toast.error("Please fill in all required fields");
       return;
@@ -246,7 +234,6 @@ const RequestForm: React.FC = () => {
         return;
       }
       
-      // Show payment section instead of submitting to database
       setShowPayment(true);
       
     } catch (error: any) {
@@ -301,6 +288,10 @@ const RequestForm: React.FC = () => {
                 
                 {formData.requestTypes.others.selected && (
                   <li>Others ({formData.requestTypes.others.details}): {formData.requestTypes.others.copies} {formData.requestTypes.others.copies > 1 ? 'copies' : 'copy'}</li>
+                )}
+                
+                {formData.requestTypes.soa.selected && (
+                  <li>Statement of Account (SOA): {formData.requestTypes.soa.copies} {formData.requestTypes.soa.copies > 1 ? 'copies' : 'copy'}</li>
                 )}
               </ul>
             </div>
@@ -413,6 +404,29 @@ const RequestForm: React.FC = () => {
                             min="1"
                             value={formData.requestTypes.certificate.copies}
                             onChange={(e) => handleCopiesChange('certificate', parseInt(e.target.value) || 1)}
+                            className="text-center"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-12 gap-4">
+                        <div className="col-span-8 flex items-center space-x-2">
+                          <Checkbox 
+                            id="soa" 
+                            checked={formData.requestTypes.soa.selected}
+                            onCheckedChange={() => handleCheckboxChange('soa')}
+                          />
+                          <Label htmlFor="soa" className="font-normal">Statement of Account (SOA)</Label>
+                        </div>
+                        
+                        <div className="col-span-4">
+                          <Label htmlFor="soaCopies" className="text-sm block mb-1 text-center">No. of Copies</Label>
+                          <Input
+                            id="soaCopies"
+                            type="number"
+                            min="1"
+                            value={formData.requestTypes.soa.copies}
+                            onChange={(e) => handleCopiesChange('soa', parseInt(e.target.value) || 1)}
                             className="text-center"
                           />
                         </div>

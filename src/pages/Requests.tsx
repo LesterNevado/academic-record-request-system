@@ -30,6 +30,7 @@ type Request = Tables<"requests"> & {
   certificate_selected: boolean;
   certification_selected: boolean;
   others_selected: boolean;
+  soa_selected: boolean;
   processor_name?: string | null;
 };
 
@@ -134,6 +135,7 @@ const Requests: React.FC = () => {
     if (request.transcript_selected) types.push("Transcript of Records");
     if (request.certificate_selected) types.push("Certificate of Grades");
     if (request.certification_selected) types.push("Certification");
+    if (request.soa_selected) types.push("Statement of Account");
     if (request.others_selected) types.push("Others");
     
     return types.join(", ");

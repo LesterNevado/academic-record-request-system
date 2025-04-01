@@ -46,6 +46,11 @@ export const PaymentButton: React.FC<PaymentButtonProps> = ({
         const copies = requestFormData.requestTypes.others.copies || 1;
         totalAmount += 100 * copies; // ₱100 per copy
       }
+      
+      if (requestFormData.requestTypes.soa.selected) {
+        const copies = requestFormData.requestTypes.soa.copies || 1;
+        totalAmount += 100 * copies; // ₱100 per copy
+      }
 
       console.log("Invoking create-checkout with total amount:", totalAmount);
       console.log("Request data:", JSON.stringify({

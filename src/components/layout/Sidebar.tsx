@@ -45,7 +45,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ userProfile, userRoles, loadin
   };
 
   return (
-    <div className="w-64 bg-[#0047AB] text-white p-6 flex flex-col h-screen">
+    <div className="w-64 bg-[#0047AB] text-white p-6 flex flex-col min-h-screen h-full sticky top-0">
       <div className="flex items-center mb-10">
         <img
           src="https://cdn.builder.io/api/v1/image/assets/e3c6b0ec50df45b58e99e24af78e19b0/496ecc137f8c0eeb6c4acc7eae1c9701ab567695346929631763cd049528af73?placeholderIfAbsent=true"

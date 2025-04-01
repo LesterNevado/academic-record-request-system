@@ -147,36 +147,6 @@ export type Database = {
           },
         ]
       }
-      transaction_metadata: {
-        Row: {
-          client_reference_id: string
-          created_at: string
-          data: Json | null
-          id: string
-          session_id: string
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          client_reference_id: string
-          created_at?: string
-          data?: Json | null
-          id?: string
-          session_id: string
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          client_reference_id?: string
-          created_at?: string
-          data?: Json | null
-          id?: string
-          session_id?: string
-          status?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       transactions: {
         Row: {
           amount: number
