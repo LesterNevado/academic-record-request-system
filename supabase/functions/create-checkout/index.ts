@@ -13,6 +13,7 @@ const PRODUCT_IDS = {
   CERTIFICATE: "prod_RwMfUjiS0c3VHH",    // COG
   CERTIFICATION: "prod_RwMgZPEEMBDHlQ",  // Certification
   OTHERS: "prod_RwMgmzeBE2urMr",         // Others
+  SOA: "prod_S38hFN6e4Umkv4",            // Statement of Account
 };
 
 const corsHeaders = {
@@ -78,6 +79,12 @@ serve(async (req) => {
         const othersPrice = 100; // ₱100 per copy
         calculatedTotalAmount += othersPrice * othersCopies;
       }
+      
+      if (formData.requestTypes.soa.selected) {
+        const soaCopies = formData.requestTypes.soa.copies || 1;
+        const soaPrice = 150; // ₱150 per copy
+        calculatedTotalAmount += soaPrice * soaCopies;
+      }
     }
 
     // Add line items based on request types
@@ -139,6 +146,21 @@ serve(async (req) => {
       });
       
       console.log("Added others to line items:", othersCopies, "copies");
+    }
+    
+    if (formData.requestTypes.soa.selected) {
+      const soaCopies = formData.requestTypes.soa.copies || 1;
+      
+      lineItems.push({
+        price_data: {
+          currency: "php",
+          product: PRODUCT_IDS.SOA,
+          unit_amount: 150 * 100, // Amount in cents (₱150)
+        },
+        quantity: soaCopies,
+      });
+      
+      console.log("Added SOA to line items:", soaCopies, "copies");
     }
 
     // If no items selected, return error
