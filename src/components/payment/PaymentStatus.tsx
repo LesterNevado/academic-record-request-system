@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -96,6 +95,9 @@ export const PaymentStatus: React.FC = () => {
             others_selected: formData.requestTypes.others.selected,
             others_copies: formData.requestTypes.others.selected ? formData.requestTypes.others.copies : null,
             others_details: formData.requestTypes.others.selected ? formData.requestTypes.others.details : null,
+            
+            soa_selected: formData.requestTypes.soa && formData.requestTypes.soa.selected ? true : false,
+            soa_copies: formData.requestTypes.soa && formData.requestTypes.soa.selected ? formData.requestTypes.soa.copies : null,
             
             status: 'awaiting_pickup',
             pickup_date: null,
