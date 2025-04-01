@@ -49,6 +49,7 @@ export type Database = {
           certification_copies: number | null
           certification_details: string | null
           certification_selected: boolean
+          client_reference_id: string | null
           contact_number: string
           created_at: string
           home_address: string
@@ -60,9 +61,12 @@ export type Database = {
           pickup_date: string | null
           processed_by: string | null
           purpose: string
+          soa_copies: number | null
+          soa_selected: boolean
           status: string
           student_name: string
           student_number: string
+          transaction_id: string | null
           transcript_copies: number | null
           transcript_selected: boolean
           updated_at: string
@@ -74,6 +78,7 @@ export type Database = {
           certification_copies?: number | null
           certification_details?: string | null
           certification_selected?: boolean
+          client_reference_id?: string | null
           contact_number: string
           created_at?: string
           home_address: string
@@ -85,9 +90,12 @@ export type Database = {
           pickup_date?: string | null
           processed_by?: string | null
           purpose: string
+          soa_copies?: number | null
+          soa_selected?: boolean
           status?: string
           student_name: string
           student_number: string
+          transaction_id?: string | null
           transcript_copies?: number | null
           transcript_selected?: boolean
           updated_at?: string
@@ -99,6 +107,7 @@ export type Database = {
           certification_copies?: number | null
           certification_details?: string | null
           certification_selected?: boolean
+          client_reference_id?: string | null
           contact_number?: string
           created_at?: string
           home_address?: string
@@ -110,15 +119,25 @@ export type Database = {
           pickup_date?: string | null
           processed_by?: string | null
           purpose?: string
+          soa_copies?: number | null
+          soa_selected?: boolean
           status?: string
           student_name?: string
           student_number?: string
+          transaction_id?: string | null
           transcript_copies?: number | null
           transcript_selected?: boolean
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "requests_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "requests_user_id_fkey"
             columns: ["user_id"]
@@ -128,9 +147,40 @@ export type Database = {
           },
         ]
       }
+      transaction_metadata: {
+        Row: {
+          client_reference_id: string
+          created_at: string
+          data: Json | null
+          id: string
+          session_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          client_reference_id: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          session_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          client_reference_id?: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          session_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
+          client_reference_id: string | null
           created_at: string
           currency: string
           id: string
@@ -143,6 +193,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          client_reference_id?: string | null
           created_at?: string
           currency?: string
           id?: string
@@ -155,6 +206,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          client_reference_id?: string | null
           created_at?: string
           currency?: string
           id?: string
