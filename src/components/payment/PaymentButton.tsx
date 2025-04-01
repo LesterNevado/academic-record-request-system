@@ -47,6 +47,13 @@ export const PaymentButton: React.FC<PaymentButtonProps> = ({
         totalAmount += 100 * copies; // ₱100 per copy
       }
 
+      console.log("Invoking create-checkout with total amount:", totalAmount);
+      console.log("Request data:", JSON.stringify({
+        formData: requestFormData,
+        redirectUrl,
+        totalAmount,
+      }));
+
       // Call Supabase Edge Function to create checkout session
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: {
@@ -57,8 +64,15 @@ export const PaymentButton: React.FC<PaymentButtonProps> = ({
       });
 
       if (error) {
-        throw new Error(error.message);
+        console.error("Supabase function error:", error);
+        throw new Error(error.message || "Failed to create checkout session");
       }
+
+      if (!data) {
+        throw new Error("No data returned from checkout function");
+      }
+
+      console.log("Checkout session created:", data);
 
       if (data?.url) {
         // Store form data in localStorage for use after payment
@@ -69,11 +83,11 @@ export const PaymentButton: React.FC<PaymentButtonProps> = ({
         // Redirect to Stripe Checkout
         window.location.href = data.url;
       } else {
-        throw new Error("Failed to create checkout session");
+        throw new Error("Payment URL not returned from checkout function");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Payment error:", error);
-      toast.error("Payment processing error. Please try again.");
+      toast.error(`Payment processing error: ${error.message || "Please try again."}`);
     } finally {
       setIsLoading(false);
     }
