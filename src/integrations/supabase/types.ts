@@ -226,6 +226,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_transaction_if_not_exists: {
+        Args: {
+          p_user_id: string
+          p_request_id: string
+          p_amount: number
+          p_payment_status: string
+          p_payment_method: string
+          p_stripe_session_id: string
+        }
+        Returns: Json
+      }
       get_processor_name: {
         Args: {
           processor_id: string

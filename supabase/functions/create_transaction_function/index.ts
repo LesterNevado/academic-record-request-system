@@ -20,17 +20,21 @@ serve(async (req) => {
     );
 
     // Execute a database function to create a stored procedure that handles atomic transaction creation
-    const { error } = await supabase.rpc('create_transaction_function');
+    const { data, error } = await supabase.rpc('create_transaction_function');
 
     if (error) {
+      console.error("Error creating transaction function:", error);
       throw error;
     }
 
-    return new Response(JSON.stringify({ success: true }), {
+    console.log("Transaction function created successfully:", data);
+    
+    return new Response(JSON.stringify({ success: true, data }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
   } catch (error) {
+    console.error("Error in create_transaction_function:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,

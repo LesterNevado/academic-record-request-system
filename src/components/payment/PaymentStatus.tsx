@@ -147,19 +147,8 @@ export const PaymentStatus: React.FC = () => {
           
           console.log("Request created successfully with ID:", requestResult.id);
           
-          // Record transaction in the transactions table with a transaction block to ensure atomicity
-          const transactionData = {
-            user_id: session.user.id,
-            request_id: requestResult.id,
-            amount: paymentAmount,
-            payment_status: 'successful',
-            payment_method: 'card',
-            stripe_session_id: sessionId
-          };
-          
+          // Call the create_transaction_if_not_exists RPC function to ensure atomic transaction creation
           console.log("Recording transaction with session ID:", sessionId.substring(0, 5) + "...");
-          
-          // Using RPC to ensure atomicity in a transaction
           const { data: transactionResult, error: transactionError } = await supabase.rpc(
             'create_transaction_if_not_exists',
             {
@@ -178,6 +167,11 @@ export const PaymentStatus: React.FC = () => {
             toast.error("Note: There was an issue recording your payment details, but your request has been submitted.");
           } else {
             console.log("Transaction recorded successfully:", transactionResult);
+            if (transactionResult.exists) {
+              console.log("Transaction already existed in database");
+            } else {
+              console.log("Created new transaction record");
+            }
           }
           
           // Clear stored form data
