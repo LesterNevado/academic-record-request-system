@@ -114,6 +114,10 @@ serve(async (req) => {
       requestTypes.push("Certification");
       totalCopies += requestData.certification_copies || 0;
     }
+    if (requestData.soa_selected) {
+      requestTypes.push("Statement of Account");
+      totalCopies += requestData.soa_copies || 0;
+    }
     if (requestData.others_selected) {
       requestTypes.push("Others");
       totalCopies += requestData.others_copies || 0;
