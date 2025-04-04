@@ -13,25 +13,30 @@ export const PaymentStatus: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const requestProcessedRef = useRef(false);
+  const processingInProgress = useRef(false);
 
   useEffect(() => {
-    // Only proceed if we haven't processed this request yet
-    if (requestProcessedRef.current) {
-      console.log("Request already processed in this session, preventing duplicate processing");
-      return;
-    }
+    // Function to process the payment result
+    const processPaymentResult = async () => {
+      // Only proceed if we haven't processed this request yet and no processing is in progress
+      if (requestProcessedRef.current || processingInProgress.current) {
+        console.log("Request already processed or processing in progress, preventing duplicate processing");
+        return;
+      }
 
-    const params = new URLSearchParams(location.search);
-    const isSuccess = params.get("success") === "true";
-    const sessionId = params.get("session_id");
-
-    console.log("Payment status page loaded with params:", { 
-      success: isSuccess, 
-      sessionId: sessionId ? `${sessionId.substring(0, 5)}...` : null // Log partial ID for privacy
-    });
-
-    const createRequest = async () => {
+      // Set processing flag to prevent concurrent processing attempts
+      processingInProgress.current = true;
+      
       try {
+        const params = new URLSearchParams(location.search);
+        const isSuccess = params.get("success") === "true";
+        const sessionId = params.get("session_id");
+
+        console.log("Payment status page loaded with params:", { 
+          success: isSuccess, 
+          sessionId: sessionId ? `${sessionId.substring(0, 5)}...` : null // Log partial ID for privacy
+        });
+
         // If payment was successful, create request in the database
         if (isSuccess && sessionId) {
           // Mark as processed to prevent duplicate requests within the same browser session
@@ -149,17 +154,15 @@ export const PaymentStatus: React.FC = () => {
           
           // Call the create_transaction_if_not_exists RPC function to ensure atomic transaction creation
           console.log("Recording transaction with session ID:", sessionId.substring(0, 5) + "...");
-          const { data: transactionResult, error: transactionError } = await supabase.rpc(
-            'create_transaction_if_not_exists',
-            {
+          const { data: transactionResult, error: transactionError } = await supabase
+            .rpc('create_transaction_if_not_exists', {
               p_user_id: session.user.id,
               p_request_id: requestResult.id,
               p_amount: paymentAmount,
               p_payment_status: 'successful',
               p_payment_method: 'card',
               p_stripe_session_id: sessionId
-            }
-          );
+            });
             
           if (transactionError) {
             console.error("Error recording transaction:", transactionError);
@@ -167,7 +170,8 @@ export const PaymentStatus: React.FC = () => {
             toast.error("Note: There was an issue recording your payment details, but your request has been submitted.");
           } else {
             console.log("Transaction recorded successfully:", transactionResult);
-            if (transactionResult.exists) {
+            const result = transactionResult as { id: string, request_id: string, exists: boolean };
+            if (result.exists) {
               console.log("Transaction already existed in database");
             } else {
               console.log("Created new transaction record");
@@ -191,6 +195,7 @@ export const PaymentStatus: React.FC = () => {
         toast.error("Error creating your request. Please contact support.");
       } finally {
         setIsProcessing(false);
+        processingInProgress.current = false;
         
         // Redirect to requests page after 3 seconds
         console.log("Redirecting to requests page in 3 seconds...");
@@ -200,7 +205,15 @@ export const PaymentStatus: React.FC = () => {
       }
     };
 
-    createRequest();
+    // Start processing with a small delay to prevent race conditions
+    const timeoutId = setTimeout(() => {
+      processPaymentResult();
+    }, 100);
+
+    // Clean up function
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [location.search, navigate]);
 
   if (isProcessing) {
