@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -16,6 +17,7 @@ export const PaymentStatus: React.FC = () => {
   useEffect(() => {
     // Only proceed if we haven't processed this request yet
     if (requestProcessedRef.current) {
+      console.log("Request already processed in this session, preventing duplicate processing");
       return;
     }
 
@@ -23,40 +25,63 @@ export const PaymentStatus: React.FC = () => {
     const isSuccess = params.get("success") === "true";
     const sessionId = params.get("session_id");
 
+    console.log("Payment status page loaded with params:", { 
+      success: isSuccess, 
+      sessionId: sessionId ? `${sessionId.substring(0, 5)}...` : null // Log partial ID for privacy
+    });
+
     const createRequest = async () => {
       try {
         // If payment was successful, create request in the database
         if (isSuccess && sessionId) {
-          // Mark as processed to prevent duplicate requests
+          // Mark as processed to prevent duplicate requests within the same browser session
           requestProcessedRef.current = true;
+          console.log("Processing payment success with session ID:", sessionId.substring(0, 5) + "...");
           
           // Get stored form data
           const storedFormData = localStorage.getItem('pendingRequestData');
           const storedAmount = localStorage.getItem('pendingPaymentAmount');
           
           if (!storedFormData) {
+            console.error("Request data not found in localStorage");
             throw new Error("Request data not found");
           }
           
           const formData = JSON.parse(storedFormData);
           const paymentAmount = storedAmount ? parseFloat(storedAmount) : 0;
           
+          console.log("Retrieved form data from localStorage:", {
+            studentName: formData.studentName,
+            amount: paymentAmount,
+            requestTypes: Object.keys(formData.requestTypes)
+              .filter(key => formData.requestTypes[key].selected)
+              .map(key => key)
+          });
+          
           // Check if session has a user
           const { data: { session } } = await supabase.auth.getSession();
           
           if (!session?.user) {
+            console.error("User not authenticated");
             throw new Error("User not authenticated");
           }
+          
+          console.log("User authenticated:", session.user.id.substring(0, 8) + "...");
 
           // First check if transaction with this session ID already exists (to prevent duplicates)
-          const { data: existingTransaction } = await supabase
+          console.log("Checking if transaction already exists for session ID:", sessionId.substring(0, 5) + "...");
+          const { data: existingTransaction, error: txCheckError } = await supabase
             .from('transactions')
             .select('id, request_id')
             .eq('stripe_session_id', sessionId)
-            .single();
+            .maybeSingle();
+            
+          if (txCheckError) {
+            console.error("Error checking for existing transaction:", txCheckError);
+          }
 
           if (existingTransaction) {
-            console.log("Transaction already exists for this session ID:", existingTransaction);
+            console.log("Transaction already exists:", existingTransaction);
             // Transaction already exists, just set success state and show message
             setSuccess(true);
             toast.success("Payment successful! Your request is waiting for faculty approval.");
@@ -72,6 +97,8 @@ export const PaymentStatus: React.FC = () => {
             }, 3000);
             return;
           }
+          
+          console.log("No existing transaction found, creating new request...");
           
           // Prepare request data for submission to Supabase
           const requestData: TablesInsert<"requests"> = {
@@ -106,6 +133,7 @@ export const PaymentStatus: React.FC = () => {
           };
           
           // Submit request to Supabase
+          console.log("Creating request in database...");
           const { data: requestResult, error: requestError } = await supabase
             .from('requests')
             .insert(requestData)
@@ -113,10 +141,13 @@ export const PaymentStatus: React.FC = () => {
             .single();
           
           if (requestError) {
+            console.error("Error creating request:", requestError);
             throw requestError;
           }
           
-          // Record transaction in the transactions table
+          console.log("Request created successfully with ID:", requestResult.id);
+          
+          // Record transaction in the transactions table with a transaction block to ensure atomicity
           const transactionData = {
             user_id: session.user.id,
             request_id: requestResult.id,
@@ -126,13 +157,27 @@ export const PaymentStatus: React.FC = () => {
             stripe_session_id: sessionId
           };
           
-          const { error: transactionError } = await supabase
-            .from('transactions')
-            .insert(transactionData);
+          console.log("Recording transaction with session ID:", sessionId.substring(0, 5) + "...");
+          
+          // Using RPC to ensure atomicity in a transaction
+          const { data: transactionResult, error: transactionError } = await supabase.rpc(
+            'create_transaction_if_not_exists',
+            {
+              p_user_id: session.user.id,
+              p_request_id: requestResult.id,
+              p_amount: paymentAmount,
+              p_payment_status: 'successful',
+              p_payment_method: 'card',
+              p_stripe_session_id: sessionId
+            }
+          );
             
           if (transactionError) {
             console.error("Error recording transaction:", transactionError);
-            // Continue despite transaction recording error, as the request was created
+            // We'll continue despite transaction recording error, as the request was created
+            toast.error("Note: There was an issue recording your payment details, but your request has been submitted.");
+          } else {
+            console.log("Transaction recorded successfully:", transactionResult);
           }
           
           // Clear stored form data
@@ -140,9 +185,11 @@ export const PaymentStatus: React.FC = () => {
           localStorage.removeItem('pendingPaymentAmount');
           localStorage.removeItem('pendingSessionId');
           
+          console.log("Successfully processed payment, created request, and transaction");
           setSuccess(true);
           toast.success("Payment successful! Your request is waiting for faculty approval.");
         } else {
+          console.log("Payment was not successful or session ID is missing");
           toast.error("Payment was canceled or unsuccessful.");
         }
       } catch (error) {
@@ -152,6 +199,7 @@ export const PaymentStatus: React.FC = () => {
         setIsProcessing(false);
         
         // Redirect to requests page after 3 seconds
+        console.log("Redirecting to requests page in 3 seconds...");
         setTimeout(() => {
           navigate("/requests");
         }, 3000);

@@ -52,14 +52,21 @@ export const PaymentButton: React.FC<PaymentButtonProps> = ({
         totalAmount += 150 * copies; // ₱150 per copy
       }
 
-      console.log("Invoking create-checkout with total amount:", totalAmount);
-      console.log("Request data:", JSON.stringify({
-        formData: requestFormData,
-        redirectUrl,
-        totalAmount,
-      }));
+      console.log("Starting payment process with total amount:", totalAmount);
+      console.log("Request data summary:", {
+        studentName: requestFormData.studentName,
+        studentNumber: requestFormData.studentNumber,
+        purpose: requestFormData.purpose,
+        requestTypes: Object.keys(requestFormData.requestTypes)
+          .filter(key => requestFormData.requestTypes[key].selected)
+          .map(key => ({
+            type: key,
+            copies: requestFormData.requestTypes[key].copies
+          }))
+      });
 
       // Call Supabase Edge Function to create checkout session
+      console.log("Invoking create-checkout function...");
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: {
           formData: requestFormData,
@@ -74,18 +81,24 @@ export const PaymentButton: React.FC<PaymentButtonProps> = ({
       }
 
       if (!data) {
+        console.error("No data returned from checkout function");
         throw new Error("No data returned from checkout function");
       }
 
-      console.log("Checkout session created:", data);
+      console.log("Checkout session created successfully:", {
+        sessionId: data.sessionId ? data.sessionId.substring(0, 5) + '...' : null,
+        hasUrl: !!data.url
+      });
 
       if (data?.url) {
         // Store form data in localStorage for use after payment
+        console.log("Storing form data in localStorage");
         localStorage.setItem('pendingRequestData', JSON.stringify(requestFormData));
         localStorage.setItem('pendingPaymentAmount', totalAmount.toString());
         localStorage.setItem('pendingSessionId', data.sessionId);
         
         // Redirect to Stripe Checkout
+        console.log("Redirecting to Stripe Checkout...");
         window.location.href = data.url;
       } else {
         throw new Error("Payment URL not returned from checkout function");
