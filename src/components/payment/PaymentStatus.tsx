@@ -85,8 +85,8 @@ export const PaymentStatus: React.FC = () => {
             console.error("Error checking for existing transaction:", txCheckError);
           }
 
-          if (existingTransaction) {
-            console.log("Transaction already exists:", existingTransaction);
+          if (existingTransaction && existingTransaction.request_id) {
+            console.log("Transaction already exists with linked request:", existingTransaction);
             // Transaction already exists, just set success state and show message
             setSuccess(true);
             toast.success("Payment successful! Your request is waiting for faculty approval.");
@@ -103,78 +103,135 @@ export const PaymentStatus: React.FC = () => {
             return;
           }
           
-          console.log("No existing transaction found, creating new request...");
+          let requestId: string;
           
-          // Prepare request data for submission to Supabase
-          const requestData: TablesInsert<"requests"> = {
-            user_id: session.user.id,
-            student_name: formData.studentName,
-            student_number: formData.studentNumber,
-            contact_number: formData.contactNumber,
-            home_address: formData.homeAddress,
-            purpose: formData.purpose,
+          // If transaction exists but has no request_id, we need to create the request and link it
+          if (existingTransaction && !existingTransaction.request_id) {
+            console.log("Transaction exists but has no linked request. Creating request...");
             
-            transcript_selected: formData.requestTypes.transcript.selected,
-            transcript_copies: formData.requestTypes.transcript.selected ? formData.requestTypes.transcript.copies : null,
+            // Prepare request data for submission to Supabase
+            const requestData: TablesInsert<"requests"> = {
+              user_id: session.user.id,
+              student_name: formData.studentName,
+              student_number: formData.studentNumber,
+              contact_number: formData.contactNumber,
+              home_address: formData.homeAddress,
+              purpose: formData.purpose,
+              transaction_id: existingTransaction.id, // Link to existing transaction
+              transcript_selected: formData.requestTypes.transcript.selected,
+              transcript_copies: formData.requestTypes.transcript.selected ? formData.requestTypes.transcript.copies : null,
+              certificate_selected: formData.requestTypes.certificate.selected,
+              certificate_copies: formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.copies : null,
+              certification_selected: formData.requestTypes.certification.selected,
+              certification_copies: formData.requestTypes.certification.selected ? formData.requestTypes.certification.copies : null,
+              certification_details: formData.requestTypes.certification.selected ? formData.requestTypes.certification.details : null,
+              others_selected: formData.requestTypes.others.selected,
+              others_copies: formData.requestTypes.others.selected ? formData.requestTypes.others.copies : null,
+              others_details: formData.requestTypes.others.selected ? formData.requestTypes.others.details : null,
+              soa_selected: formData.requestTypes.soa && formData.requestTypes.soa.selected ? true : false,
+              soa_copies: formData.requestTypes.soa && formData.requestTypes.soa.selected ? formData.requestTypes.soa.copies : null,
+              status: 'awaiting_pickup',
+              pickup_date: null,
+              processed_by: null,
+              notes: null
+            };
             
-            certificate_selected: formData.requestTypes.certificate.selected,
-            certificate_copies: formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.copies : null,
+            // Submit request to Supabase
+            console.log("Creating request in database with existing transaction ID:", existingTransaction.id);
+            const { data: requestResult, error: requestError } = await supabase
+              .from('requests')
+              .insert(requestData)
+              .select('id')
+              .single();
             
-            certification_selected: formData.requestTypes.certification.selected,
-            certification_copies: formData.requestTypes.certification.selected ? formData.requestTypes.certification.copies : null,
-            certification_details: formData.requestTypes.certification.selected ? formData.requestTypes.certification.details : null,
+            if (requestError) {
+              console.error("Error creating request:", requestError);
+              throw requestError;
+            }
             
-            others_selected: formData.requestTypes.others.selected,
-            others_copies: formData.requestTypes.others.selected ? formData.requestTypes.others.copies : null,
-            others_details: formData.requestTypes.others.selected ? formData.requestTypes.others.details : null,
+            requestId = requestResult.id;
+            console.log("Request created successfully with ID:", requestId);
             
-            soa_selected: formData.requestTypes.soa && formData.requestTypes.soa.selected ? true : false,
-            soa_copies: formData.requestTypes.soa && formData.requestTypes.soa.selected ? formData.requestTypes.soa.copies : null,
+            // Update the transaction to link back to the request
+            const { error: updateError } = await supabase
+              .from('transactions')
+              .update({ request_id: requestId })
+              .eq('id', existingTransaction.id);
+              
+            if (updateError) {
+              console.error("Error updating transaction with request ID:", updateError);
+              // Non-fatal error, continue
+            }
             
-            status: 'awaiting_pickup',
-            pickup_date: null,
-            processed_by: null,
-            notes: null
-          };
-          
-          // Submit request to Supabase
-          console.log("Creating request in database...");
-          const { data: requestResult, error: requestError } = await supabase
-            .from('requests')
-            .insert(requestData)
-            .select('id')
-            .single();
-          
-          if (requestError) {
-            console.error("Error creating request:", requestError);
-            throw requestError;
-          }
-          
-          console.log("Request created successfully with ID:", requestResult.id);
-          
-          // Call the create_transaction_if_not_exists RPC function to ensure atomic transaction creation
-          console.log("Recording transaction with session ID:", sessionId.substring(0, 5) + "...");
-          const { data: transactionResult, error: transactionError } = await supabase
-            .rpc('create_transaction_if_not_exists', {
-              p_user_id: session.user.id,
-              p_request_id: requestResult.id,
-              p_amount: paymentAmount,
-              p_payment_status: 'successful',
-              p_payment_method: 'card',
-              p_stripe_session_id: sessionId
-            });
+          } else if (!existingTransaction) {
+            console.log("No existing transaction found, creating new request...");
             
-          if (transactionError) {
-            console.error("Error recording transaction:", transactionError);
-            // We'll continue despite transaction recording error, as the request was created
-            toast.error("Note: There was an issue recording your payment details, but your request has been submitted.");
-          } else {
-            console.log("Transaction recorded successfully:", transactionResult);
-            const result = transactionResult as { id: string, request_id: string, exists: boolean };
-            if (result.exists) {
-              console.log("Transaction already existed in database");
+            // Prepare request data for submission to Supabase
+            const requestData: TablesInsert<"requests"> = {
+              user_id: session.user.id,
+              student_name: formData.studentName,
+              student_number: formData.studentNumber,
+              contact_number: formData.contactNumber,
+              home_address: formData.homeAddress,
+              purpose: formData.purpose,
+              transcript_selected: formData.requestTypes.transcript.selected,
+              transcript_copies: formData.requestTypes.transcript.selected ? formData.requestTypes.transcript.copies : null,
+              certificate_selected: formData.requestTypes.certificate.selected,
+              certificate_copies: formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.copies : null,
+              certification_selected: formData.requestTypes.certification.selected,
+              certification_copies: formData.requestTypes.certification.selected ? formData.requestTypes.certification.copies : null,
+              certification_details: formData.requestTypes.certification.selected ? formData.requestTypes.certification.details : null,
+              others_selected: formData.requestTypes.others.selected,
+              others_copies: formData.requestTypes.others.selected ? formData.requestTypes.others.copies : null,
+              others_details: formData.requestTypes.others.selected ? formData.requestTypes.others.details : null,
+              soa_selected: formData.requestTypes.soa && formData.requestTypes.soa.selected ? true : false,
+              soa_copies: formData.requestTypes.soa && formData.requestTypes.soa.selected ? formData.requestTypes.soa.copies : null,
+              status: 'awaiting_pickup',
+              pickup_date: null,
+              processed_by: null,
+              notes: null
+            };
+            
+            // Submit request to Supabase
+            console.log("Creating request in database...");
+            const { data: requestResult, error: requestError } = await supabase
+              .from('requests')
+              .insert(requestData)
+              .select('id')
+              .single();
+            
+            if (requestError) {
+              console.error("Error creating request:", requestError);
+              throw requestError;
+            }
+            
+            requestId = requestResult.id;
+            console.log("Request created successfully with ID:", requestId);
+            
+            // Call the create_transaction_if_not_exists RPC function to ensure atomic transaction creation
+            console.log("Recording transaction with session ID:", sessionId.substring(0, 5) + "...");
+            const { data: transactionResult, error: transactionError } = await supabase
+              .rpc('create_transaction_if_not_exists', {
+                p_user_id: session.user.id,
+                p_request_id: requestId,
+                p_amount: paymentAmount,
+                p_payment_status: 'successful',
+                p_payment_method: 'card',
+                p_stripe_session_id: sessionId
+              });
+              
+            if (transactionError) {
+              console.error("Error recording transaction:", transactionError);
+              // We'll continue despite transaction recording error, as the request was created
+              toast.error("Note: There was an issue recording your payment details, but your request has been submitted.");
             } else {
-              console.log("Created new transaction record");
+              console.log("Transaction recorded successfully:", transactionResult);
+              const result = transactionResult as { id: string, request_id: string, exists: boolean };
+              if (result.exists) {
+                console.log("Transaction already existed in database");
+              } else {
+                console.log("Created new transaction record");
+              }
             }
           }
           
