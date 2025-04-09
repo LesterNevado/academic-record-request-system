@@ -20,10 +20,41 @@ import {
   ArrowUpDown,
   Package,
   Calendar,
-  MessageCircle
+  MessageCircle,
+  X,
+  ChevronDown
 } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { format } from "date-fns";
+import { Input } from "@/components/ui/input";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { 
+  ToggleGroup, 
+  ToggleGroupItem 
+} from "@/components/ui/toggle-group";
 
 type Request = Tables<"requests"> & {
   transcript_selected: boolean;
@@ -33,6 +64,9 @@ type Request = Tables<"requests"> & {
   soa_selected: boolean;
   processor_name?: string | null;
 };
+
+type SortOption = "newest" | "oldest" | "name_asc" | "name_desc" | "status";
+type DocumentType = "all" | "transcript" | "certificate" | "certification" | "soa" | "others";
 
 const Requests: React.FC = () => {
   const navigate = useNavigate();
@@ -48,6 +82,19 @@ const Requests: React.FC = () => {
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  // Filter and sort state
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortOption, setSortOption] = useState<SortOption>("newest");
+  const [documentType, setDocumentType] = useState<DocumentType>("all");
+  const [processor, setProcessor] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<{
+    from: string | null;
+    to: string | null;
+  }>({
+    from: null,
+    to: null
+  });
+  const [processors, setProcessors] = useState<{id: string, name: string}[]>([]);
 
   // Update user profile whenever session changes
   useEffect(() => {
@@ -69,6 +116,32 @@ const Requests: React.FC = () => {
       avatarUrl
     });
   }, [session, navigate]);
+
+  // Fetch all processors (faculty members) for the filter dropdown
+  useEffect(() => {
+    const fetchProcessors = async () => {
+      try {
+        const { data: processorData, error } = await supabase
+          .rpc('get_all_processors');
+        
+        if (error) throw error;
+        
+        // Transform the data for the dropdown
+        const formatProcessors = processorData.map((processor: any) => ({
+          id: processor.id,
+          name: processor.name || 'Unknown'
+        }));
+        
+        setProcessors(formatProcessors);
+      } catch (err) {
+        console.error("Failed to fetch processors:", err);
+      }
+    };
+
+    if (session?.user?.id) {
+      fetchProcessors();
+    }
+  }, [session?.user?.id]);
 
   // Use React Query to fetch requests, which handles caching and refetching
   const { data: requests = [], isLoading: requestsLoading, error, refetch } = useQuery({
@@ -141,24 +214,110 @@ const Requests: React.FC = () => {
     return types.join(", ");
   };
 
+  // Check if a request matches the selected document type filter
+  const matchesDocumentTypeFilter = (request: Request): boolean => {
+    if (documentType === "all") return true;
+    
+    switch (documentType) {
+      case "transcript": return request.transcript_selected;
+      case "certificate": return request.certificate_selected;
+      case "certification": return request.certification_selected;
+      case "soa": return request.soa_selected;
+      case "others": return request.others_selected;
+      default: return true;
+    }
+  };
+
+  // Check if a request matches the processor filter
+  const matchesProcessorFilter = (request: Request): boolean => {
+    if (processor === "all") return true;
+    return request.processed_by === processor;
+  };
+
+  // Check if a request matches the date range filter
+  const matchesDateFilter = (request: Request): boolean => {
+    if (!dateRange.from && !dateRange.to) return true;
+    
+    const requestDate = new Date(request.created_at);
+    
+    if (dateRange.from && !dateRange.to) {
+      const fromDate = new Date(dateRange.from);
+      return requestDate >= fromDate;
+    }
+    
+    if (!dateRange.from && dateRange.to) {
+      const toDate = new Date(dateRange.to);
+      return requestDate <= toDate;
+    }
+    
+    // Both from and to are set
+    const fromDate = new Date(dateRange.from!);
+    const toDate = new Date(dateRange.to!);
+    return requestDate >= fromDate && requestDate <= toDate;
+  };
+
   // Format date to a more readable format
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return format(date, 'MMM d, yyyy');
+  };
+
+  // Apply all filters and sorting
+  const getFilteredAndSortedRequests = () => {
+    if (!Array.isArray(requests)) return [];
+    
+    // First apply all filters
+    const filtered = requests.filter(request => {
+      const matchesSearch = 
+        request.student_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        getRequestType(request).toLowerCase().includes(searchTerm.toLowerCase()) ||
+        request.student_number.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      return matchesSearch && 
+        matchesDocumentTypeFilter(request) && 
+        matchesProcessorFilter(request) &&
+        matchesDateFilter(request);
+    });
+    
+    // Then sort the filtered results
+    return filtered.sort((a, b) => {
+      switch (sortOption) {
+        case "newest":
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case "oldest":
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case "name_asc":
+          return a.student_name.localeCompare(b.student_name);
+        case "name_desc":
+          return b.student_name.localeCompare(a.student_name);
+        case "status":
+          // Sort by status: 'approved' first, then 'awaiting_pickup', 'pending', 'rejected'
+          const statusOrder = { 
+            'approved': 1, 
+            'awaiting_pickup': 2, 
+            'pending': 3, 
+            'rejected': 4 
+          };
+          return (statusOrder[a.status as keyof typeof statusOrder] || 5) - 
+                 (statusOrder[b.status as keyof typeof statusOrder] || 5);
+        default:
+          return 0;
+      }
     });
   };
 
-  // Filter requests based on search term - safely check for arrays and objects
-  const filteredRequests = Array.isArray(requests) 
-    ? requests.filter(request => 
-        request.student_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        getRequestType(request).toLowerCase().includes(searchTerm.toLowerCase()) ||
-        request.student_number.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : [];
+  // Get the filtered and sorted requests
+  const filteredRequests = getFilteredAndSortedRequests();
+
+  // Clear all filters
+  const clearFilters = () => {
+    setDocumentType("all");
+    setProcessor("all");
+    setDateRange({ from: null, to: null });
+    setSortOption("newest");
+    setSearchTerm("");
+    setShowFilters(false);
+  };
 
   // Add a manual refresh function
   const handleManualRefresh = async () => {
@@ -181,7 +340,7 @@ const Requests: React.FC = () => {
       />
       
       {/* Main Content */}
-      <div className="flex-1 p-10">
+      <div className="flex-1 p-6 md:p-10">
         <header className="mb-8">
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold">My Requests</h1>
@@ -206,7 +365,7 @@ const Requests: React.FC = () => {
         </header>
 
         {/* Search and filter */}
-        <div className="mb-6 flex space-x-4">
+        <div className="mb-6 flex flex-col md:flex-row md:space-x-4 space-y-2 md:space-y-0">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input
@@ -217,15 +376,183 @@ const Requests: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button variant="outline" className="flex items-center">
-            <Filter className="w-4 h-4 mr-2" />
-            Filter
-          </Button>
-          <Button variant="outline" className="flex items-center">
-            <ArrowUpDown className="w-4 h-4 mr-2" />
-            Sort
-          </Button>
+          <div className="flex space-x-2">
+            <Button 
+              variant="outline" 
+              className="flex items-center whitespace-nowrap"
+              onClick={() => setShowFilters(true)}
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              Filter
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center whitespace-nowrap">
+                  <ArrowUpDown className="w-4 h-4 mr-2" />
+                  Sort
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setSortOption("newest")}>
+                  {sortOption === "newest" && <CheckCircle className="w-4 h-4 mr-2" />}
+                  Newest first
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortOption("oldest")}>
+                  {sortOption === "oldest" && <CheckCircle className="w-4 h-4 mr-2" />}
+                  Oldest first
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortOption("name_asc")}>
+                  {sortOption === "name_asc" && <CheckCircle className="w-4 h-4 mr-2" />}
+                  Name (A-Z)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortOption("name_desc")}>
+                  {sortOption === "name_desc" && <CheckCircle className="w-4 h-4 mr-2" />}
+                  Name (Z-A)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSortOption("status")}>
+                  {sortOption === "status" && <CheckCircle className="w-4 h-4 mr-2" />}
+                  Status
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
+
+        {/* Applied filters display */}
+        {(documentType !== "all" || processor !== "all" || dateRange.from || dateRange.to) && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {documentType !== "all" && (
+              <div className="bg-blue-50 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center">
+                {documentType === "transcript" && "Transcript"}
+                {documentType === "certificate" && "Certificate"}
+                {documentType === "certification" && "Certification"}
+                {documentType === "soa" && "Statement of Account"}
+                {documentType === "others" && "Others"}
+                <button
+                  onClick={() => setDocumentType("all")}
+                  className="ml-2 focus:outline-none"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+            {processor !== "all" && (
+              <div className="bg-blue-50 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center">
+                Processor: {processors.find(p => p.id === processor)?.name}
+                <button
+                  onClick={() => setProcessor("all")}
+                  className="ml-2 focus:outline-none"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+            {(dateRange.from || dateRange.to) && (
+              <div className="bg-blue-50 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center">
+                Date: {dateRange.from ? formatDate(dateRange.from) : 'Any'} - {dateRange.to ? formatDate(dateRange.to) : 'Any'}
+                <button
+                  onClick={() => setDateRange({ from: null, to: null })}
+                  className="ml-2 focus:outline-none"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+            <button
+              onClick={clearFilters}
+              className="text-sm text-blue-600 hover:text-blue-800 underline ml-2"
+            >
+              Clear all filters
+            </button>
+          </div>
+        )}
+
+        {/* Filter Dialog */}
+        <Dialog open={showFilters} onOpenChange={setShowFilters}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Filter Requests</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">Document Type</label>
+                <ToggleGroup 
+                  type="single"
+                  variant="outline"
+                  className="justify-start flex-wrap"
+                  value={documentType}
+                  onValueChange={(value) => {
+                    if (value) setDocumentType(value as DocumentType);
+                  }}
+                >
+                  <ToggleGroupItem value="all">All</ToggleGroupItem>
+                  <ToggleGroupItem value="transcript">Transcript</ToggleGroupItem>
+                  <ToggleGroupItem value="certificate">Certificate</ToggleGroupItem>
+                  <ToggleGroupItem value="certification">Certification</ToggleGroupItem>
+                  <ToggleGroupItem value="soa">Statement of Account</ToggleGroupItem>
+                  <ToggleGroupItem value="others">Others</ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+              
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">Processor</label>
+                <Select 
+                  value={processor} 
+                  onValueChange={setProcessor}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a processor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Processors</SelectItem>
+                    {processors.map((proc) => (
+                      <SelectItem key={proc.id} value={proc.id}>
+                        {proc.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">Date Range</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">From</label>
+                    <Input
+                      type="date"
+                      value={dateRange.from || ''}
+                      onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value || null }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">To</label>
+                    <Input
+                      type="date"
+                      value={dateRange.to || ''}
+                      onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value || null }))}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button 
+                variant="outline" 
+                onClick={clearFilters}
+              >
+                Reset
+              </Button>
+              <DialogClose asChild>
+                <Button className="bg-[#0047AB] hover:bg-[#00377e]">
+                  Apply Filters
+                </Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Request Cards */}
         {requestsLoading ? (
