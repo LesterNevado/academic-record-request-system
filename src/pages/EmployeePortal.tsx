@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,7 @@ type RequestWithTransaction = {
   };
 };
 
-const FacultyPortal: React.FC = () => {
+const EmployeePortal: React.FC = () => {
   const navigate = useNavigate();
   const { session, userRoles = [] } = useContext(SessionContext);
   const [userProfile, setUserProfile] = useState<{
@@ -85,22 +86,27 @@ const FacultyPortal: React.FC = () => {
       const email = user.email;
       const avatarUrl = user.user_metadata.avatar_url;
       
-      const { data, error } = await supabase.rpc(
+      const { data: hasEmployeeRole, error: employeeError } = await supabase.rpc(
+        'has_role',
+        { user_id: user.id, role: 'employee' }
+      );
+
+      const { data: hasFacultyRole, error: facultyError } = await supabase.rpc(
         'has_role',
         { user_id: user.id, role: 'faculty' }
       );
       
-      if (error) {
-        console.error("Error checking faculty role:", error);
-        toast.error("Failed to verify faculty access");
+      if (employeeError && facultyError) {
+        console.error("Error checking employee/faculty role:", employeeError || facultyError);
+        toast.error("Failed to verify employee access");
         navigate('/dashboard');
         return;
       }
       
-      const isFaculty = data || false;
+      const isEmployee = hasEmployeeRole || hasFacultyRole || false;
       
-      if (!isFaculty) {
-        toast.error("You don't have faculty access");
+      if (!isEmployee) {
+        toast.error("You don't have employee access");
         navigate('/dashboard');
         return;
       }
@@ -117,7 +123,7 @@ const FacultyPortal: React.FC = () => {
   }, [session, navigate]);
 
   const { data: requests = [], isLoading: requestsLoading, error, refetch } = useQuery({
-    queryKey: ['faculty-requests'],
+    queryKey: ['employee-requests'],
     queryFn: async () => {
       try {
         const { data: requestsData, error: requestsError } = await supabase
@@ -147,7 +153,7 @@ const FacultyPortal: React.FC = () => {
         
         return requestsWithTransactions as RequestWithTransaction[];
       } catch (err) {
-        console.error("Failed to fetch faculty requests:", err);
+        console.error("Failed to fetch employee requests:", err);
         toast.error("Failed to load requests. Please try again.");
         return [];
       }
@@ -269,7 +275,7 @@ const FacultyPortal: React.FC = () => {
       <div className="flex-1 p-10">
         <header className="mb-8">
           <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold">Faculty Portal</h1>
+            <h1 className="text-3xl font-bold">Employee Portal</h1>
             <div className="flex gap-2">
               <Button 
                 onClick={() => refetch()} 
@@ -450,4 +456,4 @@ const FacultyPortal: React.FC = () => {
   );
 };
 
-export default FacultyPortal;
+export default EmployeePortal;

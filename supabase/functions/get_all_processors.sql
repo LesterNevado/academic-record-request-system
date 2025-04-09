@@ -1,5 +1,5 @@
 
--- Create a function to get all processors (faculty/admin) who have processed requests
+-- Create a function to get all processors (employee/admin) who have processed requests
 CREATE OR REPLACE FUNCTION public.get_all_processors()
 RETURNS TABLE(id uuid, name text) 
 LANGUAGE plpgsql

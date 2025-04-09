@@ -15,7 +15,7 @@ interface UserProfile {
 }
 
 // Define the role type explicitly to match the database enum
-type UserRole = 'student' | 'faculty' | 'admin';
+type UserRole = 'student' | 'employee' | 'faculty' | 'admin';
 
 export const UserRoleManager: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -66,7 +66,10 @@ export const UserRoleManager: React.FC = () => {
       if (error) {
         console.error(`Error fetching role for user ${userId}:`, error);
       } else if (data && data.length > 0) {
-        roles[userId] = data[0].role as UserRole;
+        // Handle both 'faculty' and 'employee' roles for displaying purposes
+        let role = data[0].role as UserRole;
+        // For display purposes, treat 'faculty' as 'employee'
+        roles[userId] = role;
       }
     }
     
@@ -84,9 +87,13 @@ export const UserRoleManager: React.FC = () => {
     
     try {
       const currentRole = userRoles[selectedUser];
+      const roleToAssign = selectedRole;
       
-      if (currentRole === selectedRole) {
-        toast.info(`User already has the ${selectedRole} role`);
+      // For backward compatibility we'll handle the old 'faculty' role as 'employee'
+      if ((currentRole === 'faculty' && roleToAssign === 'employee') || 
+          (currentRole === 'employee' && roleToAssign === 'faculty') || 
+          currentRole === roleToAssign) {
+        toast.info(`User already has the ${roleToAssign === 'faculty' ? 'employee' : roleToAssign} role`);
         setRoleLoading(false);
         return;
       }
@@ -110,7 +117,7 @@ export const UserRoleManager: React.FC = () => {
           const { error: updateError } = await supabase
             .from('user_roles')
             .update({ 
-              role: selectedRole,
+              role: roleToAssign,
               updated_at: new Date().toISOString()
             })
             .eq('id', existingRoleData[0].id);
@@ -125,7 +132,7 @@ export const UserRoleManager: React.FC = () => {
             .from('user_roles')
             .insert({
               user_id: selectedUser,
-              role: selectedRole
+              role: roleToAssign
             });
           
           if (error) throw error;
@@ -136,7 +143,7 @@ export const UserRoleManager: React.FC = () => {
           .from('user_roles')
           .insert({
             user_id: selectedUser,
-            role: selectedRole
+            role: roleToAssign
           });
         
         if (error) throw error;
@@ -144,10 +151,10 @@ export const UserRoleManager: React.FC = () => {
       
       // Update the local state
       const updatedRoles = { ...userRoles };
-      updatedRoles[selectedUser] = selectedRole;
+      updatedRoles[selectedUser] = roleToAssign;
       setUserRoles(updatedRoles);
       
-      toast.success(`Successfully updated user to ${selectedRole} role`);
+      toast.success(`Successfully updated user to ${roleToAssign === 'faculty' ? 'employee' : roleToAssign} role`);
     } catch (error) {
       console.error("Error assigning role:", error);
       toast.error("Failed to assign role");
@@ -159,6 +166,12 @@ export const UserRoleManager: React.FC = () => {
   // Get user's current role
   const getUserRole = (userId: string): UserRole | null => {
     return userRoles[userId] || null;
+  };
+
+  // Convert role display for UI consistency
+  const displayRole = (role: UserRole | null): string => {
+    if (!role) return 'No role';
+    return role === 'faculty' ? 'Employee' : role.charAt(0).toUpperCase() + role.slice(1);
   };
 
   return (
@@ -180,7 +193,9 @@ export const UserRoleManager: React.FC = () => {
               // Set the selected role to match the user's current role, if they have one
               const userRole = userRoles[value];
               if (userRole) {
-                setSelectedRole(userRole);
+                setSelectedRole(userRole === 'faculty' ? 'employee' : userRole);
+              } else {
+                setSelectedRole('student');
               }
             }}
           >
@@ -203,7 +218,7 @@ export const UserRoleManager: React.FC = () => {
             {getUserRole(selectedUser) ? (
               <div className="flex flex-wrap gap-1">
                 <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                  {getUserRole(selectedUser)}
+                  {displayRole(getUserRole(selectedUser))}
                 </span>
               </div>
             ) : (
@@ -224,8 +239,8 @@ export const UserRoleManager: React.FC = () => {
               <Label htmlFor="student">Student</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="faculty" id="faculty" />
-              <Label htmlFor="faculty">Faculty</Label>
+              <RadioGroupItem value="employee" id="employee" />
+              <Label htmlFor="employee">Employee</Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="admin" id="admin" />

@@ -11,7 +11,7 @@ import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import RequestForm from "./pages/RequestForm";
 import Requests from "./pages/Requests";
-import FacultyPortal from "./pages/FacultyPortal";
+import EmployeePortal from "./pages/EmployeePortal";
 import AdminPage from "./pages/AdminPage";
 import { supabase } from "./integrations/supabase/client";
 import { PaymentStatus } from "./components/payment/PaymentStatus";
@@ -27,7 +27,7 @@ const queryClient = new QueryClient({
   },
 });
 
-export type UserRole = 'student' | 'faculty' | 'admin';
+export type UserRole = 'student' | 'employee' | 'faculty' | 'admin';
 
 export const SessionContext = createContext<{
   session: Session | null;
@@ -74,21 +74,17 @@ const ProtectedRoute = ({ children, requiredRole, restrictedRoles }: ProtectedRo
             setUserRoles(roles || []);
           }
           
+          // Handle both 'employee' and 'faculty' roles for backward compatibility
+          const requiredRoleCheck = requiredRole === 'employee' ? 
+            ['employee', 'faculty'] : // Check for both if employee is required
+            requiredRole ? [requiredRole] : [];
+          
           // Check if specific role is required
-          if (requiredRole) {
-            const { data, error } = await supabase.rpc(
-              'has_role',
-              { user_id: sessionData.session.user.id, role: requiredRole }
-            );
-            
-            if (error) {
-              console.error("Error checking role:", error);
-              toast.error(`Error checking role: ${error.message}`);
-              setHasRole(false);
-            } else {
-              console.log(`Has ${requiredRole} role:`, data);
-              setHasRole(!!data);
-            }
+          if (requiredRoleCheck.length > 0) {
+            const hasRequiredRole = roles ? 
+              requiredRoleCheck.some(role => roles.includes(role)) : 
+              false;
+            setHasRole(hasRequiredRole);
           } else {
             // If no specific role is required, set hasRole to true
             setHasRole(true);
@@ -181,19 +177,20 @@ const App = () => {
               <Route path="/" element={<Index />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/request" element={
-                <ProtectedRoute restrictedRoles={['faculty', 'admin']}>
+                <ProtectedRoute restrictedRoles={['employee', 'faculty', 'admin']}>
                   <RequestForm />
                 </ProtectedRoute>
               } />
               <Route path="/requests" element={
-                <ProtectedRoute restrictedRoles={['faculty', 'admin']}>
+                <ProtectedRoute restrictedRoles={['employee', 'faculty', 'admin']}>
                   <Requests />
                 </ProtectedRoute>
               } />
-              <Route path="/faculty" element={<ProtectedRoute requiredRole="faculty"><FacultyPortal /></ProtectedRoute>} />
+              <Route path="/employee" element={<ProtectedRoute requiredRole="employee"><EmployeePortal /></ProtectedRoute>} />
+              <Route path="/faculty" element={<Navigate to="/employee" replace />} />
               <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute>} />
               <Route path="/payment-status" element={
-                <ProtectedRoute restrictedRoles={['faculty', 'admin']}>
+                <ProtectedRoute restrictedRoles={['employee', 'faculty', 'admin']}>
                   <PaymentStatus />
                 </ProtectedRoute>
               } />

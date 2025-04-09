@@ -76,10 +76,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ userProfile, userRoles, loadin
           {userRoles.map((role) => (
             <span key={role} className={`px-2 py-1 text-xs rounded-full ${
               role === 'admin' ? 'bg-red-500' : 
-              role === 'faculty' ? 'bg-amber-500' : 
+              role === 'employee' ? 'bg-amber-500' : 
+              role === 'faculty' ? 'bg-amber-500' : // Keep this for backward compatibility
               'bg-blue-500'
             }`}>
-              {role.charAt(0).toUpperCase() + role.slice(1)}
+              {role === 'faculty' ? 'Employee' : role.charAt(0).toUpperCase() + role.slice(1)}
             </span>
           ))}
           {userRoles.length === 0 && (
@@ -104,16 +105,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ userProfile, userRoles, loadin
             </Link>
           </li>
           
-          {userRoles.includes('faculty') && (
+          {(userRoles.includes('employee') || userRoles.includes('faculty')) && (
             <li>
               <Link 
-                to="/faculty" 
+                to="/employee" 
                 className={`flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors ${
-                  isActive('/faculty') ? 'bg-white/10' : ''
+                  isActive('/employee') || isActive('/faculty') ? 'bg-white/10' : ''
                 }`}
               >
                 <Package className="w-5 h-5 mr-3" />
-                Faculty Portal
+                Employee Portal
               </Link>
             </li>
           )}
