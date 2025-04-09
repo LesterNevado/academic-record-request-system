@@ -18,3 +18,7 @@ BEGIN
     r.processed_by IS NOT NULL;
 END;
 $$;
+
+-- Grant access to the function
+GRANT EXECUTE ON FUNCTION public.get_all_processors() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_all_processors() TO anon;

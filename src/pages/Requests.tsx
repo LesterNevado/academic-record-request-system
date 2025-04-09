@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -82,7 +81,6 @@ const Requests: React.FC = () => {
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  // Filter and sort state
   const [showFilters, setShowFilters] = useState(false);
   const [sortOption, setSortOption] = useState<SortOption>("newest");
   const [documentType, setDocumentType] = useState<DocumentType>("all");
@@ -96,20 +94,17 @@ const Requests: React.FC = () => {
   });
   const [processors, setProcessors] = useState<{id: string, name: string}[]>([]);
 
-  // Update user profile whenever session changes
   useEffect(() => {
     if (!session) {
       navigate('/');
       return;
     }
 
-    // Get user metadata from session
     const { user } = session;
     const name = user.user_metadata.name || user.user_metadata.full_name;
     const email = user.email;
     const avatarUrl = user.user_metadata.avatar_url;
 
-    // Set user profile
     setUserProfile({
       name,
       email,
@@ -117,22 +112,31 @@ const Requests: React.FC = () => {
     });
   }, [session, navigate]);
 
-  // Fetch all processors (faculty members) for the filter dropdown
   useEffect(() => {
     const fetchProcessors = async () => {
       try {
         const { data: processorData, error } = await supabase
-          .rpc('get_all_processors');
+          .from('requests')
+          .select('processed_by, auth.users!processed_by(raw_user_meta_data)')
+          .not('processed_by', 'is', null)
+          .filter('status', 'eq', 'approved');
         
         if (error) throw error;
         
-        // Transform the data for the dropdown
-        const formatProcessors = processorData.map((processor: any) => ({
-          id: processor.id,
-          name: processor.name || 'Unknown'
-        }));
+        const uniqueProcessors = new Map();
+        processorData.forEach((request: any) => {
+          if (request.processed_by && request.users && request.users.raw_user_meta_data) {
+            const processorId = request.processed_by;
+            const processorName = request.users.raw_user_meta_data.name || 'Unknown';
+            
+            if (!uniqueProcessors.has(processorId)) {
+              uniqueProcessors.set(processorId, { id: processorId, name: processorName });
+            }
+          }
+        });
         
-        setProcessors(formatProcessors);
+        const formattedProcessors = Array.from(uniqueProcessors.values());
+        setProcessors(formattedProcessors);
       } catch (err) {
         console.error("Failed to fetch processors:", err);
       }
@@ -143,7 +147,6 @@ const Requests: React.FC = () => {
     }
   }, [session?.user?.id]);
 
-  // Use React Query to fetch requests, which handles caching and refetching
   const { data: requests = [], isLoading: requestsLoading, error, refetch } = useQuery({
     queryKey: ['requests', session?.user?.id],
     queryFn: async () => {
@@ -165,7 +168,6 @@ const Requests: React.FC = () => {
           throw error;
         }
         
-        // Get processor names for approved requests
         const requestsWithProcessorNames = await Promise.all((data || []).map(async (request) => {
           if (request.processed_by) {
             const { data: processorName } = await supabase.rpc(
@@ -186,10 +188,9 @@ const Requests: React.FC = () => {
       }
     },
     enabled: !!session?.user?.id,
-    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnWindowFocus: false,
   });
 
-  // Handle errors from React Query
   useEffect(() => {
     if (error) {
       toast.error("Failed to load your requests. Please try again.");
@@ -197,12 +198,10 @@ const Requests: React.FC = () => {
     }
   }, [error]);
 
-  // Force refetch when visiting the page
   useEffect(() => {
     refetch();
   }, [refetch]);
 
-  // Get request type as a formatted string
   const getRequestType = (request: Request): string => {
     const types = [];
     if (request.transcript_selected) types.push("Transcript of Records");
@@ -214,7 +213,6 @@ const Requests: React.FC = () => {
     return types.join(", ");
   };
 
-  // Check if a request matches the selected document type filter
   const matchesDocumentTypeFilter = (request: Request): boolean => {
     if (documentType === "all") return true;
     
@@ -228,13 +226,11 @@ const Requests: React.FC = () => {
     }
   };
 
-  // Check if a request matches the processor filter
   const matchesProcessorFilter = (request: Request): boolean => {
     if (processor === "all") return true;
     return request.processed_by === processor;
   };
 
-  // Check if a request matches the date range filter
   const matchesDateFilter = (request: Request): boolean => {
     if (!dateRange.from && !dateRange.to) return true;
     
@@ -250,23 +246,19 @@ const Requests: React.FC = () => {
       return requestDate <= toDate;
     }
     
-    // Both from and to are set
     const fromDate = new Date(dateRange.from!);
     const toDate = new Date(dateRange.to!);
     return requestDate >= fromDate && requestDate <= toDate;
   };
 
-  // Format date to a more readable format
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     return format(date, 'MMM d, yyyy');
   };
 
-  // Apply all filters and sorting
   const getFilteredAndSortedRequests = () => {
     if (!Array.isArray(requests)) return [];
     
-    // First apply all filters
     const filtered = requests.filter(request => {
       const matchesSearch = 
         request.student_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -279,7 +271,6 @@ const Requests: React.FC = () => {
         matchesDateFilter(request);
     });
     
-    // Then sort the filtered results
     return filtered.sort((a, b) => {
       switch (sortOption) {
         case "newest":
@@ -291,7 +282,6 @@ const Requests: React.FC = () => {
         case "name_desc":
           return b.student_name.localeCompare(a.student_name);
         case "status":
-          // Sort by status: 'approved' first, then 'awaiting_pickup', 'pending', 'rejected'
           const statusOrder = { 
             'approved': 1, 
             'awaiting_pickup': 2, 
@@ -306,10 +296,8 @@ const Requests: React.FC = () => {
     });
   };
 
-  // Get the filtered and sorted requests
   const filteredRequests = getFilteredAndSortedRequests();
 
-  // Clear all filters
   const clearFilters = () => {
     setDocumentType("all");
     setProcessor("all");
@@ -319,7 +307,6 @@ const Requests: React.FC = () => {
     setShowFilters(false);
   };
 
-  // Add a manual refresh function
   const handleManualRefresh = async () => {
     try {
       refetch();
@@ -332,14 +319,12 @@ const Requests: React.FC = () => {
 
   return (
     <div className="min-h-screen flex">
-      {/* Sidebar using the new component */}
       <Sidebar 
         userProfile={userProfile} 
         userRoles={userRoles} 
         loading={isLoading} 
       />
       
-      {/* Main Content */}
       <div className="flex-1 p-6 md:p-10">
         <header className="mb-8">
           <div className="flex justify-between items-center">
@@ -364,7 +349,6 @@ const Requests: React.FC = () => {
           <p className="text-gray-600 mt-2">View and manage your academic record requests</p>
         </header>
 
-        {/* Search and filter */}
         <div className="mb-6 flex flex-col md:flex-row md:space-x-4 space-y-2 md:space-y-0">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -420,7 +404,6 @@ const Requests: React.FC = () => {
           </div>
         </div>
 
-        {/* Applied filters display */}
         {(documentType !== "all" || processor !== "all" || dateRange.from || dateRange.to) && (
           <div className="flex flex-wrap gap-2 mb-4">
             {documentType !== "all" && (
@@ -469,7 +452,6 @@ const Requests: React.FC = () => {
           </div>
         )}
 
-        {/* Filter Dialog */}
         <Dialog open={showFilters} onOpenChange={setShowFilters}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
@@ -554,7 +536,6 @@ const Requests: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Request Cards */}
         {requestsLoading ? (
           <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
             <p>Loading your requests...</p>
@@ -587,7 +568,6 @@ const Requests: React.FC = () => {
                     <p className="text-gray-600 text-sm">Student Number: {request.student_number}</p>
                     <p className="text-gray-600 text-sm">Submitted: {formatDate(request.created_at)}</p>
                     
-                    {/* Show processor info and pickup date for approved requests */}
                     {request.status === 'approved' && (
                       <div className="mt-3 pt-3 border-t border-gray-100">
                         <p className="text-gray-600 text-sm"><span className="font-medium">Processed by:</span> {request.processor_name || 'Staff Member'}</p>
