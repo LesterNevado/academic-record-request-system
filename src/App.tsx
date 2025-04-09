@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,7 +16,6 @@ import { supabase } from "./integrations/supabase/client";
 import { PaymentStatus } from "./components/payment/PaymentStatus";
 import { toast } from "sonner";
 
-// Create a new QueryClient instance
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -27,8 +25,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
-console.log("App.tsx is loading");
 
 // Update UserRole to match the database enum - we don't have 'employee' in the DB
 export type UserRole = 'student' | 'faculty' | 'admin';
@@ -142,34 +138,26 @@ const ProtectedRoute = ({ children, requiredRole, restrictedRoles }: ProtectedRo
 };
 
 const App = () => {
-  console.log("Rendering App component");
   const [session, setSession] = useState<Session | null>(null);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
 
   useEffect(() => {
     const checkSession = async () => {
-      console.log("Checking session");
-      try {
-        const { data } = await supabase.auth.getSession();
-        console.log("Session data:", data);
-        setSession(data.session);
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+      
+      if (data.session) {
+        // Fetch user roles
+        const { data: roles, error } = await supabase.rpc(
+          'get_user_roles',
+          { user_id: data.session.user.id }
+        );
         
-        if (data.session) {
-          // Fetch user roles
-          const { data: roles, error } = await supabase.rpc(
-            'get_user_roles',
-            { user_id: data.session.user.id }
-          );
-          
-          if (error) {
-            console.error("Error fetching roles:", error);
-          } else {
-            console.log("User roles:", roles);
-            setUserRoles(roles || []);
-          }
+        if (error) {
+          console.error("Error fetching roles:", error);
+        } else {
+          setUserRoles(roles || []);
         }
-      } catch (error) {
-        console.error("Error checking session:", error);
       }
     };
     
