@@ -4,9 +4,10 @@ import { LoginImage } from "./LoginImage";
 import { LoginForm } from "./LoginForm";
 
 export const LoginLayout: React.FC = () => {
+  console.log("Rendering LoginLayout");
   return (
     <main className="bg-white overflow-hidden min-h-screen">
-      <div className="gap-5 flex max-md:flex-col max-md:items-stretch">
+      <div className="flex max-md:flex-col max-md:items-stretch">
         <LoginImage />
         <LoginForm />
       </div>
