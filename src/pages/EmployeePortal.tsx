@@ -44,6 +44,7 @@ type RequestWithTransaction = {
   transcript_selected: boolean;
   certificate_selected: boolean;
   certification_selected: boolean;
+  statement_selected: boolean;
   others_selected: boolean;
   
   transaction?: {
@@ -58,10 +59,6 @@ type RequestWithTransaction = {
 // Define filter state type
 type FilterState = {
   requestType: string[];
-  dateRange: {
-    from: Date | undefined;
-    to: Date | undefined;
-  };
   paymentMethod: string | null;
 };
 
@@ -90,10 +87,6 @@ const EmployeePortal: React.FC = () => {
   const [sortPopoverOpen, setSortPopoverOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     requestType: [],
-    dateRange: {
-      from: undefined,
-      to: undefined,
-    },
     paymentMethod: null,
   });
   const [sortConfig, setSortConfig] = useState<{
@@ -109,7 +102,6 @@ const EmployeePortal: React.FC = () => {
   useEffect(() => {
     let count = 0;
     if (filters.requestType.length > 0) count++;
-    if (filters.dateRange.from || filters.dateRange.to) count++;
     if (filters.paymentMethod) count++;
     setActiveFilters(count);
   }, [filters]);
@@ -222,6 +214,7 @@ const EmployeePortal: React.FC = () => {
     if (request.transcript_selected) types.push("Transcript of Records");
     if (request.certificate_selected) types.push("Certificate of Grades");
     if (request.certification_selected) types.push("Certification");
+    if (request.statement_selected) types.push("Statement of Account");
     if (request.others_selected) types.push("Others");
     
     return types.join(", ");
@@ -244,23 +237,11 @@ const EmployeePortal: React.FC = () => {
         if (request.transcript_selected) requestTypes.push("transcript");
         if (request.certificate_selected) requestTypes.push("certificate");
         if (request.certification_selected) requestTypes.push("certification");
+        if (request.statement_selected) requestTypes.push("statement");
         if (request.others_selected) requestTypes.push("others");
         
         const hasMatchingType = filters.requestType.some(type => requestTypes.includes(type));
         if (!hasMatchingType) return false;
-      }
-      
-      // Date range filter
-      if (filters.dateRange.from || filters.dateRange.to) {
-        const requestDate = new Date(request.created_at);
-        
-        if (filters.dateRange.from && isBefore(requestDate, filters.dateRange.from) && !isEqual(requestDate, filters.dateRange.from)) {
-          return false;
-        }
-        
-        if (filters.dateRange.to && isAfter(requestDate, filters.dateRange.to) && !isEqual(requestDate, filters.dateRange.to)) {
-          return false;
-        }
       }
       
       // Payment method filter
@@ -296,10 +277,6 @@ const EmployeePortal: React.FC = () => {
   const resetFilters = () => {
     setFilters({
       requestType: [],
-      dateRange: {
-        from: undefined,
-        to: undefined,
-      },
       paymentMethod: null,
     });
     setFilterPopoverOpen(false);
@@ -497,6 +474,16 @@ const EmployeePortal: React.FC = () => {
                     </div>
                     <div className="flex items-center">
                       <Checkbox 
+                        id="type-statement" 
+                        checked={filters.requestType.includes('statement')} 
+                        onCheckedChange={() => toggleRequestTypeFilter('statement')}
+                      />
+                      <label htmlFor="type-statement" className="ml-2 text-sm cursor-pointer">
+                        Statement of Account
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <Checkbox 
                         id="type-others" 
                         checked={filters.requestType.includes('others')} 
                         onCheckedChange={() => toggleRequestTypeFilter('others')}
@@ -506,99 +493,6 @@ const EmployeePortal: React.FC = () => {
                       </label>
                     </div>
                   </div>
-                </div>
-                
-                {/* Date Range Filter */}
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium mb-2">Request Date Range</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label htmlFor="fromDate" className="text-xs">From</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            id="fromDate"
-                            variant="outline"
-                            size="sm"
-                            className="w-full justify-start text-left font-normal"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {filters.dateRange.from ? (
-                              format(filters.dateRange.from, "MMM d, yyyy")
-                            ) : (
-                              <span>Pick date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={filters.dateRange.from}
-                            onSelect={(date) => setFilters({
-                              ...filters,
-                              dateRange: {
-                                ...filters.dateRange,
-                                from: date
-                              }
-                            })}
-                            className="pointer-events-auto"
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="toDate" className="text-xs">To</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            id="toDate"
-                            variant="outline"
-                            size="sm"
-                            className="w-full justify-start text-left font-normal"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {filters.dateRange.to ? (
-                              format(filters.dateRange.to, "MMM d, yyyy")
-                            ) : (
-                              <span>Pick date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={filters.dateRange.to}
-                            onSelect={(date) => setFilters({
-                              ...filters,
-                              dateRange: {
-                                ...filters.dateRange,
-                                to: date
-                              }
-                            })}
-                            className="pointer-events-auto"
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
-                  
-                  {(filters.dateRange.from || filters.dateRange.to) && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => setFilters({
-                        ...filters,
-                        dateRange: {
-                          from: undefined,
-                          to: undefined
-                        }
-                      })}
-                      className="text-xs mt-2"
-                    >
-                      <X className="h-3 w-3 mr-1" /> Clear dates
-                    </Button>
-                  )}
                 </div>
                 
                 {/* Payment Method Filter */}

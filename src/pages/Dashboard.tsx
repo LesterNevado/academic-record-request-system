@@ -154,7 +154,7 @@ const Dashboard: React.FC = () => {
                 role === 'faculty' ? 'bg-amber-500' : 
                 'bg-blue-500'
               }`}>
-                {role.charAt(0).toUpperCase() + role.slice(1)}
+                {role === 'faculty' ? 'Employee' : role.charAt(0).toUpperCase() + role.slice(1)}
               </span>
             ))}
             {userRoles.length === 0 && (
@@ -178,7 +178,7 @@ const Dashboard: React.FC = () => {
               <li>
                 <Link to="/faculty" className="flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors">
                   <Package className="w-5 h-5 mr-3" />
-                  Faculty Portal
+                  Employee Portal
                 </Link>
               </li>
             )}
@@ -260,7 +260,7 @@ const Dashboard: React.FC = () => {
             <Card className="border border-gray-200 shadow-sm">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold">Faculty Portal</h2>
+                  <h2 className="text-xl font-semibold">Employee Portal</h2>
                   <Package className="w-6 h-6 text-amber-500" />
                 </div>
                 
@@ -269,10 +269,10 @@ const Dashboard: React.FC = () => {
                 </p>
                 
                 <Button 
-                  onClick={() => navigate("/faculty")} 
+                  onClick={() => navigate("/employee")} 
                   className="mt-4 w-full bg-amber-500 hover:bg-amber-600"
                 >
-                  Go to Faculty Portal
+                  Go to Employee Portal
                 </Button>
               </CardContent>
             </Card>
