@@ -358,9 +358,9 @@ const EmployeePortal: React.FC = () => {
       
       if (error) throw error;
       
-      toast({
-        title: "Sending email",
-        description: "Sending email notification...",
+      // Fix the toast call to match the sonner toast API
+      toast("Sending email notification...", {
+        description: "Processing notification email..."
       });
       
       try {
