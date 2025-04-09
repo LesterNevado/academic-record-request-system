@@ -27,7 +27,10 @@ const queryClient = new QueryClient({
   },
 });
 
-export type UserRole = 'student' | 'employee' | 'faculty' | 'admin';
+// Update UserRole to match the database enum
+export type UserRole = 'student' | 'faculty' | 'admin';
+// We'll use this internally to represent both 'faculty' and 'employee' as the same role
+export type DisplayRole = 'student' | 'employee' | 'admin';
 
 export const SessionContext = createContext<{
   session: Session | null;
@@ -38,8 +41,8 @@ export const SessionContext = createContext<{
 
 type ProtectedRouteProps = {
   children: React.ReactNode;
-  requiredRole?: UserRole; // Optional role requirement
-  restrictedRoles?: UserRole[]; // Optional roles to restrict
+  requiredRole?: UserRole; // Using the DB enum type for role checks
+  restrictedRoles?: UserRole[]; // Using the DB enum type for role checks
 };
 
 const ProtectedRoute = ({ children, requiredRole, restrictedRoles }: ProtectedRouteProps) => {
@@ -75,8 +78,8 @@ const ProtectedRoute = ({ children, requiredRole, restrictedRoles }: ProtectedRo
           }
           
           // Handle both 'employee' and 'faculty' roles for backward compatibility
-          const requiredRoleCheck = requiredRole === 'employee' ? 
-            ['employee', 'faculty'] : // Check for both if employee is required
+          const requiredRoleCheck = requiredRole === 'faculty' ? 
+            ['faculty'] : // Check for faculty only
             requiredRole ? [requiredRole] : [];
           
           // Check if specific role is required
@@ -177,20 +180,20 @@ const App = () => {
               <Route path="/" element={<Index />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/request" element={
-                <ProtectedRoute restrictedRoles={['employee', 'faculty', 'admin']}>
+                <ProtectedRoute restrictedRoles={['faculty', 'admin']}>
                   <RequestForm />
                 </ProtectedRoute>
               } />
               <Route path="/requests" element={
-                <ProtectedRoute restrictedRoles={['employee', 'faculty', 'admin']}>
+                <ProtectedRoute restrictedRoles={['faculty', 'admin']}>
                   <Requests />
                 </ProtectedRoute>
               } />
-              <Route path="/employee" element={<ProtectedRoute requiredRole="employee"><EmployeePortal /></ProtectedRoute>} />
+              <Route path="/employee" element={<ProtectedRoute requiredRole="faculty"><EmployeePortal /></ProtectedRoute>} />
               <Route path="/faculty" element={<Navigate to="/employee" replace />} />
               <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute>} />
               <Route path="/payment-status" element={
-                <ProtectedRoute restrictedRoles={['employee', 'faculty', 'admin']}>
+                <ProtectedRoute restrictedRoles={['faculty', 'admin']}>
                   <PaymentStatus />
                 </ProtectedRoute>
               } />

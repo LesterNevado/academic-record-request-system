@@ -24,6 +24,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ userProfile, userRoles, loadin
 
   // Check if user is a student (no special roles or only has 'student' role)
   const isStudent = userRoles.length === 0 || (userRoles.length === 1 && userRoles.includes('student'));
+  // Check if user is an employee/faculty
+  const isEmployee = userRoles.includes('faculty');
+  // Check if user is an admin
+  const isAdmin = userRoles.includes('admin');
 
   const handleSignOut = async () => {
     try {
@@ -42,6 +46,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ userProfile, userRoles, loadin
 
   const isActive = (path: string) => {
     return location.pathname === path;
+  };
+
+  // Helper function to display role name correctly
+  const displayRoleName = (role: string): string => {
+    if (role === 'faculty') return 'Employee';
+    return role.charAt(0).toUpperCase() + role.slice(1);
   };
 
   return (
@@ -76,11 +86,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ userProfile, userRoles, loadin
           {userRoles.map((role) => (
             <span key={role} className={`px-2 py-1 text-xs rounded-full ${
               role === 'admin' ? 'bg-red-500' : 
-              role === 'employee' ? 'bg-amber-500' : 
-              role === 'faculty' ? 'bg-amber-500' : // Keep this for backward compatibility
+              role === 'faculty' ? 'bg-amber-500' : 
               'bg-blue-500'
             }`}>
-              {role === 'faculty' ? 'Employee' : role.charAt(0).toUpperCase() + role.slice(1)}
+              {displayRoleName(role)}
             </span>
           ))}
           {userRoles.length === 0 && (
@@ -105,7 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ userProfile, userRoles, loadin
             </Link>
           </li>
           
-          {(userRoles.includes('employee') || userRoles.includes('faculty')) && (
+          {isEmployee && (
             <li>
               <Link 
                 to="/employee" 
@@ -119,7 +128,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ userProfile, userRoles, loadin
             </li>
           )}
           
-          {userRoles.includes('admin') && (
+          {isAdmin && (
             <li>
               <Link 
                 to="/admin" 

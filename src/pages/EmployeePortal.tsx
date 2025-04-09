@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -86,26 +85,19 @@ const EmployeePortal: React.FC = () => {
       const email = user.email;
       const avatarUrl = user.user_metadata.avatar_url;
       
-      const { data: hasEmployeeRole, error: employeeError } = await supabase.rpc(
-        'has_role',
-        { user_id: user.id, role: 'employee' }
-      );
-
       const { data: hasFacultyRole, error: facultyError } = await supabase.rpc(
         'has_role',
         { user_id: user.id, role: 'faculty' }
       );
       
-      if (employeeError && facultyError) {
-        console.error("Error checking employee/faculty role:", employeeError || facultyError);
+      if (facultyError) {
+        console.error("Error checking faculty role:", facultyError);
         toast.error("Failed to verify employee access");
         navigate('/dashboard');
         return;
       }
       
-      const isEmployee = hasEmployeeRole || hasFacultyRole || false;
-      
-      if (!isEmployee) {
+      if (!hasFacultyRole) {
         toast.error("You don't have employee access");
         navigate('/dashboard');
         return;
@@ -224,8 +216,6 @@ const EmployeePortal: React.FC = () => {
       
       if (error) throw error;
       
-      // We need to handle the email notification differently since we're using a custom toast
-      // First, let's display a loading toast
       toast({
         title: "Sending email",
         description: "Sending email notification...",
@@ -234,10 +224,8 @@ const EmployeePortal: React.FC = () => {
       try {
         await sendApprovalEmail(selectedRequest.id);
         
-        // Show success toast
         toast.success("Email notification sent successfully");
       } catch (err) {
-        // Show error toast
         toast.error("Failed to send email notification");
       }
       

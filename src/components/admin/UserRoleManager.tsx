@@ -14,8 +14,8 @@ interface UserProfile {
   full_name: string | null;
 }
 
-// Define the role type explicitly to match the database enum
-type UserRole = 'student' | 'employee' | 'faculty' | 'admin';
+// Define the role type to match the database enum
+type UserRole = 'student' | 'faculty' | 'admin';
 
 export const UserRoleManager: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -68,7 +68,7 @@ export const UserRoleManager: React.FC = () => {
       } else if (data && data.length > 0) {
         // Handle both 'faculty' and 'employee' roles for displaying purposes
         let role = data[0].role as UserRole;
-        // For display purposes, treat 'faculty' as 'employee'
+        // For display purposes, store the database role
         roles[userId] = role;
       }
     }
@@ -89,11 +89,9 @@ export const UserRoleManager: React.FC = () => {
       const currentRole = userRoles[selectedUser];
       const roleToAssign = selectedRole;
       
-      // For backward compatibility we'll handle the old 'faculty' role as 'employee'
-      if ((currentRole === 'faculty' && roleToAssign === 'employee') || 
-          (currentRole === 'employee' && roleToAssign === 'faculty') || 
-          currentRole === roleToAssign) {
-        toast.info(`User already has the ${roleToAssign === 'faculty' ? 'employee' : roleToAssign} role`);
+      // Don't update if it's the same role
+      if (currentRole === roleToAssign) {
+        toast.info(`User already has the ${displayRole(roleToAssign)} role`);
         setRoleLoading(false);
         return;
       }
@@ -154,7 +152,7 @@ export const UserRoleManager: React.FC = () => {
       updatedRoles[selectedUser] = roleToAssign;
       setUserRoles(updatedRoles);
       
-      toast.success(`Successfully updated user to ${roleToAssign === 'faculty' ? 'employee' : roleToAssign} role`);
+      toast.success(`Successfully updated user to ${displayRole(roleToAssign)} role`);
     } catch (error) {
       console.error("Error assigning role:", error);
       toast.error("Failed to assign role");
@@ -193,7 +191,7 @@ export const UserRoleManager: React.FC = () => {
               // Set the selected role to match the user's current role, if they have one
               const userRole = userRoles[value];
               if (userRole) {
-                setSelectedRole(userRole === 'faculty' ? 'employee' : userRole);
+                setSelectedRole(userRole);
               } else {
                 setSelectedRole('student');
               }
@@ -239,8 +237,8 @@ export const UserRoleManager: React.FC = () => {
               <Label htmlFor="student">Student</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="employee" id="employee" />
-              <Label htmlFor="employee">Employee</Label>
+              <RadioGroupItem value="faculty" id="faculty" />
+              <Label htmlFor="faculty">Employee</Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="admin" id="admin" />
