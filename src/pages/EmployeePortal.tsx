@@ -1,28 +1,32 @@
+
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { toast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { format, isAfter, isBefore, isEqual, parse } from "date-fns";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { SessionContext } from "../App";
 import { useQuery } from "@tanstack/react-query";
 import { 
   Package,
   Calendar as CalendarIcon,
-  CheckCircle,
-  XCircle,
   Clock,
   Search,
   Filter,
   ArrowUpDown,
-  Mail
+  Mail,
+  X,
+  Check
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 type RequestWithTransaction = {
   id: string;
@@ -51,6 +55,16 @@ type RequestWithTransaction = {
   };
 };
 
+// Define filter state type
+type FilterState = {
+  requestType: string[];
+  dateRange: {
+    from: Date | undefined;
+    to: Date | undefined;
+  };
+  paymentMethod: string | null;
+};
+
 const EmployeePortal: React.FC = () => {
   const navigate = useNavigate();
   const { session, userRoles = [] } = useContext(SessionContext);
@@ -70,6 +84,35 @@ const EmployeePortal: React.FC = () => {
   const [processingNotes, setProcessingNotes] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Filter state
+  const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
+  const [sortPopoverOpen, setSortPopoverOpen] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({
+    requestType: [],
+    dateRange: {
+      from: undefined,
+      to: undefined,
+    },
+    paymentMethod: null,
+  });
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: 'asc' | 'desc';
+  }>({
+    key: 'created_at',
+    direction: 'desc',
+  });
+  const [activeFilters, setActiveFilters] = useState<number>(0);
+
+  // Update active filter count
+  useEffect(() => {
+    let count = 0;
+    if (filters.requestType.length > 0) count++;
+    if (filters.dateRange.from || filters.dateRange.to) count++;
+    if (filters.paymentMethod) count++;
+    setActiveFilters(count);
+  }, [filters]);
 
   useEffect(() => {
     if (!session) {
@@ -184,11 +227,110 @@ const EmployeePortal: React.FC = () => {
     return types.join(", ");
   };
 
-  const filteredRequests = requests.filter(request => 
-    request.student_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    getRequestType(request).toLowerCase().includes(searchTerm.toLowerCase()) ||
-    request.student_number.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter functions
+  const applyFilters = (requests: RequestWithTransaction[]): RequestWithTransaction[] => {
+    return requests.filter(request => {
+      // Text search filter
+      const matchesSearch = 
+        request.student_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        getRequestType(request).toLowerCase().includes(searchTerm.toLowerCase()) ||
+        request.student_number.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      if (!matchesSearch) return false;
+      
+      // Request type filter
+      if (filters.requestType.length > 0) {
+        const requestTypes = [];
+        if (request.transcript_selected) requestTypes.push("transcript");
+        if (request.certificate_selected) requestTypes.push("certificate");
+        if (request.certification_selected) requestTypes.push("certification");
+        if (request.others_selected) requestTypes.push("others");
+        
+        const hasMatchingType = filters.requestType.some(type => requestTypes.includes(type));
+        if (!hasMatchingType) return false;
+      }
+      
+      // Date range filter
+      if (filters.dateRange.from || filters.dateRange.to) {
+        const requestDate = new Date(request.created_at);
+        
+        if (filters.dateRange.from && isBefore(requestDate, filters.dateRange.from) && !isEqual(requestDate, filters.dateRange.from)) {
+          return false;
+        }
+        
+        if (filters.dateRange.to && isAfter(requestDate, filters.dateRange.to) && !isEqual(requestDate, filters.dateRange.to)) {
+          return false;
+        }
+      }
+      
+      // Payment method filter
+      if (filters.paymentMethod && request.transaction?.payment_method !== filters.paymentMethod) {
+        return false;
+      }
+      
+      return true;
+    });
+  };
+  
+  // Apply sorting
+  const applySorting = (requests: RequestWithTransaction[]): RequestWithTransaction[] => {
+    return [...requests].sort((a, b) => {
+      if (sortConfig.key === 'student_name') {
+        return sortConfig.direction === 'asc' 
+          ? a.student_name.localeCompare(b.student_name)
+          : b.student_name.localeCompare(a.student_name);
+      }
+      
+      if (sortConfig.key === 'created_at') {
+        return sortConfig.direction === 'asc'
+          ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+      
+      // Default sort by creation date (newest first)
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+  };
+
+  // Reset filters
+  const resetFilters = () => {
+    setFilters({
+      requestType: [],
+      dateRange: {
+        from: undefined,
+        to: undefined,
+      },
+      paymentMethod: null,
+    });
+    setFilterPopoverOpen(false);
+  };
+
+  // Toggle request type filter
+  const toggleRequestTypeFilter = (type: string) => {
+    if (filters.requestType.includes(type)) {
+      setFilters({
+        ...filters,
+        requestType: filters.requestType.filter(t => t !== type)
+      });
+    } else {
+      setFilters({
+        ...filters,
+        requestType: [...filters.requestType, type]
+      });
+    }
+  };
+
+  // Set sort configuration
+  const handleSortChange = (key: string) => {
+    setSortConfig({
+      key,
+      direction: sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc'
+    });
+    setSortPopoverOpen(false);
+  };
+
+  // Apply all filters and sorting
+  const filteredAndSortedRequests = applySorting(applyFilters(requests || []));
 
   const processRequest = (request: RequestWithTransaction) => {
     setSelectedRequest(request);
@@ -288,14 +430,256 @@ const EmployeePortal: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button variant="outline" className="flex items-center">
-            <Filter className="w-4 h-4 mr-2" />
-            Filter
-          </Button>
-          <Button variant="outline" className="flex items-center">
-            <ArrowUpDown className="w-4 h-4 mr-2" />
-            Sort
-          </Button>
+          
+          {/* Filter Button with Popover */}
+          <Popover open={filterPopoverOpen} onOpenChange={setFilterPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="flex items-center"
+              >
+                <Filter className="w-4 h-4 mr-2" />
+                Filter
+                {activeFilters > 0 && (
+                  <span className="ml-2 bg-blue-100 text-blue-800 text-xs font-medium rounded-full px-2 py-0.5">
+                    {activeFilters}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0" align="end">
+              <div className="bg-white p-4 rounded-lg border border-gray-200 max-h-[80vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-medium">Filter Requests</h3>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={resetFilters} 
+                    className="text-xs"
+                  >
+                    Reset all
+                  </Button>
+                </div>
+                
+                {/* Request Type Filter */}
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium mb-2">Request Type</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <Checkbox 
+                        id="type-transcript" 
+                        checked={filters.requestType.includes('transcript')} 
+                        onCheckedChange={() => toggleRequestTypeFilter('transcript')}
+                      />
+                      <label htmlFor="type-transcript" className="ml-2 text-sm cursor-pointer">
+                        Transcript of Records
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <Checkbox 
+                        id="type-certificate" 
+                        checked={filters.requestType.includes('certificate')} 
+                        onCheckedChange={() => toggleRequestTypeFilter('certificate')}
+                      />
+                      <label htmlFor="type-certificate" className="ml-2 text-sm cursor-pointer">
+                        Certificate of Grades
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <Checkbox 
+                        id="type-certification" 
+                        checked={filters.requestType.includes('certification')} 
+                        onCheckedChange={() => toggleRequestTypeFilter('certification')}
+                      />
+                      <label htmlFor="type-certification" className="ml-2 text-sm cursor-pointer">
+                        Certification
+                      </label>
+                    </div>
+                    <div className="flex items-center">
+                      <Checkbox 
+                        id="type-others" 
+                        checked={filters.requestType.includes('others')} 
+                        onCheckedChange={() => toggleRequestTypeFilter('others')}
+                      />
+                      <label htmlFor="type-others" className="ml-2 text-sm cursor-pointer">
+                        Others
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Date Range Filter */}
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium mb-2">Request Date Range</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label htmlFor="fromDate" className="text-xs">From</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            id="fromDate"
+                            variant="outline"
+                            size="sm"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {filters.dateRange.from ? (
+                              format(filters.dateRange.from, "MMM d, yyyy")
+                            ) : (
+                              <span>Pick date</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={filters.dateRange.from}
+                            onSelect={(date) => setFilters({
+                              ...filters,
+                              dateRange: {
+                                ...filters.dateRange,
+                                from: date
+                              }
+                            })}
+                            className="pointer-events-auto"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="toDate" className="text-xs">To</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            id="toDate"
+                            variant="outline"
+                            size="sm"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {filters.dateRange.to ? (
+                              format(filters.dateRange.to, "MMM d, yyyy")
+                            ) : (
+                              <span>Pick date</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={filters.dateRange.to}
+                            onSelect={(date) => setFilters({
+                              ...filters,
+                              dateRange: {
+                                ...filters.dateRange,
+                                to: date
+                              }
+                            })}
+                            className="pointer-events-auto"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                  
+                  {(filters.dateRange.from || filters.dateRange.to) && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setFilters({
+                        ...filters,
+                        dateRange: {
+                          from: undefined,
+                          to: undefined
+                        }
+                      })}
+                      className="text-xs mt-2"
+                    >
+                      <X className="h-3 w-3 mr-1" /> Clear dates
+                    </Button>
+                  )}
+                </div>
+                
+                {/* Payment Method Filter */}
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium mb-2">Payment Method</h4>
+                  <RadioGroup 
+                    value={filters.paymentMethod || ""} 
+                    onValueChange={(value) => setFilters({
+                      ...filters,
+                      paymentMethod: value || null
+                    })}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="" id="payment-all" />
+                      <Label htmlFor="payment-all" className="text-sm">All methods</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="card" id="payment-card" />
+                      <Label htmlFor="payment-card" className="text-sm">Card</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="cash" id="payment-cash" />
+                      <Label htmlFor="payment-cash" className="text-sm">Cash</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                
+                <div className="pt-2 border-t border-gray-200 flex justify-end">
+                  <Button 
+                    onClick={() => setFilterPopoverOpen(false)}
+                    className="bg-[#0047AB] hover:bg-[#00377e]"
+                  >
+                    Apply Filters
+                  </Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          
+          {/* Sort Button with Popover */}
+          <Popover open={sortPopoverOpen} onOpenChange={setSortPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="flex items-center">
+                <ArrowUpDown className="w-4 h-4 mr-2" />
+                Sort
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48" align="end">
+              <div className="space-y-2 p-2">
+                <h3 className="text-sm font-medium mb-2">Sort by</h3>
+                
+                <div 
+                  className={`flex items-center justify-between p-2 rounded cursor-pointer hover:bg-gray-100 ${
+                    sortConfig.key === 'created_at' ? 'bg-blue-50' : ''
+                  }`}
+                  onClick={() => handleSortChange('created_at')}
+                >
+                  <span className="text-sm">Date Requested</span>
+                  {sortConfig.key === 'created_at' && (
+                    <span className="text-blue-600">
+                      {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
+                
+                <div 
+                  className={`flex items-center justify-between p-2 rounded cursor-pointer hover:bg-gray-100 ${
+                    sortConfig.key === 'student_name' ? 'bg-blue-50' : ''
+                  }`}
+                  onClick={() => handleSortChange('student_name')}
+                >
+                  <span className="text-sm">Student Name</span>
+                  {sortConfig.key === 'student_name' && (
+                    <span className="text-blue-600">
+                      {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {requestsLoading ? (
@@ -305,7 +689,7 @@ const EmployeePortal: React.FC = () => {
         ) : error ? (
           <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
             <div className="text-red-500 mb-4">
-              <XCircle className="w-16 h-16 mx-auto" />
+              <X className="w-16 h-16 mx-auto" />
             </div>
             <h3 className="text-xl font-semibold mb-2">Error loading requests</h3>
             <p className="text-gray-600 mb-6">There was a problem loading the requests.</p>
@@ -316,9 +700,9 @@ const EmployeePortal: React.FC = () => {
               Try Again
             </Button>
           </div>
-        ) : filteredRequests.length > 0 ? (
+        ) : filteredAndSortedRequests.length > 0 ? (
           <div className="grid grid-cols-1 gap-4">
-            {filteredRequests.map((request) => (
+            {filteredAndSortedRequests.map((request) => (
               <Card key={request.id} className="overflow-hidden">
                 <CardHeader className="pb-4">
                   <div className="flex justify-between items-start">
@@ -377,7 +761,20 @@ const EmployeePortal: React.FC = () => {
           <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
             <Package className="w-16 h-16 mx-auto text-gray-300 mb-4" />
             <h3 className="text-xl font-semibold mb-2">No requests to process</h3>
-            <p className="text-gray-600 mb-6">There are no pending requests waiting for pickup scheduling.</p>
+            <p className="text-gray-600 mb-6">
+              {activeFilters > 0 ? 
+                "No requests match your current filters. Try adjusting your filters or resetting them." : 
+                "There are no pending requests waiting for pickup scheduling."}
+            </p>
+            {activeFilters > 0 && (
+              <Button 
+                onClick={resetFilters} 
+                variant="outline" 
+                className="mx-auto"
+              >
+                Reset Filters
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -404,7 +801,7 @@ const EmployeePortal: React.FC = () => {
                   selected={pickupDate}
                   onSelect={setPickupDate}
                   disabled={(date) => date < new Date()}
-                  className="rounded-md border"
+                  className="rounded-md border pointer-events-auto"
                 />
               </div>
               {pickupDate && (

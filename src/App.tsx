@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -27,9 +26,9 @@ const queryClient = new QueryClient({
   },
 });
 
-// Update UserRole to match the database enum
+// Update UserRole to match the database enum - we don't have 'employee' in the DB
 export type UserRole = 'student' | 'faculty' | 'admin';
-// We'll use this internally to represent both 'faculty' and 'employee' as the same role
+// We'll use this internally to represent both 'faculty' and 'employee' as the same role for display
 export type DisplayRole = 'student' | 'employee' | 'admin';
 
 export const SessionContext = createContext<{
@@ -77,16 +76,10 @@ const ProtectedRoute = ({ children, requiredRole, restrictedRoles }: ProtectedRo
             setUserRoles(roles || []);
           }
           
-          // Handle both 'employee' and 'faculty' roles for backward compatibility
-          const requiredRoleCheck = requiredRole === 'faculty' ? 
-            ['faculty'] : // Check for faculty only
-            requiredRole ? [requiredRole] : [];
-          
-          // Check if specific role is required
-          if (requiredRoleCheck.length > 0) {
-            const hasRequiredRole = roles ? 
-              requiredRoleCheck.some(role => roles.includes(role)) : 
-              false;
+          // Handle required role check
+          if (requiredRole) {
+            // Specifically check for the required role
+            const hasRequiredRole = roles ? roles.includes(requiredRole) : false;
             setHasRole(hasRequiredRole);
           } else {
             // If no specific role is required, set hasRole to true
@@ -95,7 +88,9 @@ const ProtectedRoute = ({ children, requiredRole, restrictedRoles }: ProtectedRo
           
           // Check if user has any restricted roles
           if (restrictedRoles && restrictedRoles.length > 0) {
-            const hasRestrictedRole = roles ? restrictedRoles.some(role => roles.includes(role)) : false;
+            const hasRestrictedRole = roles ? 
+              restrictedRoles.some(role => roles.includes(role)) : 
+              false;
             setIsRestricted(hasRestrictedRole);
           } else {
             setIsRestricted(false);
