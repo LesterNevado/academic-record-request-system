@@ -114,7 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ userProfile, userRoles, loadin
             </Link>
           </li>
           
-          {/* Employee links - always show activity logs if they have faculty role */}
+          {/* Employee links */}
           {isEmployee && (
             <>
               <li>
@@ -128,6 +128,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ userProfile, userRoles, loadin
                   Employee Portal
                 </Link>
               </li>
+              {/* Always show Activity Logs for employees */}
               <li>
                 <Link 
                   to="/employee/logs" 

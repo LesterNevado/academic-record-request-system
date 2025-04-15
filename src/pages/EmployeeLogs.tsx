@@ -130,12 +130,12 @@ const EmployeeLogs: React.FC = () => {
 
   const fetchActivityLogs = async (userId: string) => {
     try {
+      console.log("Fetching activity logs...");
+      
+      // Get direct logs data without trying to join with profiles
       const { data: logsData, error: logsError } = await supabase
         .from('activity_logs')
-        .select(`
-          *,
-          profiles(avatar_url, full_name)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
       
       if (logsError) {
@@ -143,16 +143,42 @@ const EmployeeLogs: React.FC = () => {
         toast.error("Failed to load activity logs");
         setLogs([]);
         setFilteredLogs([]);
-      } else {
-        const transformedLogs = logsData.map(log => ({
-          ...log,
-          related_user_avatar: log.profiles ? log.profiles.avatar_url : null,
-          related_user_name: log.profiles ? log.profiles.full_name : null
-        }));
+        setIsLoading(false);
+        return;
+      } 
+      
+      console.log("Retrieved logs data:", logsData);
+      
+      // Process logs to include user profiles information
+      const processedLogs: ActivityLog[] = [];
+      
+      for (const log of logsData) {
+        let relatedUserAvatar = null;
+        let relatedUserName = null;
         
-        setLogs(transformedLogs);
-        setFilteredLogs(transformedLogs);
+        // If there's a related user, fetch their profile info separately
+        if (log.related_user_id) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('avatar_url, full_name')
+            .eq('id', log.related_user_id)
+            .single();
+            
+          if (profileData) {
+            relatedUserAvatar = profileData.avatar_url;
+            relatedUserName = profileData.full_name;
+          }
+        }
+        
+        processedLogs.push({
+          ...log,
+          related_user_avatar: relatedUserAvatar,
+          related_user_name: relatedUserName
+        });
       }
+      
+      setLogs(processedLogs);
+      setFilteredLogs(processedLogs);
     } catch (error) {
       console.error("Unexpected error fetching logs:", error);
       toast.error("An unexpected error occurred");
@@ -263,7 +289,7 @@ const EmployeeLogs: React.FC = () => {
             <h1 className="text-3xl font-bold">Activity Logs</h1>
             <div className="flex gap-2">
               <Button 
-                onClick={refreshLogs} 
+                onClick={() => fetchActivityLogs(session?.user.id || '')} 
                 variant="outline"
                 className="mr-2"
               >
@@ -444,7 +470,7 @@ const EmployeeLogs: React.FC = () => {
             </p>
             {activityFilter && (
               <Button 
-                onClick={resetFilters} 
+                onClick={() => setActivityFilter(null)} 
                 variant="outline" 
                 className="mx-auto"
               >
