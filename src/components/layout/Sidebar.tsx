@@ -1,7 +1,7 @@
 
 import React, { useContext } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, User, FileText, LogOut, Package, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, User, FileText, LogOut, Package, ShieldCheck, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -115,17 +115,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ userProfile, userRoles, loadin
           </li>
           
           {isEmployee && (
-            <li>
-              <Link 
-                to="/employee" 
-                className={`flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors ${
-                  isActive('/employee') || isActive('/faculty') ? 'bg-white/10' : ''
-                }`}
-              >
-                <Package className="w-5 h-5 mr-3" />
-                Employee Portal
-              </Link>
-            </li>
+            <>
+              <li>
+                <Link 
+                  to="/employee" 
+                  className={`flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors ${
+                    isActive('/employee') || isActive('/faculty') ? 'bg-white/10' : ''
+                  }`}
+                >
+                  <Package className="w-5 h-5 mr-3" />
+                  Employee Portal
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/employee/logs" 
+                  className={`flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors ${
+                    isActive('/employee/logs') ? 'bg-white/10' : ''
+                  }`}
+                >
+                  <ClipboardList className="w-5 h-5 mr-3" />
+                  Activity Logs
+                </Link>
+              </li>
+            </>
           )}
           
           {isAdmin && (

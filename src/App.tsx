@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import RequestForm from "./pages/RequestForm";
 import Requests from "./pages/Requests";
 import EmployeePortal from "./pages/EmployeePortal";
+import EmployeeLogs from "./pages/EmployeeLogs";
 import AdminPage from "./pages/AdminPage";
 import { supabase } from "./integrations/supabase/client";
 import { PaymentStatus } from "./components/payment/PaymentStatus";
@@ -185,6 +187,7 @@ const App = () => {
                 </ProtectedRoute>
               } />
               <Route path="/employee" element={<ProtectedRoute requiredRole="faculty"><EmployeePortal /></ProtectedRoute>} />
+              <Route path="/employee/logs" element={<ProtectedRoute requiredRole="faculty"><EmployeeLogs /></ProtectedRoute>} />
               <Route path="/faculty" element={<Navigate to="/employee" replace />} />
               <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute>} />
               <Route path="/payment-status" element={
