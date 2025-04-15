@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -44,7 +43,7 @@ type RequestWithTransaction = {
   transcript_selected: boolean;
   certificate_selected: boolean;
   certification_selected: boolean;
-  statement_selected: boolean;
+  soa_selected: boolean;
   others_selected: boolean;
   
   transaction?: {
@@ -56,7 +55,6 @@ type RequestWithTransaction = {
   };
 };
 
-// Define filter state type
 type FilterState = {
   requestType: string[];
   paymentMethod: string | null;
@@ -82,7 +80,6 @@ const EmployeePortal: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Filter state
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
   const [sortPopoverOpen, setSortPopoverOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
@@ -98,7 +95,6 @@ const EmployeePortal: React.FC = () => {
   });
   const [activeFilters, setActiveFilters] = useState<number>(0);
 
-  // Update active filter count
   useEffect(() => {
     let count = 0;
     if (filters.requestType.length > 0) count++;
@@ -214,16 +210,14 @@ const EmployeePortal: React.FC = () => {
     if (request.transcript_selected) types.push("Transcript of Records");
     if (request.certificate_selected) types.push("Certificate of Grades");
     if (request.certification_selected) types.push("Certification");
-    if (request.statement_selected) types.push("Statement of Account");
+    if (request.soa_selected) types.push("Statement of Account");
     if (request.others_selected) types.push("Others");
     
     return types.join(", ");
   };
 
-  // Filter functions
   const applyFilters = (requests: RequestWithTransaction[]): RequestWithTransaction[] => {
     return requests.filter(request => {
-      // Text search filter
       const matchesSearch = 
         request.student_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
         getRequestType(request).toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -231,20 +225,18 @@ const EmployeePortal: React.FC = () => {
       
       if (!matchesSearch) return false;
       
-      // Request type filter
       if (filters.requestType.length > 0) {
         const requestTypes = [];
         if (request.transcript_selected) requestTypes.push("transcript");
         if (request.certificate_selected) requestTypes.push("certificate");
         if (request.certification_selected) requestTypes.push("certification");
-        if (request.statement_selected) requestTypes.push("statement");
+        if (request.soa_selected) requestTypes.push("statement");
         if (request.others_selected) requestTypes.push("others");
         
         const hasMatchingType = filters.requestType.some(type => requestTypes.includes(type));
         if (!hasMatchingType) return false;
       }
       
-      // Payment method filter
       if (filters.paymentMethod && request.transaction?.payment_method !== filters.paymentMethod) {
         return false;
       }
@@ -252,8 +244,7 @@ const EmployeePortal: React.FC = () => {
       return true;
     });
   };
-  
-  // Apply sorting
+
   const applySorting = (requests: RequestWithTransaction[]): RequestWithTransaction[] => {
     return [...requests].sort((a, b) => {
       if (sortConfig.key === 'student_name') {
@@ -268,12 +259,10 @@ const EmployeePortal: React.FC = () => {
           : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
       
-      // Default sort by creation date (newest first)
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
   };
 
-  // Reset filters
   const resetFilters = () => {
     setFilters({
       requestType: [],
@@ -282,7 +271,6 @@ const EmployeePortal: React.FC = () => {
     setFilterPopoverOpen(false);
   };
 
-  // Toggle request type filter
   const toggleRequestTypeFilter = (type: string) => {
     if (filters.requestType.includes(type)) {
       setFilters({
@@ -297,7 +285,6 @@ const EmployeePortal: React.FC = () => {
     }
   };
 
-  // Set sort configuration
   const handleSortChange = (key: string) => {
     setSortConfig({
       key,
@@ -306,7 +293,6 @@ const EmployeePortal: React.FC = () => {
     setSortPopoverOpen(false);
   };
 
-  // Apply all filters and sorting
   const filteredAndSortedRequests = applySorting(applyFilters(requests || []));
 
   const processRequest = (request: RequestWithTransaction) => {
@@ -335,7 +321,6 @@ const EmployeePortal: React.FC = () => {
       
       if (error) throw error;
       
-      // Fix the toast call to match the sonner toast API
       toast("Sending email notification...", {
         description: "Processing notification email..."
       });
@@ -408,7 +393,6 @@ const EmployeePortal: React.FC = () => {
             />
           </div>
           
-          {/* Filter Button with Popover */}
           <Popover open={filterPopoverOpen} onOpenChange={setFilterPopoverOpen}>
             <PopoverTrigger asChild>
               <Button 
@@ -438,7 +422,6 @@ const EmployeePortal: React.FC = () => {
                   </Button>
                 </div>
                 
-                {/* Request Type Filter */}
                 <div className="mb-4">
                   <h4 className="text-sm font-medium mb-2">Request Type</h4>
                   <div className="space-y-2">
@@ -495,7 +478,6 @@ const EmployeePortal: React.FC = () => {
                   </div>
                 </div>
                 
-                {/* Payment Method Filter */}
                 <div className="mb-4">
                   <h4 className="text-sm font-medium mb-2">Payment Method</h4>
                   <RadioGroup 
@@ -532,7 +514,6 @@ const EmployeePortal: React.FC = () => {
             </PopoverContent>
           </Popover>
           
-          {/* Sort Button with Popover */}
           <Popover open={sortPopoverOpen} onOpenChange={setSortPopoverOpen}>
             <PopoverTrigger asChild>
               <Button variant="outline" className="flex items-center">
