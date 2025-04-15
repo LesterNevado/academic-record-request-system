@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { SessionContext } from "../App";
@@ -32,7 +31,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 
-// Define types for our activity logs
+// Update type definition to better handle related user info
 type ActivityLog = {
   id: string;
   user_id: string;
@@ -41,8 +40,8 @@ type ActivityLog = {
   related_id: string | null;
   related_user_id: string | null;
   created_at: string;
-  related_user_avatar?: string | null;
   related_user_name?: string | null;
+  related_user_avatar?: string | null;
 };
 
 const EmployeeLogs: React.FC = () => {
@@ -110,22 +109,14 @@ const EmployeeLogs: React.FC = () => {
         email,
         avatarUrl
       });
-
-      try {
-        await supabase.rpc(
-          'log_activity',
-          { 
-            p_user_id: user.id, 
-            p_activity_type: 'view_logs',
-            p_details: 'Viewed activity logs page'
-          }
-        );
-      } catch (error) {
-        console.error("Error logging activity:", error);
-      }
       
       fetchActivityLogs(user.id);
-    };
+    } catch (error) {
+      console.error("Auth check error:", error);
+      toast.error("An error occurred while checking access");
+      navigate('/dashboard');
+    }
+  };
     
     checkUserRole();
   }, [session, navigate]);
@@ -134,10 +125,27 @@ const EmployeeLogs: React.FC = () => {
     try {
       console.log("Fetching activity logs...");
       
-      // Get direct logs data without trying to join with profiles
+      // Get faculty users to filter logs
+      const { data: facultyData, error: facultyError } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'faculty');
+        
+      if (facultyError) {
+        console.error("Error fetching faculty users:", facultyError);
+        toast.error("Failed to load activity logs");
+        setIsLoading(false);
+        return;
+      }
+      
+      const facultyIds = facultyData.map(f => f.user_id);
+      
+      // Fetch logs only for faculty users and exclude view_logs and view_requests
       const { data: logsData, error: logsError } = await supabase
         .from('activity_logs')
         .select('*')
+        .in('user_id', facultyIds)
+        .not('activity_type', 'in', '("view_logs","view_requests")')
         .order('created_at', { ascending: false });
       
       if (logsError) {
@@ -158,7 +166,7 @@ const EmployeeLogs: React.FC = () => {
         let relatedUserAvatar = null;
         let relatedUserName = null;
         
-        // If there's a related user, fetch their profile info separately
+        // If there's a related user, fetch their profile info
         if (log.related_user_id) {
           const { data: profileData } = await supabase
             .from('profiles')
@@ -168,7 +176,7 @@ const EmployeeLogs: React.FC = () => {
             
           if (profileData) {
             relatedUserAvatar = profileData.avatar_url;
-            relatedUserName = profileData.full_name;
+            relatedUserName = profileData.full_name; // Using full_name instead of display_name
           }
         }
         
@@ -234,10 +242,6 @@ const EmployeeLogs: React.FC = () => {
         return <CalendarClock className="h-4 w-4 text-green-500" />;
       case 'approve_request':
         return <CheckCircle2 className="h-4 w-4 text-purple-500" />;
-      case 'view_logs':
-        return <Clock className="h-4 w-4 text-amber-500" />;
-      case 'view_requests':
-        return <Clock className="h-4 w-4 text-cyan-500" />;
       default:
         return <Clock className="h-4 w-4 text-gray-500" />;
     }
@@ -253,10 +257,6 @@ const EmployeeLogs: React.FC = () => {
         return 'Schedule Pickup';
       case 'approve_request':
         return 'Approve Request';
-      case 'view_logs':
-        return 'View Logs';
-      case 'view_requests':
-        return 'View Requests';
       default:
         return activityType.split('_').map(word => 
           word.charAt(0).toUpperCase() + word.slice(1)
@@ -372,14 +372,6 @@ const EmployeeLogs: React.FC = () => {
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="schedule_pickup" id="activity-schedule" />
                       <Label htmlFor="activity-schedule" className="text-sm">Schedule Pickup</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="view_requests" id="activity-view-requests" />
-                      <Label htmlFor="activity-view-requests" className="text-sm">View Requests</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="view_logs" id="activity-view-logs" />
-                      <Label htmlFor="activity-view-logs" className="text-sm">View Logs</Label>
                     </div>
                   </RadioGroup>
                 </div>
