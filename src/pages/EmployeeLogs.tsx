@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { SessionContext } from "../App";
@@ -110,7 +109,6 @@ const EmployeeLogs: React.FC = () => {
         avatarUrl
       });
 
-      // Log the login activity
       try {
         await supabase.rpc(
           'log_activity',
@@ -124,7 +122,6 @@ const EmployeeLogs: React.FC = () => {
         console.error("Error logging activity:", error);
       }
       
-      // Fetch activity logs from the database
       fetchActivityLogs(user.id);
     };
     
@@ -133,15 +130,11 @@ const EmployeeLogs: React.FC = () => {
 
   const fetchActivityLogs = async (userId: string) => {
     try {
-      // Modified query to correctly join with profiles table
       const { data: logsData, error: logsError } = await supabase
         .from('activity_logs')
         .select(`
           *,
-          profiles:related_user_id (
-            avatar_url,
-            full_name
-          )
+          profiles(avatar_url, full_name)
         `)
         .order('created_at', { ascending: false });
       
@@ -151,11 +144,10 @@ const EmployeeLogs: React.FC = () => {
         setLogs([]);
         setFilteredLogs([]);
       } else {
-        // Transform the data to include the related user info
         const transformedLogs = logsData.map(log => ({
           ...log,
-          related_user_avatar: log.profiles?.avatar_url || null,
-          related_user_name: log.profiles?.full_name || null
+          related_user_avatar: log.profiles ? log.profiles.avatar_url : null,
+          related_user_name: log.profiles ? log.profiles.full_name : null
         }));
         
         setLogs(transformedLogs);
@@ -171,16 +163,13 @@ const EmployeeLogs: React.FC = () => {
     }
   };
 
-  // Apply filters and search to logs
   useEffect(() => {
     let result = [...logs];
     
-    // Apply activity type filter
     if (activityFilter) {
       result = result.filter(log => log.activity_type === activityFilter);
     }
     
-    // Apply search
     if (searchTerm) {
       const lowercaseSearch = searchTerm.toLowerCase();
       result = result.filter(log => 
@@ -190,7 +179,6 @@ const EmployeeLogs: React.FC = () => {
       );
     }
     
-    // Apply sorting
     result = result.sort((a, b) => {
       if (sortConfig.key === 'created_at') {
         return sortConfig.direction === 'asc'
