@@ -284,7 +284,7 @@ const EmployeeLogs: React.FC = () => {
   const refreshLogs = async () => {
     if (!session) return;
     setIsLoading(true);
-    await fetchActivityLogs(session.user.id);
+    await fetchActivityLogs();
     toast.success("Logs refreshed");
   };
 
@@ -302,12 +302,7 @@ const EmployeeLogs: React.FC = () => {
             <h1 className="text-3xl font-bold">Activity Logs</h1>
             <div className="flex gap-2">
               <Button 
-                onClick={() => {
-                  setIsLoading(true);
-                  fetchActivityLogs().then(() => {
-                    toast.success("Logs refreshed");
-                  });
-                }} 
+                onClick={refreshLogs} 
                 variant="outline"
                 className="mr-2"
               >
