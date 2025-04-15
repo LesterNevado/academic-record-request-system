@@ -9,6 +9,36 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          activity_type: string
+          created_at: string
+          details: string | null
+          id: string
+          related_id: string | null
+          related_user_id: string | null
+          user_id: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          related_id?: string | null
+          related_user_id?: string | null
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          related_id?: string | null
+          related_user_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -248,6 +278,16 @@ export type Database = {
       has_role: {
         Args: { user_id: string; role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
+      }
+      log_activity: {
+        Args: {
+          p_user_id: string
+          p_activity_type: string
+          p_details: string
+          p_related_user_id?: string
+          p_related_id?: string
+        }
+        Returns: string
       }
     }
     Enums: {

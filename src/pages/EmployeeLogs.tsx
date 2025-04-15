@@ -13,7 +13,8 @@ import {
   Filter, 
   ArrowUpDown,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  UserIcon
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -25,7 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -37,56 +38,11 @@ type ActivityLog = {
   activity_type: string;
   details: string | null;
   related_id: string | null;
+  related_user_id: string | null;
   created_at: string;
-};
-
-// For simplicity, we'll simulate log data since we don't have an actual logs table
-// In a real implementation, you would fetch this from a logs table in Supabase
-const generateMockLogs = (userId: string): ActivityLog[] => {
-  const now = new Date();
-  
-  return [
-    {
-      id: "1",
-      user_id: userId,
-      activity_type: "login",
-      details: "User logged in successfully",
-      related_id: null,
-      created_at: new Date(now.getTime() - 7200000).toISOString() // 2 hours ago
-    },
-    {
-      id: "2",
-      user_id: userId,
-      activity_type: "schedule_pickup",
-      details: "Scheduled pickup for request from John Smith (2023-00123)",
-      related_id: "req-123",
-      created_at: new Date(now.getTime() - 5400000).toISOString() // 1.5 hours ago
-    },
-    {
-      id: "3",
-      user_id: userId,
-      activity_type: "approve_request",
-      details: "Approved request from Maria Garcia (2023-00456)",
-      related_id: "req-456",
-      created_at: new Date(now.getTime() - 3600000).toISOString() // 1 hour ago
-    },
-    {
-      id: "4",
-      user_id: userId,
-      activity_type: "login",
-      details: "User logged in successfully",
-      related_id: null,
-      created_at: new Date(now.getTime() - 86400000).toISOString() // 1 day ago
-    },
-    {
-      id: "5",
-      user_id: userId,
-      activity_type: "schedule_pickup",
-      details: "Scheduled pickup for request from Sam Wilson (2023-00789)",
-      related_id: "req-789",
-      created_at: new Date(now.getTime() - 172800000).toISOString() // 2 days ago
-    }
-  ];
+  // Added this for when we join with profiles
+  related_user_avatar?: string | null;
+  related_user_name?: string | null;
 };
 
 const EmployeeLogs: React.FC = () => {
@@ -155,17 +111,65 @@ const EmployeeLogs: React.FC = () => {
         avatarUrl
       });
 
-      // In a real app, fetch logs from the database
-      // For now, we'll use mock data
-      const mockLogs = generateMockLogs(user.id);
-      setLogs(mockLogs);
-      setFilteredLogs(mockLogs);
+      // Log the login activity
+      try {
+        await supabase.rpc(
+          'log_activity',
+          { 
+            p_user_id: user.id, 
+            p_activity_type: 'view_logs',
+            p_details: 'Viewed activity logs page'
+          }
+        );
+      } catch (error) {
+        console.error("Error logging activity:", error);
+      }
       
-      setIsLoading(false);
+      // Fetch activity logs from the database
+      fetchActivityLogs(user.id);
     };
     
     checkUserRole();
   }, [session, navigate]);
+
+  const fetchActivityLogs = async (userId: string) => {
+    try {
+      const { data: logsData, error: logsError } = await supabase
+        .from('activity_logs')
+        .select(`
+          *,
+          profiles:related_user_id (
+            avatar_url,
+            full_name
+          )
+        `)
+        .order('created_at', { ascending: false });
+      
+      if (logsError) {
+        console.error("Error fetching activity logs:", logsError);
+        toast.error("Failed to load activity logs");
+        setLogs([]);
+        setFilteredLogs([]);
+      } else {
+        // Transform the data to include the related user info
+        const transformedLogs = logsData.map(log => ({
+          ...log,
+          related_user_avatar: log.profiles?.avatar_url || null,
+          related_user_name: log.profiles?.full_name || null
+        }));
+        
+        setLogs(transformedLogs);
+        setFilteredLogs(transformedLogs);
+      }
+    } catch (error) {
+      console.error("Unexpected error fetching logs:", error);
+      toast.error("An unexpected error occurred");
+      setLogs([]);
+      setFilteredLogs([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Apply filters and search to logs
   useEffect(() => {
@@ -181,7 +185,8 @@ const EmployeeLogs: React.FC = () => {
       const lowercaseSearch = searchTerm.toLowerCase();
       result = result.filter(log => 
         log.details?.toLowerCase().includes(lowercaseSearch) || 
-        log.activity_type.toLowerCase().includes(lowercaseSearch)
+        log.activity_type.toLowerCase().includes(lowercaseSearch) ||
+        log.related_user_name?.toLowerCase().includes(lowercaseSearch)
       );
     }
     
@@ -211,6 +216,8 @@ const EmployeeLogs: React.FC = () => {
         return <CalendarClock className="h-4 w-4 text-green-500" />;
       case 'approve_request':
         return <CheckCircle2 className="h-4 w-4 text-purple-500" />;
+      case 'view_logs':
+        return <Clock className="h-4 w-4 text-amber-500" />;
       default:
         return <Clock className="h-4 w-4 text-gray-500" />;
     }
@@ -224,8 +231,12 @@ const EmployeeLogs: React.FC = () => {
         return 'Schedule Pickup';
       case 'approve_request':
         return 'Approve Request';
+      case 'view_logs':
+        return 'View Logs';
       default:
-        return activityType.replace('_', ' ');
+        return activityType.split('_').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
     }
   };
 
@@ -243,6 +254,13 @@ const EmployeeLogs: React.FC = () => {
     setFilterPopoverOpen(false);
   };
 
+  const refreshLogs = async () => {
+    if (!session) return;
+    setIsLoading(true);
+    await fetchActivityLogs(session.user.id);
+    toast.success("Logs refreshed");
+  };
+
   return (
     <div className="min-h-screen flex">
       <Sidebar 
@@ -257,10 +275,7 @@ const EmployeeLogs: React.FC = () => {
             <h1 className="text-3xl font-bold">Activity Logs</h1>
             <div className="flex gap-2">
               <Button 
-                onClick={() => {
-                  // In a real app, this would refresh logs from the database
-                  toast.success("Logs refreshed");
-                }} 
+                onClick={refreshLogs} 
                 variant="outline"
                 className="mr-2"
               >
@@ -268,7 +283,7 @@ const EmployeeLogs: React.FC = () => {
               </Button>
             </div>
           </div>
-          <p className="text-gray-600 mt-2">View your recent activities in the system</p>
+          <p className="text-gray-600 mt-2">View recent activities in the system</p>
         </header>
 
         <div className="mb-6 flex space-x-4">
@@ -334,6 +349,10 @@ const EmployeeLogs: React.FC = () => {
                       <RadioGroupItem value="approve_request" id="activity-approve" />
                       <Label htmlFor="activity-approve" className="text-sm">Approve Request</Label>
                     </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="view_logs" id="activity-view-logs" />
+                      <Label htmlFor="activity-view-logs" className="text-sm">View Logs</Label>
+                    </div>
                   </RadioGroup>
                 </div>
                 
@@ -388,6 +407,7 @@ const EmployeeLogs: React.FC = () => {
                   <TableHead className="w-[180px]">Date & Time</TableHead>
                   <TableHead className="w-[150px]">Activity</TableHead>
                   <TableHead>Details</TableHead>
+                  <TableHead className="w-[130px]">Related User</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -403,6 +423,23 @@ const EmployeeLogs: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell>{log.details}</TableCell>
+                    <TableCell>
+                      {log.related_user_id ? (
+                        <div className="flex items-center">
+                          <Avatar className="h-8 w-8 mr-2">
+                            <AvatarImage src={log.related_user_avatar || undefined} />
+                            <AvatarFallback>
+                              <UserIcon className="h-4 w-4" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm truncate max-w-[80px]">
+                            {log.related_user_name || "User"}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-sm">None</span>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -415,7 +452,7 @@ const EmployeeLogs: React.FC = () => {
             <p className="text-gray-600 mb-6">
               {activityFilter ? 
                 "No logs match your current filters. Try adjusting your filters or resetting them." : 
-                "There are no activity logs recorded for your account yet."}
+                "There are no activity logs recorded yet."}
             </p>
             {activityFilter && (
               <Button 
