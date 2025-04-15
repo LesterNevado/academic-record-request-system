@@ -31,8 +31,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ userProfile, userRoles, loadin
 
   const handleSignOut = async () => {
     try {
-      // Log sign out activity before signing out
-      if (session?.user?.id) {
+      // Only attempt to log sign out activity for faculty users
+      if (session?.user?.id && isEmployee) {
         try {
           await supabase.rpc(
             'log_activity',

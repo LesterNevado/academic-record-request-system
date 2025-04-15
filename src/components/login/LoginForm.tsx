@@ -43,7 +43,7 @@ export const LoginForm: React.FC = () => {
           
           if (hasFacultyRole && !facultyError) {
             // Log the login activity for faculty members only
-            // No need to check if the user is faculty again as the RLS policy will handle it
+            // The RLS policy will prevent logging for non-faculty users as a second layer of protection
             await supabase.rpc(
               'log_activity',
               {
