@@ -127,27 +127,10 @@ const EmployeeLogs: React.FC = () => {
     try {
       console.log("Fetching activity logs...");
       
-      // Get faculty users to filter logs
-      const { data: facultyData, error: facultyError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'faculty');
-        
-      if (facultyError) {
-        console.error("Error fetching faculty users:", facultyError);
-        toast.error("Failed to load activity logs");
-        setIsLoading(false);
-        return;
-      }
-      
-      const facultyIds = facultyData.map(f => f.user_id);
-      
-      // Fetch all logs for faculty members excluding view_logs and view_requests
+      // Fetch ALL logs without filtering by user or activity type
       const { data: logsData, error: logsError } = await supabase
         .from('activity_logs')
         .select('*')
-        .in('user_id', facultyIds)
-        .not('activity_type', 'in', '("view_logs","view_requests")')
         .order('created_at', { ascending: false });
       
       if (logsError) {
@@ -181,11 +164,25 @@ const EmployeeLogs: React.FC = () => {
             relatedUserName = profileData.full_name;
           }
         }
+
+        // Get user profile information
+        let userName = null;
+        if (log.user_id) {
+          const { data: userProfileData } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', log.user_id)
+            .maybeSingle();
+            
+          if (userProfileData) {
+            userName = userProfileData.full_name;
+          }
+        }
         
         processedLogs.push({
           ...log,
           related_user_avatar: relatedUserAvatar,
-          related_user_name: relatedUserName
+          related_user_name: relatedUserName,
         });
       }
       
