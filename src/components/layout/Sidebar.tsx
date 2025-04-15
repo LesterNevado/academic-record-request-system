@@ -31,6 +31,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ userProfile, userRoles, loadin
 
   const handleSignOut = async () => {
     try {
+      // Log sign out activity before signing out
+      if (session?.user?.id) {
+        try {
+          await supabase.rpc(
+            'log_activity',
+            { 
+              p_user_id: session.user.id, 
+              p_activity_type: 'sign_out',
+              p_details: `User signed out - ${userProfile.email || 'Unknown email'}`
+            }
+          );
+        } catch (logError) {
+          console.error("Error logging sign out activity:", logError);
+          // Continue with sign out even if logging fails
+        }
+      }
+      
       const { error } = await supabase.auth.signOut();
       if (error) {
         toast.error(`Logout failed: ${error.message}`);

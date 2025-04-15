@@ -139,6 +139,24 @@ const EmployeePortal: React.FC = () => {
         email,
         avatarUrl
       });
+
+      const fetchActivityLogs = async (userId: string) => {
+        try {
+          await supabase.rpc(
+            'log_activity',
+            { 
+              p_user_id: userId, 
+              p_activity_type: 'view_requests',
+              p_details: 'Viewed employee request portal'
+            }
+          );
+        } catch (error) {
+          console.error("Error logging activity:", error);
+        }
+      };
+
+      fetchActivityLogs(user.id);
+      
       setIsLoading(false);
     };
     
@@ -320,6 +338,23 @@ const EmployeePortal: React.FC = () => {
         .eq('id', selectedRequest.id);
       
       if (error) throw error;
+
+      if (session?.user?.id) {
+        try {
+          await supabase.rpc(
+            'log_activity',
+            { 
+              p_user_id: session.user.id, 
+              p_activity_type: 'schedule_pickup',
+              p_details: `Scheduled pickup for request #${selectedRequest.id} - ${selectedRequest.student_name}`,
+              p_related_id: selectedRequest.id,
+              p_related_user_id: selectedRequest.user_id
+            }
+          );
+        } catch (logError) {
+          console.error("Error logging scheduling activity:", logError);
+        }
+      }
       
       toast("Sending email notification...", {
         description: "Processing notification email..."

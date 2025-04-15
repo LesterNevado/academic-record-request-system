@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { SessionContext } from "../App";
@@ -13,7 +14,8 @@ import {
   ArrowUpDown,
   CheckCircle2,
   AlertCircle,
-  UserIcon
+  UserIcon,
+  LogOut
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -226,12 +228,16 @@ const EmployeeLogs: React.FC = () => {
     switch (activityType) {
       case 'login':
         return <LogIn className="h-4 w-4 text-blue-500" />;
+      case 'sign_out':
+        return <LogOut className="h-4 w-4 text-orange-500" />;
       case 'schedule_pickup':
         return <CalendarClock className="h-4 w-4 text-green-500" />;
       case 'approve_request':
         return <CheckCircle2 className="h-4 w-4 text-purple-500" />;
       case 'view_logs':
         return <Clock className="h-4 w-4 text-amber-500" />;
+      case 'view_requests':
+        return <Clock className="h-4 w-4 text-cyan-500" />;
       default:
         return <Clock className="h-4 w-4 text-gray-500" />;
     }
@@ -241,12 +247,16 @@ const EmployeeLogs: React.FC = () => {
     switch (activityType) {
       case 'login':
         return 'Login';
+      case 'sign_out':
+        return 'Sign Out';
       case 'schedule_pickup':
         return 'Schedule Pickup';
       case 'approve_request':
         return 'Approve Request';
       case 'view_logs':
         return 'View Logs';
+      case 'view_requests':
+        return 'View Requests';
       default:
         return activityType.split('_').map(word => 
           word.charAt(0).toUpperCase() + word.slice(1)
@@ -289,7 +299,7 @@ const EmployeeLogs: React.FC = () => {
             <h1 className="text-3xl font-bold">Activity Logs</h1>
             <div className="flex gap-2">
               <Button 
-                onClick={() => fetchActivityLogs(session?.user.id || '')} 
+                onClick={refreshLogs} 
                 variant="outline"
                 className="mr-2"
               >
@@ -356,12 +366,16 @@ const EmployeeLogs: React.FC = () => {
                       <Label htmlFor="activity-login" className="text-sm">Login</Label>
                     </div>
                     <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="sign_out" id="activity-sign-out" />
+                      <Label htmlFor="activity-sign-out" className="text-sm">Sign Out</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
                       <RadioGroupItem value="schedule_pickup" id="activity-schedule" />
                       <Label htmlFor="activity-schedule" className="text-sm">Schedule Pickup</Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="approve_request" id="activity-approve" />
-                      <Label htmlFor="activity-approve" className="text-sm">Approve Request</Label>
+                      <RadioGroupItem value="view_requests" id="activity-view-requests" />
+                      <Label htmlFor="activity-view-requests" className="text-sm">View Requests</Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="view_logs" id="activity-view-logs" />
@@ -470,7 +484,7 @@ const EmployeeLogs: React.FC = () => {
             </p>
             {activityFilter && (
               <Button 
-                onClick={() => setActivityFilter(null)} 
+                onClick={resetFilters} 
                 variant="outline" 
                 className="mx-auto"
               >
