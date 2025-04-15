@@ -40,7 +40,6 @@ type ActivityLog = {
   related_id: string | null;
   related_user_id: string | null;
   created_at: string;
-  // Added this for when we join with profiles
   related_user_avatar?: string | null;
   related_user_name?: string | null;
 };
@@ -134,6 +133,7 @@ const EmployeeLogs: React.FC = () => {
 
   const fetchActivityLogs = async (userId: string) => {
     try {
+      // Modified query to correctly join with profiles table
       const { data: logsData, error: logsError } = await supabase
         .from('activity_logs')
         .select(`
