@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { SessionContext } from "../App";
@@ -79,44 +80,45 @@ const EmployeeLogs: React.FC = () => {
     }
 
     const checkUserRole = async () => {
-      setIsLoading(true);
-      const { user } = session;
-      
-      const name = user.user_metadata.name || user.user_metadata.full_name;
-      const email = user.email;
-      const avatarUrl = user.user_metadata.avatar_url;
-      
-      const { data: hasFacultyRole, error: facultyError } = await supabase.rpc(
-        'has_role',
-        { user_id: user.id, role: 'faculty' }
-      );
-      
-      if (facultyError) {
-        console.error("Error checking faculty role:", facultyError);
-        toast.error("Failed to verify employee access");
+      try {
+        setIsLoading(true);
+        const { user } = session;
+        
+        const name = user.user_metadata.name || user.user_metadata.full_name;
+        const email = user.email;
+        const avatarUrl = user.user_metadata.avatar_url;
+        
+        const { data: hasFacultyRole, error: facultyError } = await supabase.rpc(
+          'has_role',
+          { user_id: user.id, role: 'faculty' }
+        );
+        
+        if (facultyError) {
+          console.error("Error checking faculty role:", facultyError);
+          toast.error("Failed to verify employee access");
+          navigate('/dashboard');
+          return;
+        }
+        
+        if (!hasFacultyRole) {
+          toast.error("You don't have employee access");
+          navigate('/dashboard');
+          return;
+        }
+        
+        setUserProfile({
+          name,
+          email,
+          avatarUrl
+        });
+        
+        fetchActivityLogs(user.id);
+      } catch (error) {
+        console.error("Auth check error:", error);
+        toast.error("An error occurred while checking access");
         navigate('/dashboard');
-        return;
       }
-      
-      if (!hasFacultyRole) {
-        toast.error("You don't have employee access");
-        navigate('/dashboard');
-        return;
-      }
-      
-      setUserProfile({
-        name,
-        email,
-        avatarUrl
-      });
-      
-      fetchActivityLogs(user.id);
-    } catch (error) {
-      console.error("Auth check error:", error);
-      toast.error("An error occurred while checking access");
-      navigate('/dashboard');
-    }
-  };
+    };
     
     checkUserRole();
   }, [session, navigate]);
