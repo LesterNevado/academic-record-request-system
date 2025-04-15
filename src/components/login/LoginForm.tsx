@@ -30,19 +30,20 @@ export const LoginForm: React.FC = () => {
         toast.error(`Login failed: ${error.message}`);
         console.error("Google login error:", error);
       } else {
-        // After successful login, check if user is faculty and log the activity
+        // Only attempt to log activity for faculty users
         const session = await supabase.auth.getSession();
         if (session.data.session?.user) {
           const userId = session.data.session.user.id;
           
-          // Check if user has faculty role
+          // Check if user has faculty role before attempting to log
           const { data: hasFacultyRole, error: facultyError } = await supabase.rpc(
             'has_role',
             { user_id: userId, role: 'faculty' }
           );
           
           if (hasFacultyRole && !facultyError) {
-            // Log the login activity for faculty members
+            // Log the login activity for faculty members only
+            // No need to check if the user is faculty again as the RLS policy will handle it
             await supabase.rpc(
               'log_activity',
               {
