@@ -150,27 +150,13 @@ const EmployeeLogs: React.FC = () => {
       for (const log of logsData) {
         let relatedUserAvatar = null;
         let relatedUserName = null;
-        
-        // If there's a related user, fetch their profile info
-        if (log.related_user_id) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('avatar_url, full_name')
-            .eq('id', log.related_user_id)
-            .single();
-            
-          if (profileData) {
-            relatedUserAvatar = profileData.avatar_url;
-            relatedUserName = profileData.full_name;
-          }
-        }
-
-        // Get user profile information
         let userName = null;
+        
+        // Get the user who performed the action
         if (log.user_id) {
           const { data: userProfileData } = await supabase
             .from('profiles')
-            .select('full_name')
+            .select('full_name, avatar_url')
             .eq('id', log.user_id)
             .maybeSingle();
             
@@ -179,10 +165,31 @@ const EmployeeLogs: React.FC = () => {
           }
         }
         
+        // If there's a related user (e.g., student for pickup scheduling), fetch their profile info
+        if (log.related_user_id) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .eq('id', log.related_user_id)
+            .maybeSingle();
+            
+          if (profileData) {
+            relatedUserAvatar = profileData.avatar_url;
+            relatedUserName = profileData.full_name;
+          }
+        }
+        
+        // For schedule pickup activities, update the details to include the processor's name
+        let details = log.details;
+        if (log.activity_type === 'schedule_pickup' && userName) {
+          details = `${userName} scheduled pickup for request ${log.related_id} - ${relatedUserName || 'Unknown Student'}`;
+        }
+        
         processedLogs.push({
           ...log,
+          details,
           related_user_avatar: relatedUserAvatar,
-          related_user_name: relatedUserName,
+          related_user_name: relatedUserName
         });
       }
       

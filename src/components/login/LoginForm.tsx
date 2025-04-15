@@ -21,7 +21,7 @@ export const LoginForm: React.FC = () => {
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
-            hd: 'neu.edu.ph' // This ensures Google only shows neu.edu.ph accounts
+            hd: 'neu.edu.ph'
           }
         }
       });
@@ -29,6 +29,32 @@ export const LoginForm: React.FC = () => {
       if (error) {
         toast.error(`Login failed: ${error.message}`);
         console.error("Google login error:", error);
+      } else {
+        // After successful login, check if user is faculty and log the activity
+        const session = await supabase.auth.getSession();
+        if (session.data.session?.user) {
+          const userId = session.data.session.user.id;
+          
+          // Check if user has faculty role
+          const { data: hasFacultyRole, error: facultyError } = await supabase.rpc(
+            'has_role',
+            { user_id: userId, role: 'faculty' }
+          );
+          
+          if (hasFacultyRole && !facultyError) {
+            // Log the login activity for faculty members
+            await supabase.rpc(
+              'log_activity',
+              {
+                p_user_id: userId,
+                p_activity_type: 'login',
+                p_details: `User logged in - ${session.data.session.user.email}`,
+                p_related_user_id: null,
+                p_related_id: null
+              }
+            );
+          }
+        }
       }
     } catch (err) {
       console.error("Unexpected error during login:", err);
