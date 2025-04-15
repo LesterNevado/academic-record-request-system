@@ -112,7 +112,7 @@ const EmployeeLogs: React.FC = () => {
           avatarUrl
         });
         
-        fetchActivityLogs(user.id);
+        fetchActivityLogs();
       } catch (error) {
         console.error("Auth check error:", error);
         toast.error("An error occurred while checking access");
@@ -123,7 +123,7 @@ const EmployeeLogs: React.FC = () => {
     checkUserRole();
   }, [session, navigate]);
 
-  const fetchActivityLogs = async (userId: string) => {
+  const fetchActivityLogs = async () => {
     try {
       console.log("Fetching activity logs...");
       
@@ -142,7 +142,7 @@ const EmployeeLogs: React.FC = () => {
       
       const facultyIds = facultyData.map(f => f.user_id);
       
-      // Fetch logs only for faculty users and exclude view_logs and view_requests
+      // Fetch all logs for faculty members excluding view_logs and view_requests
       const { data: logsData, error: logsError } = await supabase
         .from('activity_logs')
         .select('*')
@@ -178,7 +178,7 @@ const EmployeeLogs: React.FC = () => {
             
           if (profileData) {
             relatedUserAvatar = profileData.avatar_url;
-            relatedUserName = profileData.full_name; // Using full_name instead of display_name
+            relatedUserName = profileData.full_name;
           }
         }
         
@@ -189,6 +189,7 @@ const EmployeeLogs: React.FC = () => {
         });
       }
       
+      console.log("Processed logs:", processedLogs);
       setLogs(processedLogs);
       setFilteredLogs(processedLogs);
     } catch (error) {
@@ -301,7 +302,12 @@ const EmployeeLogs: React.FC = () => {
             <h1 className="text-3xl font-bold">Activity Logs</h1>
             <div className="flex gap-2">
               <Button 
-                onClick={refreshLogs} 
+                onClick={() => {
+                  setIsLoading(true);
+                  fetchActivityLogs().then(() => {
+                    toast.success("Logs refreshed");
+                  });
+                }} 
                 variant="outline"
                 className="mr-2"
               >
@@ -429,7 +435,7 @@ const EmployeeLogs: React.FC = () => {
                   <TableHead className="w-[180px]">Date & Time</TableHead>
                   <TableHead className="w-[150px]">Activity</TableHead>
                   <TableHead>Details</TableHead>
-                  <TableHead className="w-[130px]">Related User</TableHead>
+                  <TableHead className="w-[200px]">Related User</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -454,7 +460,7 @@ const EmployeeLogs: React.FC = () => {
                               <UserIcon className="h-4 w-4" />
                             </AvatarFallback>
                           </Avatar>
-                          <span className="text-sm truncate max-w-[80px]">
+                          <span className="text-sm">
                             {log.related_user_name || "User"}
                           </span>
                         </div>

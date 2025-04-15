@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -30,7 +29,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 type RequestWithTransaction = {
   id: string;
-  user_id: string; // Added this property to fix the error
+  user_id: string;
   student_name: string;
   student_number: string;
   contact_number: string;
@@ -141,23 +140,6 @@ const EmployeePortal: React.FC = () => {
         email,
         avatarUrl
       });
-
-      const fetchActivityLogs = async (userId: string) => {
-        try {
-          await supabase.rpc(
-            'log_activity',
-            { 
-              p_user_id: userId, 
-              p_activity_type: 'view_requests',
-              p_details: 'Viewed employee request portal'
-            }
-          );
-        } catch (error) {
-          console.error("Error logging activity:", error);
-        }
-      };
-
-      fetchActivityLogs(user.id);
       
       setIsLoading(false);
     };
