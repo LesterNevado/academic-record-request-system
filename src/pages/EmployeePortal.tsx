@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 type RequestWithTransaction = {
   id: string;
+  user_id: string; // Added this property to fix the error
   student_name: string;
   student_number: string;
   contact_number: string;
