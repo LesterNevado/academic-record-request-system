@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
@@ -34,11 +35,15 @@ const RequestForm: React.FC = () => {
     homeAddress: "",
     purpose: "",
     requestTypes: {
-      transcript: { selected: false, copies: 1 },
-      certificate: { selected: false, copies: 1 },
-      certification: { selected: false, copies: 1, details: "" },
-      others: { selected: false, copies: 1, details: "" },
-      soa: { selected: false, copies: 1 }
+      transcript: { selected: false, copies: 1, price: 0, ctc: false },
+      certificate: { selected: false, copies: 1, price: 0, ctc: false },
+      registrationForm: { selected: false, copies: 1, price: 0, ctc: false },
+      com: { selected: false, copies: 1, price: 0, ctc: false },
+      soa: { selected: false, copies: 1, price: 0, ctc: false },
+      coe: { selected: false, copies: 1, price: 0, ctc: false },
+      noScholarship: { selected: false, copies: 1, price: 0, ctc: false },
+      certification: { selected: false, copies: 1, details: "", price: 0, ctc: false },
+      others: { selected: false, copies: 1, details: "", price: 0, ctc: false }
     }
   });
   
@@ -197,6 +202,19 @@ const RequestForm: React.FC = () => {
     });
   };
 
+  const handleCtcDrySealChange = (type: string) => {
+    setFormData({
+      ...formData,
+      requestTypes: {
+        ...formData.requestTypes,
+        [type]: {
+          ...formData.requestTypes[type as keyof typeof formData.requestTypes],
+          ctc: !formData.requestTypes[type as keyof typeof formData.requestTypes].ctc
+        }
+      }
+    });
+  };
+
   const validateForm = () => {
     let isValid = true;
     const newErrors = {
@@ -216,6 +234,19 @@ const RequestForm: React.FC = () => {
 
     setFormErrors(newErrors);
     return isValid;
+  };
+
+  // Calculate price for each document type: for now, price is a property in formData. 
+  // Subtotal = sum of (copies * price) for each selected request type
+  const calculateSubtotal = () => {
+    let subtotal = 0;
+    for (const key in formData.requestTypes) {
+      const req = formData.requestTypes[key as keyof typeof formData.requestTypes];
+      if (req.selected) {
+        subtotal += (req.copies || 0) * (req.price || 0);
+      }
+    }
+    return subtotal;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -274,25 +305,22 @@ const RequestForm: React.FC = () => {
             <div className="p-4 bg-gray-50 rounded-lg mb-6">
               <h3 className="font-medium mb-3">Request Summary:</h3>
               <ul className="space-y-2">
-                {formData.requestTypes.transcript.selected && (
-                  <li>Transcript of Records (TOR): {formData.requestTypes.transcript.copies} {formData.requestTypes.transcript.copies > 1 ? 'copies' : 'copy'}</li>
-                )}
-                
-                {formData.requestTypes.certificate.selected && (
-                  <li>Certificate of Grades (COG): {formData.requestTypes.certificate.copies} {formData.requestTypes.certificate.copies > 1 ? 'copies' : 'copy'}</li>
-                )}
-                
-                {formData.requestTypes.certification.selected && (
-                  <li>Certification ({formData.requestTypes.certification.details}): {formData.requestTypes.certification.copies} {formData.requestTypes.certification.copies > 1 ? 'copies' : 'copy'}</li>
-                )}
-                
-                {formData.requestTypes.others.selected && (
-                  <li>Others ({formData.requestTypes.others.details}): {formData.requestTypes.others.copies} {formData.requestTypes.others.copies > 1 ? 'copies' : 'copy'}</li>
-                )}
-                
-                {formData.requestTypes.soa.selected && (
-                  <li>Statement of Account (SOA): {formData.requestTypes.soa.copies} {formData.requestTypes.soa.copies > 1 ? 'copies' : 'copy'}</li>
-                )}
+                {Object.entries(formData.requestTypes).map(([key, value]) => (
+                  value.selected && (
+                    <li key={key}>
+                      {key === "transcript" && "Transcript of Records (TOR)"}
+                      {key === "certificate" && "Certificate of Grades (COG)"}
+                      {key === "registrationForm" && "Registration Form"}
+                      {key === "com" && "Certificate of Matriculation (COM)"}
+                      {key === "soa" && "Statement of Account (SOA)"}
+                      {key === "coe" && "Certificate of Enrollment (COE)"}
+                      {key === "noScholarship" && "Certificate of No Availed Scholarship"}
+                      {key === "certification" && `Certification (${value.details})`}
+                      {key === "others" && `Others (${value.details})`}
+                      : {value.copies} {value.copies > 1 ? 'copies' : 'copy'}
+                    </li>
+                  )
+                ))}
               </ul>
             </div>
             
@@ -363,145 +391,77 @@ const RequestForm: React.FC = () => {
                     <Label className="text-lg font-semibold">APPLICATION FOR: <span className={requiredFieldStyle}>*</span></Label>
                     
                     <div className="mt-4 space-y-4">
-                      <div className="grid grid-cols-12 gap-4">
-                        <div className="col-span-8 flex items-center space-x-2">
-                          <Checkbox 
-                            id="transcript" 
-                            checked={formData.requestTypes.transcript.selected}
-                            onCheckedChange={() => handleCheckboxChange('transcript')}
-                          />
-                          <Label htmlFor="transcript" className="font-normal">Transcript of Records (TOR)</Label>
-                        </div>
-                        
-                        <div className="col-span-4">
-                          <Label htmlFor="transcriptCopies" className="text-sm block mb-1 text-center">No. of Copies</Label>
-                          <Input
-                            id="transcriptCopies"
-                            type="number"
-                            min="1"
-                            value={formData.requestTypes.transcript.copies}
-                            onChange={(e) => handleCopiesChange('transcript', parseInt(e.target.value) || 1)}
-                            className="text-center"
-                          />
-                        </div>
-                      </div>
+                      {Object.entries(formData.requestTypes).map(([key, value]) => {
+                        // Label text per key
+                        let label = "";
+                        switch(key){
+                          case "transcript": label = "Transcript of Records (TOR)"; break;
+                          case "certificate": label = "Certificate of Grades (COG)"; break;
+                          case "registrationForm": label = "Registration Form"; break;
+                          case "com": label = "Certificate of Matriculation (COM)"; break;
+                          case "soa": label = "Statement of Account (SOA)"; break;
+                          case "coe": label = "Certificate of Enrollment (COE)"; break;
+                          case "noScholarship": label = "Certificate of No Availed Scholarship"; break;
+                          case "certification": label = "Certification"; break;
+                          case "others": label = "Others (Please Specify)"; break;
+                          default: label = key; break;
+                        }
 
-                      <div className="grid grid-cols-12 gap-4">
-                        <div className="col-span-8 flex items-center space-x-2">
-                          <Checkbox 
-                            id="certificate" 
-                            checked={formData.requestTypes.certificate.selected}
-                            onCheckedChange={() => handleCheckboxChange('certificate')}
-                          />
-                          <Label htmlFor="certificate" className="font-normal">Certificate of Grades (COG)</Label>
-                        </div>
-                        
-                        <div className="col-span-4">
-                          <Label htmlFor="certificateCopies" className="text-sm block mb-1 text-center">No. of Copies</Label>
-                          <Input
-                            id="certificateCopies"
-                            type="number"
-                            min="1"
-                            value={formData.requestTypes.certificate.copies}
-                            onChange={(e) => handleCopiesChange('certificate', parseInt(e.target.value) || 1)}
-                            className="text-center"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-12 gap-4">
-                        <div className="col-span-8 flex items-center space-x-2">
-                          <Checkbox 
-                            id="soa" 
-                            checked={formData.requestTypes.soa.selected}
-                            onCheckedChange={() => handleCheckboxChange('soa')}
-                          />
-                          <Label htmlFor="soa" className="font-normal">Statement of Account (SOA)</Label>
-                        </div>
-                        
-                        <div className="col-span-4">
-                          <Label htmlFor="soaCopies" className="text-sm block mb-1 text-center">No. of Copies</Label>
-                          <Input
-                            id="soaCopies"
-                            type="number"
-                            min="1"
-                            value={formData.requestTypes.soa.copies}
-                            onChange={(e) => handleCopiesChange('soa', parseInt(e.target.value) || 1)}
-                            className="text-center"
-                          />
-                        </div>
-                      </div>
+                        // Determine if details input needed for cert/others
+                        const needsDetailsInput = (key === "certification" || key === "others");
 
-                      <div className="grid grid-cols-12 gap-4">
-                        <div className="col-span-8 flex items-start space-x-2">
-                          <Checkbox 
-                            id="certification" 
-                            checked={formData.requestTypes.certification.selected}
-                            onCheckedChange={() => handleCheckboxChange('certification')}
-                            className="mt-2"
-                          />
-                          <div className="flex-1">
-                            <Label htmlFor="certification" className="font-normal">Certification</Label>
-                            <Input
-                              className={`mt-2 ${formErrors.certificationDetails ? 'border-[#ea384c] focus-visible:ring-[#ea384c]' : ''}`}
-                              value={formData.requestTypes.certification.details}
-                              onChange={(e) => handleDetailsChange('certification', e.target.value)}
-                              placeholder="Please specify"
-                              required={formData.requestTypes.certification.selected}
-                            />
-                            {formErrors.certificationDetails && (
-                              <p className="text-[#ea384c] text-xs mt-1">This field is required when Certification is selected</p>
-                            )}
+                        return (
+                          <div key={key} className="grid grid-cols-12 gap-4 items-center">
+                            <div className={`col-span-6 flex items-center space-x-2`}>
+                              <Checkbox 
+                                id={key} 
+                                checked={value.selected}
+                                onCheckedChange={() => handleCheckboxChange(key)}
+                              />
+                              <Label htmlFor={key} className={`font-normal`}>
+                                {label} {needsDetailsInput && "(Required if Checked)"}
+                              </Label>
+                            </div>
+                            <div className="col-span-1 flex justify-center">
+                              <Checkbox 
+                                id={`${key}-ctc`} 
+                                checked={value.ctc}
+                                onCheckedChange={() => handleCtcDrySealChange(key)}
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              <Label htmlFor={`${key}Copies`} className="text-sm block mb-1 text-center">No. of Copies</Label>
+                              <Input
+                                id={`${key}Copies`}
+                                type="number"
+                                min="1"
+                                value={value.copies}
+                                onChange={(e) => handleCopiesChange(key, parseInt(e.target.value) || 1)}
+                                className="text-center"
+                                disabled={!value.selected}
+                              />
+                            </div>
+                            <div className="col-span-2 flex flex-col">
+                              {needsDetailsInput && (
+                                <Input
+                                  className={`mt-1 ${key === "certification" && formErrors.certificationDetails ? 'border-[#ea384c] focus-visible:ring-[#ea384c]' : ''} ${key === "others" && formErrors.othersDetails ? 'border-[#ea384c] focus-visible:ring-[#ea384c]' : ''}`}
+                                  value={value.details}
+                                  onChange={(e) => handleDetailsChange(key, e.target.value)}
+                                  placeholder="Please specify"
+                                  required={value.selected}
+                                  disabled={!value.selected}
+                                />
+                              )}
+                            </div>
+                            <div className="col-span-1 text-right font-mono">
+                              ₱{(value.price * value.copies).toFixed(2)}
+                            </div>
                           </div>
-                        </div>
-                        
-                        <div className="col-span-4">
-                          <Label htmlFor="certificationCopies" className="text-sm block mb-1 text-center">No. of Copies</Label>
-                          <Input
-                            id="certificationCopies"
-                            type="number"
-                            min="1"
-                            value={formData.requestTypes.certification.copies}
-                            onChange={(e) => handleCopiesChange('certification', parseInt(e.target.value) || 1)}
-                            className="text-center"
-                          />
-                        </div>
-                      </div>
+                        );
+                      })}
 
-                      <div className="grid grid-cols-12 gap-4">
-                        <div className="col-span-8 flex items-start space-x-2">
-                          <Checkbox 
-                            id="others" 
-                            checked={formData.requestTypes.others.selected}
-                            onCheckedChange={() => handleCheckboxChange('others')}
-                            className="mt-2"
-                          />
-                          <div className="flex-1">
-                            <Label htmlFor="others" className="font-normal">Others (Please Specify)</Label>
-                            <Input
-                              className={`mt-2 ${formErrors.othersDetails ? 'border-[#ea384c] focus-visible:ring-[#ea384c]' : ''}`}
-                              value={formData.requestTypes.others.details}
-                              onChange={(e) => handleDetailsChange('others', e.target.value)}
-                              placeholder="Please specify"
-                              required={formData.requestTypes.others.selected}
-                            />
-                            {formErrors.othersDetails && (
-                              <p className="text-[#ea384c] text-xs mt-1">This field is required when Others is selected</p>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="col-span-4">
-                          <Label htmlFor="othersCopies" className="text-sm block mb-1 text-center">No. of Copies</Label>
-                          <Input
-                            id="othersCopies"
-                            type="number"
-                            min="1"
-                            value={formData.requestTypes.others.copies}
-                            onChange={(e) => handleCopiesChange('others', parseInt(e.target.value) || 1)}
-                            className="text-center"
-                          />
-                        </div>
+                      <div className="flex justify-end mt-4 font-semibold text-lg">
+                        Total: ₱{calculateSubtotal().toFixed(2)}
                       </div>
                     </div>
                   </div>
@@ -545,3 +505,4 @@ const RequestForm: React.FC = () => {
 };
 
 export default RequestForm;
+
