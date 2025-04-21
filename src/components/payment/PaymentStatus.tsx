@@ -29,12 +29,16 @@ export const PaymentStatus: React.FC = () => {
       
       try {
         const params = new URLSearchParams(location.search);
-        const isSuccess = params.get("success") === "true";
+        // Check if status is explicitly "success" or check for session_id which indicates success too
+        const isSuccess = params.get("status") === "success" || params.get("session_id") !== null;
         const sessionId = params.get("session_id");
+        const clientReferenceId = params.get("ref");
 
         console.log("Payment status page loaded with params:", { 
+          status: params.get("status"),
           success: isSuccess, 
-          sessionId: sessionId ? `${sessionId.substring(0, 5)}...` : null // Log partial ID for privacy
+          sessionId: sessionId ? `${sessionId.substring(0, 5)}...` : null,
+          ref: clientReferenceId
         });
 
         // If payment was successful, create request in the database
@@ -118,18 +122,51 @@ export const PaymentStatus: React.FC = () => {
               home_address: formData.homeAddress,
               purpose: formData.purpose,
               transaction_id: existingTransaction.id, // Link to existing transaction
+              client_reference_id: clientReferenceId || null,
+              // Document type selections and copies
               transcript_selected: formData.requestTypes.transcript.selected,
               transcript_copies: formData.requestTypes.transcript.selected ? formData.requestTypes.transcript.copies : null,
+              transcript_ctc: formData.requestTypes.transcript.selected ? formData.requestTypes.transcript.ctc : false,
+              
               certificate_selected: formData.requestTypes.certificate.selected,
               certificate_copies: formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.copies : null,
+              certificate_ctc: formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.ctc : false,
+              
               certification_selected: formData.requestTypes.certification.selected,
               certification_copies: formData.requestTypes.certification.selected ? formData.requestTypes.certification.copies : null,
+              certification_ctc: formData.requestTypes.certification.selected ? formData.requestTypes.certification.ctc : false,
               certification_details: formData.requestTypes.certification.selected ? formData.requestTypes.certification.details : null,
+              
               others_selected: formData.requestTypes.others.selected,
               others_copies: formData.requestTypes.others.selected ? formData.requestTypes.others.copies : null,
+              others_ctc: formData.requestTypes.others.selected ? formData.requestTypes.others.ctc : false,
               others_details: formData.requestTypes.others.selected ? formData.requestTypes.others.details : null,
+              
               soa_selected: formData.requestTypes.soa && formData.requestTypes.soa.selected ? true : false,
               soa_copies: formData.requestTypes.soa && formData.requestTypes.soa.selected ? formData.requestTypes.soa.copies : null,
+              soa_ctc: formData.requestTypes.soa && formData.requestTypes.soa.selected ? formData.requestTypes.soa.ctc : false,
+              
+              registration_form_selected: formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected ? true : false,
+              registration_form_copies: formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected ? formData.requestTypes.registrationForm.copies : null,
+              registration_form_ctc: formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected ? formData.requestTypes.registrationForm.ctc : false,
+              registration_form_details: formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected ? formData.requestTypes.registrationForm.details : null,
+              
+              com_selected: formData.requestTypes.com && formData.requestTypes.com.selected ? true : false,
+              com_copies: formData.requestTypes.com && formData.requestTypes.com.selected ? formData.requestTypes.com.copies : null,
+              com_ctc: formData.requestTypes.com && formData.requestTypes.com.selected ? formData.requestTypes.com.ctc : false,
+              
+              coe_selected: formData.requestTypes.coe && formData.requestTypes.coe.selected ? true : false,
+              coe_copies: formData.requestTypes.coe && formData.requestTypes.coe.selected ? formData.requestTypes.coe.copies : null,
+              coe_ctc: formData.requestTypes.coe && formData.requestTypes.coe.selected ? formData.requestTypes.coe.ctc : false,
+              
+              coa_selected: formData.requestTypes.coa && formData.requestTypes.coa.selected ? true : false,
+              coa_copies: formData.requestTypes.coa && formData.requestTypes.coa.selected ? formData.requestTypes.coa.copies : null,
+              coa_ctc: formData.requestTypes.coa && formData.requestTypes.coa.selected ? formData.requestTypes.coa.ctc : false,
+              
+              no_scholarship_selected: formData.requestTypes.noScholarship && formData.requestTypes.noScholarship.selected ? true : false,
+              no_scholarship_copies: formData.requestTypes.noScholarship && formData.requestTypes.noScholarship.selected ? formData.requestTypes.noScholarship.copies : null,
+              no_scholarship_ctc: formData.requestTypes.noScholarship && formData.requestTypes.noScholarship.selected ? formData.requestTypes.noScholarship.ctc : false,
+              
               status: 'awaiting_pickup',
               pickup_date: null,
               processed_by: null,
@@ -174,18 +211,51 @@ export const PaymentStatus: React.FC = () => {
               contact_number: formData.contactNumber,
               home_address: formData.homeAddress,
               purpose: formData.purpose,
+              client_reference_id: clientReferenceId || null,
+              // Document type selections and copies
               transcript_selected: formData.requestTypes.transcript.selected,
               transcript_copies: formData.requestTypes.transcript.selected ? formData.requestTypes.transcript.copies : null,
+              transcript_ctc: formData.requestTypes.transcript.selected ? formData.requestTypes.transcript.ctc : false,
+              
               certificate_selected: formData.requestTypes.certificate.selected,
               certificate_copies: formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.copies : null,
+              certificate_ctc: formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.ctc : false,
+              
               certification_selected: formData.requestTypes.certification.selected,
               certification_copies: formData.requestTypes.certification.selected ? formData.requestTypes.certification.copies : null,
+              certification_ctc: formData.requestTypes.certification.selected ? formData.requestTypes.certification.ctc : false,
               certification_details: formData.requestTypes.certification.selected ? formData.requestTypes.certification.details : null,
+              
               others_selected: formData.requestTypes.others.selected,
               others_copies: formData.requestTypes.others.selected ? formData.requestTypes.others.copies : null,
+              others_ctc: formData.requestTypes.others.selected ? formData.requestTypes.others.ctc : false,
               others_details: formData.requestTypes.others.selected ? formData.requestTypes.others.details : null,
+              
               soa_selected: formData.requestTypes.soa && formData.requestTypes.soa.selected ? true : false,
               soa_copies: formData.requestTypes.soa && formData.requestTypes.soa.selected ? formData.requestTypes.soa.copies : null,
+              soa_ctc: formData.requestTypes.soa && formData.requestTypes.soa.selected ? formData.requestTypes.soa.ctc : false,
+              
+              registration_form_selected: formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected ? true : false,
+              registration_form_copies: formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected ? formData.requestTypes.registrationForm.copies : null,
+              registration_form_ctc: formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected ? formData.requestTypes.registrationForm.ctc : false,
+              registration_form_details: formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected ? formData.requestTypes.registrationForm.details : null,
+              
+              com_selected: formData.requestTypes.com && formData.requestTypes.com.selected ? true : false,
+              com_copies: formData.requestTypes.com && formData.requestTypes.com.selected ? formData.requestTypes.com.copies : null,
+              com_ctc: formData.requestTypes.com && formData.requestTypes.com.selected ? formData.requestTypes.com.ctc : false,
+              
+              coe_selected: formData.requestTypes.coe && formData.requestTypes.coe.selected ? true : false,
+              coe_copies: formData.requestTypes.coe && formData.requestTypes.coe.selected ? formData.requestTypes.coe.copies : null,
+              coe_ctc: formData.requestTypes.coe && formData.requestTypes.coe.selected ? formData.requestTypes.coe.ctc : false,
+              
+              coa_selected: formData.requestTypes.coa && formData.requestTypes.coa.selected ? true : false,
+              coa_copies: formData.requestTypes.coa && formData.requestTypes.coa.selected ? formData.requestTypes.coa.copies : null,
+              coa_ctc: formData.requestTypes.coa && formData.requestTypes.coa.selected ? formData.requestTypes.coa.ctc : false,
+              
+              no_scholarship_selected: formData.requestTypes.noScholarship && formData.requestTypes.noScholarship.selected ? true : false,
+              no_scholarship_copies: formData.requestTypes.noScholarship && formData.requestTypes.noScholarship.selected ? formData.requestTypes.noScholarship.copies : null,
+              no_scholarship_ctc: formData.requestTypes.noScholarship && formData.requestTypes.noScholarship.selected ? formData.requestTypes.noScholarship.ctc : false,
+              
               status: 'awaiting_pickup',
               pickup_date: null,
               processed_by: null,

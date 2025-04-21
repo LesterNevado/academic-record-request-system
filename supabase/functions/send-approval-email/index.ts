@@ -122,6 +122,26 @@ serve(async (req) => {
       requestTypes.push("Others");
       totalCopies += requestData.others_copies || 0;
     }
+    if (requestData.registration_form_selected) {
+      requestTypes.push("Registration Form");
+      totalCopies += requestData.registration_form_copies || 0;
+    }
+    if (requestData.com_selected) {
+      requestTypes.push("Certificate of Matriculation");
+      totalCopies += requestData.com_copies || 0;
+    }
+    if (requestData.coe_selected) {
+      requestTypes.push("Certificate of Enrollment");
+      totalCopies += requestData.coe_copies || 0;
+    }
+    if (requestData.coa_selected) {
+      requestTypes.push("Certificate of Attendance");
+      totalCopies += requestData.coa_copies || 0;
+    }
+    if (requestData.no_scholarship_selected) {
+      requestTypes.push("Certificate of No Scholarship");
+      totalCopies += requestData.no_scholarship_copies || 0;
+    }
     
     const requestTypeText = requestTypes.join(", ");
     

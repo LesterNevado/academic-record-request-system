@@ -282,7 +282,7 @@ serve(async (req) => {
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
-      success_url: `${redirectUrl}?session_id={CHECKOUT_SESSION_ID}&status=success&ref=${clientReferenceId}`,
+      success_url: `${redirectUrl}?status=success&session_id={CHECKOUT_SESSION_ID}&ref=${clientReferenceId}`,
       cancel_url: `${redirectUrl}?status=cancelled&ref=${clientReferenceId}`,
       client_reference_id: clientReferenceId,
       metadata: {
