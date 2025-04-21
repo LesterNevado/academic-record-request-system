@@ -1,4 +1,3 @@
-
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { SessionContext } from "@/App";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,8 +32,8 @@ const Dashboard: React.FC = () => {
   // Local state to hold roles fetched in this component from supabase rpc.
   const [roles, setRoles] = useState<UserRole[]>(userRoles || []);
 
-  // Use a ref to ensure we do not log faculty login multiple times per session.
-  const activityLoggedRef = useRef(false);
+  // Use a ref to keep previous session user id to detect new login
+  const prevUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const getSession = async () => {
@@ -100,23 +99,20 @@ const Dashboard: React.FC = () => {
   }, [navigate]);
 
   useEffect(() => {
-    // To ensure login activity is logged only once, use localStorage flag key.
-    // This persists across refreshes but resets on logout or new login.
     async function logFacultyLoginActivity() {
       if (
         session?.user &&
         Array.isArray(userRoles) &&
-        userRoles.includes('faculty') &&
-        !activityLoggedRef.current
+        userRoles.includes('faculty')
       ) {
-        // Check localStorage if we have logged login before for this userId
         const loggedKey = `faculty_login_logged_${session.user.id}`;
-        const alreadyLogged = localStorage.getItem(loggedKey);
-        if (!alreadyLogged) {
-          activityLoggedRef.current = true;
+        // Use sessionStorage instead of localStorage: clears on tab close/new session.
+        const alreadyLogged = sessionStorage.getItem(loggedKey);
+        if (!alreadyLogged && prevUserIdRef.current !== session.user.id) {
+          prevUserIdRef.current = session.user.id;
           try {
             console.log(
-              '[Dashboard] User is faculty, attempting to log login activity once...'
+              '[Dashboard] User is faculty, attempting to log login activity ONCE after login...'
             );
             const { data: logResult, error: logError } = await supabase.rpc(
               'log_activity',
@@ -139,8 +135,7 @@ const Dashboard: React.FC = () => {
                 '[Dashboard] Successfully logged login activity for faculty user.',
                 logResult
               );
-              // Set flag so that it won't log again on refresh or revisit
-              localStorage.setItem(loggedKey, 'true');
+              sessionStorage.setItem(loggedKey, 'true'); // mark as logged in this browser tab session
             }
           } catch (err) {
             console.error(
@@ -149,9 +144,15 @@ const Dashboard: React.FC = () => {
             );
           }
         } else {
-          console.log(
-            '[Dashboard] Faculty login activity already logged this session, skipping.'
-          );
+          if (alreadyLogged) {
+            console.log(
+              '[Dashboard] Faculty login activity already logged in this session, skipping.'
+            );
+          } else if (prevUserIdRef.current === session.user.id) {
+            console.log(
+              '[Dashboard] Faculty login activity already logged for this user id, skipping.'
+            );
+          }
         }
       }
     }
@@ -288,4 +289,3 @@ const Dashboard: React.FC = () => {
 };
 
 export default Dashboard;
-
