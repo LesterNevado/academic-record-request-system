@@ -86,7 +86,8 @@ export const PaymentButton: React.FC<PaymentButtonProps> = ({
           .filter(key => requestFormData.requestTypes[key].selected)
           .map(key => ({
             type: key,
-            copies: requestFormData.requestTypes[key].copies
+            copies: requestFormData.requestTypes[key].copies,
+            ctc: requestFormData.requestTypes[key].ctc
           }))
       });
 
