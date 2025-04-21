@@ -297,7 +297,7 @@ const EmployeePortal: React.FC = () => {
     setSortPopoverOpen(false);
   };
 
-  const filteredAndSortedRequests = applySorting(applyFilters(requests || []));
+  const filteredAndSortedRequests = applySorting(applyFilters(employeeRequests || []));
 
   const processRequest = (request: RequestWithTransaction) => {
     setSelectedRequest(request);
