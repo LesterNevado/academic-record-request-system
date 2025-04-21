@@ -107,201 +107,105 @@ export const PaymentStatus: React.FC = () => {
             return;
           }
           
-          let requestId: string;
+          // Prepare request data for submission to Supabase
+          const requestData: TablesInsert<"requests"> = {
+            user_id: session.user.id,
+            student_name: formData.studentName,
+            student_number: formData.studentNumber,
+            contact_number: formData.contactNumber,
+            home_address: formData.homeAddress,
+            purpose: formData.purpose,
+            client_reference_id: clientReferenceId || null,
+            status: 'awaiting_pickup', // Set status directly to 'awaiting_pickup'
+            
+            // Document type selections and copies
+            transcript_selected: formData.requestTypes.transcript.selected,
+            transcript_copies: formData.requestTypes.transcript.selected ? formData.requestTypes.transcript.copies : null,
+            transcript_ctc: formData.requestTypes.transcript.selected ? formData.requestTypes.transcript.ctc : false,
+            
+            certificate_selected: formData.requestTypes.certificate.selected,
+            certificate_copies: formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.copies : null,
+            certificate_ctc: formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.ctc : false,
+            
+            certification_selected: formData.requestTypes.certification.selected,
+            certification_copies: formData.requestTypes.certification.selected ? formData.requestTypes.certification.copies : null,
+            certification_ctc: formData.requestTypes.certification.selected ? formData.requestTypes.certification.ctc : false,
+            certification_details: formData.requestTypes.certification.selected ? formData.requestTypes.certification.details : null,
+            
+            others_selected: formData.requestTypes.others.selected,
+            others_copies: formData.requestTypes.others.selected ? formData.requestTypes.others.copies : null,
+            others_ctc: formData.requestTypes.others.selected ? formData.requestTypes.others.ctc : false,
+            others_details: formData.requestTypes.others.selected ? formData.requestTypes.others.details : null,
+            
+            soa_selected: formData.requestTypes.soa && formData.requestTypes.soa.selected ? true : false,
+            soa_copies: formData.requestTypes.soa && formData.requestTypes.soa.selected ? formData.requestTypes.soa.copies : null,
+            soa_ctc: formData.requestTypes.soa && formData.requestTypes.soa.selected ? formData.requestTypes.soa.ctc : false,
+            
+            registration_form_selected: formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected ? true : false,
+            registration_form_copies: formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected ? formData.requestTypes.registrationForm.copies : null,
+            registration_form_ctc: formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected ? formData.requestTypes.registrationForm.ctc : false,
+            registration_form_details: formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected ? formData.requestTypes.registrationForm.details : null,
+            
+            com_selected: formData.requestTypes.com && formData.requestTypes.com.selected ? true : false,
+            com_copies: formData.requestTypes.com && formData.requestTypes.com.selected ? formData.requestTypes.com.copies : null,
+            com_ctc: formData.requestTypes.com && formData.requestTypes.com.selected ? formData.requestTypes.com.ctc : false,
+            
+            coe_selected: formData.requestTypes.coe && formData.requestTypes.coe.selected ? true : false,
+            coe_copies: formData.requestTypes.coe && formData.requestTypes.coe.selected ? formData.requestTypes.coe.copies : null,
+            coe_ctc: formData.requestTypes.coe && formData.requestTypes.coe.selected ? formData.requestTypes.coe.ctc : false,
+            
+            coa_selected: formData.requestTypes.coa && formData.requestTypes.coa.selected ? true : false,
+            coa_copies: formData.requestTypes.coa && formData.requestTypes.coa.selected ? formData.requestTypes.coa.copies : null,
+            coa_ctc: formData.requestTypes.coa && formData.requestTypes.coa.selected ? formData.requestTypes.coa.ctc : false,
+            
+            no_scholarship_selected: formData.requestTypes.noScholarship && formData.requestTypes.noScholarship.selected ? true : false,
+            no_scholarship_copies: formData.requestTypes.noScholarship && formData.requestTypes.noScholarship.selected ? formData.requestTypes.noScholarship.copies : null,
+            no_scholarship_ctc: formData.requestTypes.noScholarship && formData.requestTypes.noScholarship.selected ? formData.requestTypes.noScholarship.ctc : false,
+            
+            pickup_date: null,
+            processed_by: null,
+            notes: null
+          };
           
-          // If transaction exists but has no request_id, we need to create the request and link it
-          if (existingTransaction && !existingTransaction.request_id) {
-            console.log("Transaction exists but has no linked request. Creating request...");
+          // Submit request to Supabase
+          console.log("Creating request in database...");
+          const { data: requestResult, error: requestError } = await supabase
+            .from('requests')
+            .insert(requestData)
+            .select('id')
+            .single();
+          
+          if (requestError) {
+            console.error("Error creating request:", requestError);
+            throw requestError;
+          }
+          
+          const requestId = requestResult.id;
+          console.log("Request created successfully with ID:", requestId);
+          
+          // Call the create_transaction_if_not_exists RPC function to ensure atomic transaction creation
+          console.log("Recording transaction with session ID:", sessionId.substring(0, 5) + "...");
+          const { data: transactionResult, error: transactionError } = await supabase
+            .rpc('create_transaction_if_not_exists', {
+              p_user_id: session.user.id,
+              p_request_id: requestId,
+              p_amount: paymentAmount,
+              p_payment_status: 'successful',
+              p_payment_method: 'card',
+              p_stripe_session_id: sessionId
+            });
             
-            // Prepare request data for submission to Supabase
-            const requestData: TablesInsert<"requests"> = {
-              user_id: session.user.id,
-              student_name: formData.studentName,
-              student_number: formData.studentNumber,
-              contact_number: formData.contactNumber,
-              home_address: formData.homeAddress,
-              purpose: formData.purpose,
-              transaction_id: existingTransaction.id, // Link to existing transaction
-              client_reference_id: clientReferenceId || null,
-              // Document type selections and copies
-              transcript_selected: formData.requestTypes.transcript.selected,
-              transcript_copies: formData.requestTypes.transcript.selected ? formData.requestTypes.transcript.copies : null,
-              transcript_ctc: formData.requestTypes.transcript.selected ? formData.requestTypes.transcript.ctc : false,
-              
-              certificate_selected: formData.requestTypes.certificate.selected,
-              certificate_copies: formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.copies : null,
-              certificate_ctc: formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.ctc : false,
-              
-              certification_selected: formData.requestTypes.certification.selected,
-              certification_copies: formData.requestTypes.certification.selected ? formData.requestTypes.certification.copies : null,
-              certification_ctc: formData.requestTypes.certification.selected ? formData.requestTypes.certification.ctc : false,
-              certification_details: formData.requestTypes.certification.selected ? formData.requestTypes.certification.details : null,
-              
-              others_selected: formData.requestTypes.others.selected,
-              others_copies: formData.requestTypes.others.selected ? formData.requestTypes.others.copies : null,
-              others_ctc: formData.requestTypes.others.selected ? formData.requestTypes.others.ctc : false,
-              others_details: formData.requestTypes.others.selected ? formData.requestTypes.others.details : null,
-              
-              soa_selected: formData.requestTypes.soa && formData.requestTypes.soa.selected ? true : false,
-              soa_copies: formData.requestTypes.soa && formData.requestTypes.soa.selected ? formData.requestTypes.soa.copies : null,
-              soa_ctc: formData.requestTypes.soa && formData.requestTypes.soa.selected ? formData.requestTypes.soa.ctc : false,
-              
-              registration_form_selected: formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected ? true : false,
-              registration_form_copies: formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected ? formData.requestTypes.registrationForm.copies : null,
-              registration_form_ctc: formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected ? formData.requestTypes.registrationForm.ctc : false,
-              registration_form_details: formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected ? formData.requestTypes.registrationForm.details : null,
-              
-              com_selected: formData.requestTypes.com && formData.requestTypes.com.selected ? true : false,
-              com_copies: formData.requestTypes.com && formData.requestTypes.com.selected ? formData.requestTypes.com.copies : null,
-              com_ctc: formData.requestTypes.com && formData.requestTypes.com.selected ? formData.requestTypes.com.ctc : false,
-              
-              coe_selected: formData.requestTypes.coe && formData.requestTypes.coe.selected ? true : false,
-              coe_copies: formData.requestTypes.coe && formData.requestTypes.coe.selected ? formData.requestTypes.coe.copies : null,
-              coe_ctc: formData.requestTypes.coe && formData.requestTypes.coe.selected ? formData.requestTypes.coe.ctc : false,
-              
-              coa_selected: formData.requestTypes.coa && formData.requestTypes.coa.selected ? true : false,
-              coa_copies: formData.requestTypes.coa && formData.requestTypes.coa.selected ? formData.requestTypes.coa.copies : null,
-              coa_ctc: formData.requestTypes.coa && formData.requestTypes.coa.selected ? formData.requestTypes.coa.ctc : false,
-              
-              no_scholarship_selected: formData.requestTypes.noScholarship && formData.requestTypes.noScholarship.selected ? true : false,
-              no_scholarship_copies: formData.requestTypes.noScholarship && formData.requestTypes.noScholarship.selected ? formData.requestTypes.noScholarship.copies : null,
-              no_scholarship_ctc: formData.requestTypes.noScholarship && formData.requestTypes.noScholarship.selected ? formData.requestTypes.noScholarship.ctc : false,
-              
-              status: 'awaiting_pickup',
-              pickup_date: null,
-              processed_by: null,
-              notes: null
-            };
-            
-            // Submit request to Supabase
-            console.log("Creating request in database with existing transaction ID:", existingTransaction.id);
-            const { data: requestResult, error: requestError } = await supabase
-              .from('requests')
-              .insert(requestData)
-              .select('id')
-              .single();
-            
-            if (requestError) {
-              console.error("Error creating request:", requestError);
-              throw requestError;
-            }
-            
-            requestId = requestResult.id;
-            console.log("Request created successfully with ID:", requestId);
-            
-            // Update the transaction to link back to the request
-            const { error: updateError } = await supabase
-              .from('transactions')
-              .update({ request_id: requestId })
-              .eq('id', existingTransaction.id);
-              
-            if (updateError) {
-              console.error("Error updating transaction with request ID:", updateError);
-              // Non-fatal error, continue
-            }
-            
-          } else if (!existingTransaction) {
-            console.log("No existing transaction found, creating new request...");
-            
-            // Prepare request data for submission to Supabase
-            const requestData: TablesInsert<"requests"> = {
-              user_id: session.user.id,
-              student_name: formData.studentName,
-              student_number: formData.studentNumber,
-              contact_number: formData.contactNumber,
-              home_address: formData.homeAddress,
-              purpose: formData.purpose,
-              client_reference_id: clientReferenceId || null,
-              // Document type selections and copies
-              transcript_selected: formData.requestTypes.transcript.selected,
-              transcript_copies: formData.requestTypes.transcript.selected ? formData.requestTypes.transcript.copies : null,
-              transcript_ctc: formData.requestTypes.transcript.selected ? formData.requestTypes.transcript.ctc : false,
-              
-              certificate_selected: formData.requestTypes.certificate.selected,
-              certificate_copies: formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.copies : null,
-              certificate_ctc: formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.ctc : false,
-              
-              certification_selected: formData.requestTypes.certification.selected,
-              certification_copies: formData.requestTypes.certification.selected ? formData.requestTypes.certification.copies : null,
-              certification_ctc: formData.requestTypes.certification.selected ? formData.requestTypes.certification.ctc : false,
-              certification_details: formData.requestTypes.certification.selected ? formData.requestTypes.certification.details : null,
-              
-              others_selected: formData.requestTypes.others.selected,
-              others_copies: formData.requestTypes.others.selected ? formData.requestTypes.others.copies : null,
-              others_ctc: formData.requestTypes.others.selected ? formData.requestTypes.others.ctc : false,
-              others_details: formData.requestTypes.others.selected ? formData.requestTypes.others.details : null,
-              
-              soa_selected: formData.requestTypes.soa && formData.requestTypes.soa.selected ? true : false,
-              soa_copies: formData.requestTypes.soa && formData.requestTypes.soa.selected ? formData.requestTypes.soa.copies : null,
-              soa_ctc: formData.requestTypes.soa && formData.requestTypes.soa.selected ? formData.requestTypes.soa.ctc : false,
-              
-              registration_form_selected: formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected ? true : false,
-              registration_form_copies: formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected ? formData.requestTypes.registrationForm.copies : null,
-              registration_form_ctc: formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected ? formData.requestTypes.registrationForm.ctc : false,
-              registration_form_details: formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected ? formData.requestTypes.registrationForm.details : null,
-              
-              com_selected: formData.requestTypes.com && formData.requestTypes.com.selected ? true : false,
-              com_copies: formData.requestTypes.com && formData.requestTypes.com.selected ? formData.requestTypes.com.copies : null,
-              com_ctc: formData.requestTypes.com && formData.requestTypes.com.selected ? formData.requestTypes.com.ctc : false,
-              
-              coe_selected: formData.requestTypes.coe && formData.requestTypes.coe.selected ? true : false,
-              coe_copies: formData.requestTypes.coe && formData.requestTypes.coe.selected ? formData.requestTypes.coe.copies : null,
-              coe_ctc: formData.requestTypes.coe && formData.requestTypes.coe.selected ? formData.requestTypes.coe.ctc : false,
-              
-              coa_selected: formData.requestTypes.coa && formData.requestTypes.coa.selected ? true : false,
-              coa_copies: formData.requestTypes.coa && formData.requestTypes.coa.selected ? formData.requestTypes.coa.copies : null,
-              coa_ctc: formData.requestTypes.coa && formData.requestTypes.coa.selected ? formData.requestTypes.coa.ctc : false,
-              
-              no_scholarship_selected: formData.requestTypes.noScholarship && formData.requestTypes.noScholarship.selected ? true : false,
-              no_scholarship_copies: formData.requestTypes.noScholarship && formData.requestTypes.noScholarship.selected ? formData.requestTypes.noScholarship.copies : null,
-              no_scholarship_ctc: formData.requestTypes.noScholarship && formData.requestTypes.noScholarship.selected ? formData.requestTypes.noScholarship.ctc : false,
-              
-              status: 'awaiting_pickup',
-              pickup_date: null,
-              processed_by: null,
-              notes: null
-            };
-            
-            // Submit request to Supabase
-            console.log("Creating request in database...");
-            const { data: requestResult, error: requestError } = await supabase
-              .from('requests')
-              .insert(requestData)
-              .select('id')
-              .single();
-            
-            if (requestError) {
-              console.error("Error creating request:", requestError);
-              throw requestError;
-            }
-            
-            requestId = requestResult.id;
-            console.log("Request created successfully with ID:", requestId);
-            
-            // Call the create_transaction_if_not_exists RPC function to ensure atomic transaction creation
-            console.log("Recording transaction with session ID:", sessionId.substring(0, 5) + "...");
-            const { data: transactionResult, error: transactionError } = await supabase
-              .rpc('create_transaction_if_not_exists', {
-                p_user_id: session.user.id,
-                p_request_id: requestId,
-                p_amount: paymentAmount,
-                p_payment_status: 'successful',
-                p_payment_method: 'card',
-                p_stripe_session_id: sessionId
-              });
-              
-            if (transactionError) {
-              console.error("Error recording transaction:", transactionError);
-              // We'll continue despite transaction recording error, as the request was created
-              toast.error("Note: There was an issue recording your payment details, but your request has been submitted.");
+          if (transactionError) {
+            console.error("Error recording transaction:", transactionError);
+            // We'll continue despite transaction recording error, as the request was created
+            toast.error("Note: There was an issue recording your payment details, but your request has been submitted.");
+          } else {
+            console.log("Transaction recorded successfully:", transactionResult);
+            const result = transactionResult as { id: string, request_id: string, exists: boolean };
+            if (result.exists) {
+              console.log("Transaction already existed in database");
             } else {
-              console.log("Transaction recorded successfully:", transactionResult);
-              const result = transactionResult as { id: string, request_id: string, exists: boolean };
-              if (result.exists) {
-                console.log("Transaction already existed in database");
-              } else {
-                console.log("Created new transaction record");
-              }
+              console.log("Created new transaction record");
             }
           }
           
