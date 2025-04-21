@@ -1,4 +1,5 @@
-import React, { useContext, useEffect, useRef } from "react";
+
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { SessionContext } from "@/App";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { session, userRoles } = useContext(SessionContext);
 
+  // Local state for user profile and loading + counts.
   const [userProfile, setUserProfile] = useState<{
     name: string | null;
     email: string | null;
@@ -28,6 +30,9 @@ const Dashboard: React.FC = () => {
   const [pendingCount, setPendingCount] = useState(0);
   const [approvedCount, setApprovedCount] = useState(0);
 
+  // Local state to hold roles fetched in this component from supabase rpc.
+  const [roles, setRoles] = useState<UserRole[]>(userRoles || []);
+
   const activityLoggedRef = useRef(false);
 
   useEffect(() => {
@@ -39,23 +44,23 @@ const Dashboard: React.FC = () => {
           return;
         }
         const { user } = data.session;
-        const name = user.user_metadata.name || user.user_metadata.full_name;
-        const email = user.email;
-        const avatarUrl = user.user_metadata.avatar_url;
+        const name = user.user_metadata.name || user.user_metadata.full_name || null;
+        const email = user.email || null;
+        const avatarUrl = user.user_metadata.avatar_url || null;
 
         setUserProfile({ name, email, avatarUrl });
 
-        const { data: roles, error: rolesError } = await supabase.rpc(
+        const { data: fetchedRoles, error: rolesError } = await supabase.rpc(
           'get_user_roles',
           { user_id: user.id }
         );
         if (rolesError) {
           toast.error(`Error fetching roles: ${rolesError.message}`);
         } else {
-          setUserRoles(roles || []);
+          setRoles(fetchedRoles || []);
         }
 
-        if (!roles || (!roles.includes('faculty') && !roles.includes('admin'))) {
+        if (!fetchedRoles || (!fetchedRoles.includes('faculty') && !fetchedRoles.includes('admin'))) {
           const { count, error } = await supabase
             .from('requests')
             .select('*', { count: 'exact', head: true })
@@ -144,9 +149,10 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const isStudent = userRoles.length === 0 || (userRoles.length === 1 && userRoles.includes('student'));
-  const isEmployee = userRoles.includes('faculty');
-  const isAdmin = userRoles.includes('admin');
+  // Use local fetched roles `roles` for logic instead of context userRoles.
+  const isStudent = roles.length === 0 || (roles.length === 1 && roles.includes('student'));
+  const isEmployee = roles.includes('faculty');
+  const isAdmin = roles.includes('admin');
 
   if (loading) {
     return (
@@ -161,7 +167,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen flex w-full">
-      <Sidebar userProfile={userProfile} userRoles={userRoles} loading={loading} />
+      <Sidebar userProfile={userProfile} userRoles={roles} loading={loading} />
 
       <div className="flex-1 p-10">
         <header className="mb-10">
