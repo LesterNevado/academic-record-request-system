@@ -17,7 +17,7 @@ interface RequestType {
   copies: number;
   price: number;
   ctc: boolean;
-  details?: string; // optional for all to unify type
+  details: string; // made mandatory as string (even if empty)
 }
 
 type RequestTypes = {
@@ -400,8 +400,18 @@ const RequestForm: React.FC = () => {
                   </div>
 
                   <div className="space-y-3 md:col-span-2">
-                    <Label className="text-lg font-semibold">APPLICATION FOR: <span className={requiredFieldStyle}>*</span></Label>
+                    <Label className="text-lg font-semibold">
+                      APPLICATION FOR: <span className={requiredFieldStyle}>*</span>
+                    </Label>
                     <div className="mt-4 space-y-4">
+                      <div className="grid grid-cols-12 gap-4 font-semibold text-sm">
+                        <div className="col-span-6">Document Type</div>
+                        <div className="col-span-1 text-center">CTC/Dry Seal</div>
+                        <div className="col-span-2 text-center">No. of Copies</div>
+                        <div className="col-span-2">Details</div>
+                        <div className="col-span-1 text-right">Price</div>
+                      </div>
+
                       {Object.entries(formData.requestTypes).map(([key, value]) => {
                         let label = "";
                         let showDetailsInput = false;
@@ -455,7 +465,7 @@ const RequestForm: React.FC = () => {
                               {showDetailsInput && (
                                 <Input
                                   className={`mt-1 ${(key === "certification" && formErrors.certificationDetails) || (key === "others" && formErrors.othersDetails) ? 'border-[#ea384c] focus-visible:ring-[#ea384c]' : ''}`}
-                                  value={value.details || ""}
+                                  value={value.details}
                                   onChange={e => handleDetailsChange(key as keyof RequestTypes, e.target.value)}
                                   placeholder="Please specify"
                                   required={value.selected}
