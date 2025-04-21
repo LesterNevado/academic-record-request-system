@@ -11,89 +11,42 @@ export type Database = {
     Tables: {
       activity_logs: {
         Row: {
-          action_type: string
+          activity_type: string
           created_at: string
-          description: string
+          details: string | null
           id: string
-          new_status: string | null
-          related_file_id: string | null
+          related_id: string | null
+          related_user_id: string | null
           user_id: string
         }
         Insert: {
-          action_type: string
+          activity_type: string
           created_at?: string
-          description: string
+          details?: string | null
           id?: string
-          new_status?: string | null
-          related_file_id?: string | null
+          related_id?: string | null
+          related_user_id?: string | null
           user_id: string
         }
         Update: {
-          action_type?: string
+          activity_type?: string
           created_at?: string
-          description?: string
+          details?: string | null
           id?: string
-          new_status?: string | null
-          related_file_id?: string | null
+          related_id?: string | null
+          related_user_id?: string | null
           user_id?: string
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          avatar_url: string | null
-          created_at: string
-          email: string | null
-          full_name: string | null
-          id: string
-          updated_at: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string
-          email?: string | null
-          full_name?: string | null
-          id: string
-          updated_at?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string
-          email?: string | null
-          full_name?: string | null
-          id?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      salaysay_submissions: {
-        Row: {
-          created_at: string
-          file_path: string
-          id: string
-          metadata: Json | null
-          user_id: string
-          violation_type: string
-        }
-        Insert: {
-          created_at?: string
-          file_path: string
-          id?: string
-          metadata?: Json | null
-          user_id: string
-          violation_type: string
-        }
-        Update: {
-          created_at?: string
-          file_path?: string
-          id?: string
-          metadata?: Json | null
-          user_id?: string
-          violation_type?: string
         }
         Relationships: [
           {
-            foreignKeyName: "salaysay_submissions_user_id_fkey"
+            foreignKeyName: "activity_logs_related_user_id_fkey1"
+            columns: ["related_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_logs_user_id_fkey1"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -101,15 +54,259 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          display_name: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          provider: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          provider?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          provider?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      requests: {
+        Row: {
+          certificate_copies: number | null
+          certificate_selected: boolean
+          certification_copies: number | null
+          certification_details: string | null
+          certification_selected: boolean
+          client_reference_id: string | null
+          contact_number: string
+          created_at: string
+          home_address: string
+          id: string
+          notes: string | null
+          others_copies: number | null
+          others_details: string | null
+          others_selected: boolean
+          pickup_date: string | null
+          processed_by: string | null
+          purpose: string
+          soa_copies: number | null
+          soa_selected: boolean
+          status: string
+          student_name: string
+          student_number: string
+          transaction_id: string | null
+          transcript_copies: number | null
+          transcript_selected: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          certificate_copies?: number | null
+          certificate_selected?: boolean
+          certification_copies?: number | null
+          certification_details?: string | null
+          certification_selected?: boolean
+          client_reference_id?: string | null
+          contact_number: string
+          created_at?: string
+          home_address: string
+          id?: string
+          notes?: string | null
+          others_copies?: number | null
+          others_details?: string | null
+          others_selected?: boolean
+          pickup_date?: string | null
+          processed_by?: string | null
+          purpose: string
+          soa_copies?: number | null
+          soa_selected?: boolean
+          status?: string
+          student_name: string
+          student_number: string
+          transaction_id?: string | null
+          transcript_copies?: number | null
+          transcript_selected?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          certificate_copies?: number | null
+          certificate_selected?: boolean
+          certification_copies?: number | null
+          certification_details?: string | null
+          certification_selected?: boolean
+          client_reference_id?: string | null
+          contact_number?: string
+          created_at?: string
+          home_address?: string
+          id?: string
+          notes?: string | null
+          others_copies?: number | null
+          others_details?: string | null
+          others_selected?: boolean
+          pickup_date?: string | null
+          processed_by?: string | null
+          purpose?: string
+          soa_copies?: number | null
+          soa_selected?: boolean
+          status?: string
+          student_name?: string
+          student_number?: string
+          transaction_id?: string | null
+          transcript_copies?: number | null
+          transcript_selected?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requests_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          amount: number
+          client_reference_id: string | null
+          created_at: string
+          currency: string
+          id: string
+          payment_method: string | null
+          payment_status: string
+          request_id: string | null
+          stripe_session_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          client_reference_id?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          payment_method?: string | null
+          payment_status: string
+          request_id?: string | null
+          stripe_session_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          client_reference_id?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          payment_method?: string | null
+          payment_status?: string
+          request_id?: string | null
+          stripe_session_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_transaction_if_not_exists: {
+        Args: {
+          p_user_id: string
+          p_request_id: string
+          p_amount: number
+          p_payment_status: string
+          p_payment_method: string
+          p_stripe_session_id: string
+        }
+        Returns: Json
+      }
+      get_processor_name: {
+        Args: { processor_id: string }
+        Returns: string
+      }
+      get_user_roles: {
+        Args: { user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"][]
+      }
+      has_role: {
+        Args: { user_id: string; role: Database["public"]["Enums"]["app_role"] }
+        Returns: boolean
+      }
+      log_activity: {
+        Args: {
+          p_user_id: string
+          p_activity_type: string
+          p_details: string
+          p_related_user_id?: string
+          p_related_id?: string
+        }
+        Returns: string
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "student" | "faculty"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -224,6 +421,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "student", "faculty"],
+    },
   },
 } as const
