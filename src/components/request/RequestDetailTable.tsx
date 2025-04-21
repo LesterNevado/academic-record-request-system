@@ -1,0 +1,139 @@
+
+import React from 'react';
+import { 
+  Table, 
+  TableBody, 
+  TableCaption, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Tables } from "@/integrations/supabase/types";
+import { format } from "date-fns";
+
+type Request = Tables<"requests">;
+
+interface RequestDetailTableProps {
+  request: Request;
+}
+
+export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request }) => {
+  const getStatusBadge = (status: string) => {
+    switch(status) {
+      case 'pending':
+        return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Pending</Badge>;
+      case 'awaiting_pickup':
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Awaiting Pickup</Badge>;
+      case 'approved':
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Approved</Badge>;
+      case 'rejected':
+        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Rejected</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return format(date, 'MMM d, yyyy');
+  };
+
+  return (
+    <Table>
+      <TableCaption>Request Details</TableCaption>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Document Type</TableHead>
+          <TableHead>Copies</TableHead>
+          <TableHead className="text-center">CTC/Dry Seal</TableHead>
+          <TableHead>Details</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {request.transcript_selected && (
+          <TableRow>
+            <TableCell className="font-medium">Transcript of Records (TOR)</TableCell>
+            <TableCell>{request.transcript_copies || 1}</TableCell>
+            <TableCell className="text-center">{request.transcript_ctc ? "Yes" : "No"}</TableCell>
+            <TableCell>-</TableCell>
+          </TableRow>
+        )}
+        {request.certificate_selected && (
+          <TableRow>
+            <TableCell className="font-medium">Certificate of Grades (COG)</TableCell>
+            <TableCell>{request.certificate_copies || 1}</TableCell>
+            <TableCell className="text-center">{request.certificate_ctc ? "Yes" : "No"}</TableCell>
+            <TableCell>-</TableCell>
+          </TableRow>
+        )}
+        {request.registration_form_selected && (
+          <TableRow>
+            <TableCell className="font-medium">Registration Form</TableCell>
+            <TableCell>{request.registration_form_copies || 1}</TableCell>
+            <TableCell className="text-center">{request.registration_form_ctc ? "Yes" : "No"}</TableCell>
+            <TableCell>{request.registration_form_details || "-"}</TableCell>
+          </TableRow>
+        )}
+        {request.com_selected && (
+          <TableRow>
+            <TableCell className="font-medium">Certificate of Matriculation (COM)</TableCell>
+            <TableCell>{request.com_copies || 1}</TableCell>
+            <TableCell className="text-center">{request.com_ctc ? "Yes" : "No"}</TableCell>
+            <TableCell>-</TableCell>
+          </TableRow>
+        )}
+        {request.coe_selected && (
+          <TableRow>
+            <TableCell className="font-medium">Certificate of Enrollment (COE)</TableCell>
+            <TableCell>{request.coe_copies || 1}</TableCell>
+            <TableCell className="text-center">{request.coe_ctc ? "Yes" : "No"}</TableCell>
+            <TableCell>-</TableCell>
+          </TableRow>
+        )}
+        {request.coa_selected && (
+          <TableRow>
+            <TableCell className="font-medium">Certificate of No Availed Scholarship</TableCell>
+            <TableCell>{request.coa_copies || 1}</TableCell>
+            <TableCell className="text-center">{request.coa_ctc ? "Yes" : "No"}</TableCell>
+            <TableCell>-</TableCell>
+          </TableRow>
+        )}
+        {request.no_scholarship_selected && (
+          <TableRow>
+            <TableCell className="font-medium">Certificate of No Scholarship</TableCell>
+            <TableCell>{request.no_scholarship_copies || 1}</TableCell>
+            <TableCell className="text-center">{request.no_scholarship_ctc ? "Yes" : "No"}</TableCell>
+            <TableCell>-</TableCell>
+          </TableRow>
+        )}
+        {request.soa_selected && (
+          <TableRow>
+            <TableCell className="font-medium">Statement of Account (SOA)</TableCell>
+            <TableCell>{request.soa_copies || 1}</TableCell>
+            <TableCell className="text-center">{request.soa_ctc ? "Yes" : "No"}</TableCell>
+            <TableCell>-</TableCell>
+          </TableRow>
+        )}
+        {request.certification_selected && (
+          <TableRow>
+            <TableCell className="font-medium">Certification</TableCell>
+            <TableCell>{request.certification_copies || 1}</TableCell>
+            <TableCell className="text-center">{request.certification_ctc ? "Yes" : "No"}</TableCell>
+            <TableCell>{request.certification_details || "-"}</TableCell>
+          </TableRow>
+        )}
+        {request.others_selected && (
+          <TableRow>
+            <TableCell className="font-medium">Others</TableCell>
+            <TableCell>{request.others_copies || 1}</TableCell>
+            <TableCell className="text-center">{request.others_ctc ? "Yes" : "No"}</TableCell>
+            <TableCell>{request.others_details || "-"}</TableCell>
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
+  );
+};

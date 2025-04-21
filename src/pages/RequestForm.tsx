@@ -24,8 +24,8 @@ type RequestTypes = {
   transcript: RequestType;
   certificate: RequestType;
   registrationForm: RequestType;
-  com: RequestType; // Certificate of Matriculation
-  coa: RequestType; // Certificate of No Availed Scholarship
+  com: RequestType; 
+  coa: RequestType;
   coe: RequestType;
   soa: RequestType;
   noScholarship: RequestType;

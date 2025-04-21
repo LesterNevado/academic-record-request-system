@@ -90,87 +90,150 @@ export type Database = {
       requests: {
         Row: {
           certificate_copies: number | null
+          certificate_ctc: boolean
           certificate_selected: boolean
           certification_copies: number | null
+          certification_ctc: boolean
           certification_details: string | null
           certification_selected: boolean
           client_reference_id: string | null
+          coa_copies: number | null
+          coa_ctc: boolean
+          coa_selected: boolean
+          coe_copies: number | null
+          coe_ctc: boolean
+          coe_selected: boolean
+          com_copies: number | null
+          com_ctc: boolean
+          com_selected: boolean
           contact_number: string
           created_at: string
           home_address: string
           id: string
+          no_scholarship_copies: number | null
+          no_scholarship_ctc: boolean
+          no_scholarship_selected: boolean
           notes: string | null
           others_copies: number | null
+          others_ctc: boolean
           others_details: string | null
           others_selected: boolean
           pickup_date: string | null
           processed_by: string | null
           purpose: string
+          registration_form_copies: number | null
+          registration_form_ctc: boolean
+          registration_form_details: string | null
+          registration_form_selected: boolean
           soa_copies: number | null
+          soa_ctc: boolean
           soa_selected: boolean
           status: string
           student_name: string
           student_number: string
           transaction_id: string | null
           transcript_copies: number | null
+          transcript_ctc: boolean
           transcript_selected: boolean
           updated_at: string
           user_id: string
         }
         Insert: {
           certificate_copies?: number | null
+          certificate_ctc?: boolean
           certificate_selected?: boolean
           certification_copies?: number | null
+          certification_ctc?: boolean
           certification_details?: string | null
           certification_selected?: boolean
           client_reference_id?: string | null
+          coa_copies?: number | null
+          coa_ctc?: boolean
+          coa_selected?: boolean
+          coe_copies?: number | null
+          coe_ctc?: boolean
+          coe_selected?: boolean
+          com_copies?: number | null
+          com_ctc?: boolean
+          com_selected?: boolean
           contact_number: string
           created_at?: string
           home_address: string
           id?: string
+          no_scholarship_copies?: number | null
+          no_scholarship_ctc?: boolean
+          no_scholarship_selected?: boolean
           notes?: string | null
           others_copies?: number | null
+          others_ctc?: boolean
           others_details?: string | null
           others_selected?: boolean
           pickup_date?: string | null
           processed_by?: string | null
           purpose: string
+          registration_form_copies?: number | null
+          registration_form_ctc?: boolean
+          registration_form_details?: string | null
+          registration_form_selected?: boolean
           soa_copies?: number | null
+          soa_ctc?: boolean
           soa_selected?: boolean
           status?: string
           student_name: string
           student_number: string
           transaction_id?: string | null
           transcript_copies?: number | null
+          transcript_ctc?: boolean
           transcript_selected?: boolean
           updated_at?: string
           user_id: string
         }
         Update: {
           certificate_copies?: number | null
+          certificate_ctc?: boolean
           certificate_selected?: boolean
           certification_copies?: number | null
+          certification_ctc?: boolean
           certification_details?: string | null
           certification_selected?: boolean
           client_reference_id?: string | null
+          coa_copies?: number | null
+          coa_ctc?: boolean
+          coa_selected?: boolean
+          coe_copies?: number | null
+          coe_ctc?: boolean
+          coe_selected?: boolean
+          com_copies?: number | null
+          com_ctc?: boolean
+          com_selected?: boolean
           contact_number?: string
           created_at?: string
           home_address?: string
           id?: string
+          no_scholarship_copies?: number | null
+          no_scholarship_ctc?: boolean
+          no_scholarship_selected?: boolean
           notes?: string | null
           others_copies?: number | null
+          others_ctc?: boolean
           others_details?: string | null
           others_selected?: boolean
           pickup_date?: string | null
           processed_by?: string | null
           purpose?: string
+          registration_form_copies?: number | null
+          registration_form_ctc?: boolean
+          registration_form_details?: string | null
+          registration_form_selected?: boolean
           soa_copies?: number | null
+          soa_ctc?: boolean
           soa_selected?: boolean
           status?: string
           student_name?: string
           student_number?: string
           transaction_id?: string | null
           transcript_copies?: number | null
+          transcript_ctc?: boolean
           transcript_selected?: boolean
           updated_at?: string
           user_id?: string
