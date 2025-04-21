@@ -14,6 +14,7 @@ export const LoginForm: React.FC = () => {
   const handleGoogleLogin = async () => {
     try {
       setIsLoading(true);
+      console.log("Starting Google login...");
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -32,6 +33,7 @@ export const LoginForm: React.FC = () => {
       } else {
         // Only attempt to log activity for faculty users
         const session = await supabase.auth.getSession();
+        console.log("Google sign-in success, checking session...", session);
         if (session.data.session?.user) {
           const userId = session.data.session.user.id;
           
@@ -40,21 +42,34 @@ export const LoginForm: React.FC = () => {
             'has_role',
             { user_id: userId, role: 'faculty' }
           );
+          console.log("Faculty role check result:", { hasFacultyRole, facultyError });
           
           if (hasFacultyRole && !facultyError) {
-            // Log the login activity for faculty members only
-            // The RLS policy will prevent logging for non-faculty users as a second layer of protection
-            await supabase.rpc(
-              'log_activity',
-              {
-                p_user_id: userId,
-                p_activity_type: 'login',
-                p_details: `User logged in - ${session.data.session.user.email}`,
-                p_related_user_id: null,
-                p_related_id: null
+            try {
+              console.log("User is faculty, attempting to log login activity...");
+              const { data: logResult, error: logError } = await supabase.rpc(
+                'log_activity',
+                {
+                  p_user_id: userId,
+                  p_activity_type: 'login',
+                  p_details: `User logged in - ${session.data.session.user.email}`,
+                  p_related_user_id: null,
+                  p_related_id: null
+                }
+              );
+              if (logError) {
+                console.error("Error logging login activity for faculty:", logError);
+              } else {
+                console.log("Successfully logged login activity for faculty user.", logResult);
               }
-            );
+            } catch (logEx) {
+              console.error("Exception during logging login activity:", logEx);
+            }
+          } else {
+            console.log("User does NOT have 'faculty' role, skipping login activity logging.");
           }
+        } else {
+          console.log("Session has no user, cannot log activity.");
         }
       }
     } catch (err) {
@@ -112,3 +127,4 @@ export const LoginForm: React.FC = () => {
     </section>
   );
 };
+
