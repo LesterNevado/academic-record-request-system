@@ -1,21 +1,18 @@
-
-import React, { useEffect, useState, useContext } from "react";
-import { Button } from "@/components/ui/button";
+import React, { useContext, useEffect, useRef } from "react";
+import { SessionContext } from "@/App";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { SessionContext } from "@/App";
-
-// FIXED: Lucide icon imports should be PascalCase
 import { Activity, ListTodo } from "lucide-react";
 
 type UserRole = 'student' | 'faculty' | 'admin';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { session } = useContext(SessionContext);
+  const { session, userRoles } = useContext(SessionContext);
 
   const [userProfile, setUserProfile] = useState<{
     name: string | null;
@@ -26,11 +23,12 @@ const Dashboard: React.FC = () => {
     email: null,
     avatarUrl: null
   });
-  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [requestCount, setRequestCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
   const [approvedCount, setApprovedCount] = useState(0);
+
+  const activityLoggedRef = useRef(false);
 
   useEffect(() => {
     const getSession = async () => {
@@ -40,7 +38,6 @@ const Dashboard: React.FC = () => {
           navigate('/');
           return;
         }
-        // Get user metadata from session
         const { user } = data.session;
         const name = user.user_metadata.name || user.user_metadata.full_name;
         const email = user.email;
@@ -48,7 +45,6 @@ const Dashboard: React.FC = () => {
 
         setUserProfile({ name, email, avatarUrl });
 
-        // Fetch user roles
         const { data: roles, error: rolesError } = await supabase.rpc(
           'get_user_roles',
           { user_id: user.id }
@@ -59,7 +55,6 @@ const Dashboard: React.FC = () => {
           setUserRoles(roles || []);
         }
 
-        // Only fetch request count for students
         if (!roles || (!roles.includes('faculty') && !roles.includes('admin'))) {
           const { count, error } = await supabase
             .from('requests')
@@ -70,7 +65,6 @@ const Dashboard: React.FC = () => {
             setRequestCount(count || 0);
           }
         } else {
-          // For employee/admin, fetch counts for all requests (for summary)
           const [{ count: pending = 0 } = {}, { count: approved = 0 } = {}] = await Promise.all([
             supabase.from('requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
             supabase.from('requests').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
@@ -89,6 +83,50 @@ const Dashboard: React.FC = () => {
     getSession();
   }, [navigate]);
 
+  useEffect(() => {
+    async function logFacultyLoginActivity() {
+      if (
+        session?.user &&
+        Array.isArray(userRoles) &&
+        userRoles.includes("faculty") &&
+        !activityLoggedRef.current
+      ) {
+        activityLoggedRef.current = true;
+        try {
+          console.log("[Dashboard] User is faculty, attempting to log login activity...");
+          const { data: logResult, error: logError } = await supabase.rpc(
+            "log_activity",
+            {
+              p_user_id: session.user.id,
+              p_activity_type: "login",
+              p_details: `User logged in - ${session.user.email}`,
+              p_related_user_id: null,
+              p_related_id: null,
+            }
+          );
+          if (logError) {
+            console.error("[Dashboard] Error logging login activity for faculty:", logError);
+            toast.error("Failed to log faculty login activity.");
+          } else {
+            console.log("[Dashboard] Successfully logged login activity for faculty user.", logResult);
+          }
+        } catch (err) {
+          console.error("[Dashboard] Exception during logging login activity:", err);
+        }
+      } else {
+        if (!session?.user) {
+          console.log("[Dashboard] No session user yet, not attempting to log login activity.");
+        } else if (!userRoles?.includes("faculty")) {
+          console.log("[Dashboard] User is not faculty, skipping login activity logging.");
+        } else if (activityLoggedRef.current) {
+          console.log("[Dashboard] Login activity has already been attempted/logged for this session.");
+        }
+      }
+    }
+
+    logFacultyLoginActivity();
+  }, [session, userRoles]);
+
   const handleSignOut = async () => {
     try {
       setLoading(true);
@@ -106,7 +144,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Check if user is a student
   const isStudent = userRoles.length === 0 || (userRoles.length === 1 && userRoles.includes('student'));
   const isEmployee = userRoles.includes('faculty');
   const isAdmin = userRoles.includes('admin');
@@ -124,10 +161,8 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen flex w-full">
-      {/* Sidebar: use shared Sidebar component (per-app sidebar) */}
       <Sidebar userProfile={userProfile} userRoles={userRoles} loading={loading} />
 
-      {/* Main Content */}
       <div className="flex-1 p-10">
         <header className="mb-10">
           <h1 className="text-3xl font-bold">Welcome{userProfile.name ? `, ${userProfile.name.split(' ')[0]}` : ''}!</h1>
@@ -141,7 +176,6 @@ const Dashboard: React.FC = () => {
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Only show Requests card for students */}
           {isStudent && (
             <Card className="border border-gray-200 shadow-sm">
               <CardContent className="p-6">
@@ -166,7 +200,6 @@ const Dashboard: React.FC = () => {
             </Card>
           )}
 
-          {/* Employee/admin summary cards: show counts of pending and approved requests */}
           {(isEmployee || isAdmin) && (
             <>
               <Card className="border border-gray-200 shadow-sm">
