@@ -8,8 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { SessionContext } from "@/App";
 
-// Card icon imports (lucide-react selection per instructions)
-import { activity, listTodo } from "lucide-react";
+// FIXED: Lucide icon imports should be PascalCase
+import { Activity, ListTodo } from "lucide-react";
 
 type UserRole = 'student' | 'faculty' | 'admin';
 
