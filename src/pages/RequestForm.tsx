@@ -45,9 +45,9 @@ const RequestForm: React.FC = () => {
     email: null,
     avatarUrl: null
   });
-  
+
   const [userRoles, setUserRoles] = useState<string[]>(contextRoles || []);
-  
+
   const [formData, setFormData] = useState({
     studentName: "",
     studentNumber: "",
@@ -55,19 +55,19 @@ const RequestForm: React.FC = () => {
     homeAddress: "",
     purpose: "",
     requestTypes: {
-      transcript: { selected: false, copies: 1, price: 100, ctc: false },
-      certificate: { selected: false, copies: 1, price: 100, ctc: false },
-      registrationForm: { selected: false, copies: 1, price: 120, ctc: false },
-      com: { selected: false, copies: 1, price: 120, ctc: false },
-      coa: { selected: false, copies: 1, price: 120, ctc: false },
-      coe: { selected: false, copies: 1, price: 120, ctc: false },
-      soa: { selected: false, copies: 1, price: 150, ctc: false },
-      noScholarship: { selected: false, copies: 1, price: 150, ctc: false },
-      certification: { selected: false, copies: 1, details: "", price: 100, ctc: false },
-      others: { selected: false, copies: 1, details: "", price: 100, ctc: false }
+      transcript: { selected: false, copies: 1, price: 100, ctc: false, details: "" },
+      certificate: { selected: false, copies: 1, price: 100, ctc: false, details: "" },
+      registrationForm: { selected: false, copies: 1, price: 120, ctc: false, details: "" },
+      com: { selected: false, copies: 1, price: 120, ctc: false, details: "" },
+      coa: { selected: false, copies: 1, price: 120, ctc: false, details: "" },
+      coe: { selected: false, copies: 1, price: 120, ctc: false, details: "" },
+      soa: { selected: false, copies: 1, price: 150, ctc: false, details: "" },
+      noScholarship: { selected: false, copies: 1, price: 150, ctc: false, details: "" },
+      certification: { selected: false, copies: 1, price: 100, ctc: false, details: "" },
+      others: { selected: false, copies: 1, price: 100, ctc: false, details: "" }
     } as RequestTypes
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState({
@@ -172,7 +172,6 @@ const RequestForm: React.FC = () => {
     });
   };
 
-  // Fix access from any to proper type (with optional details)
   const handleCheckboxChange = (type: keyof RequestTypes) => {
     if (type === 'certification' && formData.requestTypes.certification.selected) {
       setFormErrors(prev => ({ ...prev, certificationDetails: false }));
@@ -258,8 +257,6 @@ const RequestForm: React.FC = () => {
     return isValid;
   };
 
-  // Calculate price for each document type: for now, price is a property in formData. 
-  // Subtotal = sum of (copies * price) for each selected request type
   const calculateSubtotal = () => {
     let subtotal = 0;
     for (const key in formData.requestTypes) {
@@ -297,7 +294,6 @@ const RequestForm: React.FC = () => {
     }
   };
 
-  // Render form updated with new document types and prices
   const requiredFieldStyle = "text-[#ea384c]";
 
   return (
@@ -305,6 +301,7 @@ const RequestForm: React.FC = () => {
       <Sidebar 
         userProfile={userProfile}
         userRoles={userRoles}
+        loading={loading}
       />
       <div className="flex-1 p-10 overflow-y-auto">
         <div className="mb-6 flex items-center">
@@ -359,7 +356,6 @@ const RequestForm: React.FC = () => {
             <div className="bg-white rounded-lg shadow p-8 border border-gray-200">
               <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  {/* Student Details Inputs */}
                   <div className="space-y-2">
                     <Label htmlFor="studentName">Student Name <span className={requiredFieldStyle}>*</span></Label>
                     <Input
@@ -403,7 +399,6 @@ const RequestForm: React.FC = () => {
                     />
                   </div>
 
-                  {/* Document Type Requests with checkboxes, copies, ctc and optional details */}
                   <div className="space-y-3 md:col-span-2">
                     <Label className="text-lg font-semibold">APPLICATION FOR: <span className={requiredFieldStyle}>*</span></Label>
                     <div className="mt-4 space-y-4">
