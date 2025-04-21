@@ -108,22 +108,179 @@ serve(async (req) => {
       );
     }
     
+    // Prepare line items for Stripe checkout
+    const lineItems = [];
+    
+    // Add line items based on selected document types
+    if (formData.requestTypes.transcript.selected) {
+      const copies = formData.requestTypes.transcript.copies || 1;
+      lineItems.push({
+        price_data: {
+          currency: 'php',
+          product_data: {
+            name: 'Transcript of Records',
+            description: `${copies} copy/copies${formData.requestTypes.transcript.ctc ? ' with CTC/Dry Seal' : ''}`,
+          },
+          unit_amount: 100 * 100, // ₱100 per copy in cents
+        },
+        quantity: copies,
+      });
+    }
+    
+    if (formData.requestTypes.certificate.selected) {
+      const copies = formData.requestTypes.certificate.copies || 1;
+      lineItems.push({
+        price_data: {
+          currency: 'php',
+          product_data: {
+            name: 'Certificate',
+            description: `${copies} copy/copies${formData.requestTypes.certificate.ctc ? ' with CTC/Dry Seal' : ''}`,
+          },
+          unit_amount: 100 * 100, // ₱100 per copy in cents
+        },
+        quantity: copies,
+      });
+    }
+    
+    if (formData.requestTypes.certification.selected) {
+      const copies = formData.requestTypes.certification.copies || 1;
+      lineItems.push({
+        price_data: {
+          currency: 'php',
+          product_data: {
+            name: 'Certification',
+            description: `${copies} copy/copies${formData.requestTypes.certification.ctc ? ' with CTC/Dry Seal' : ''}`,
+          },
+          unit_amount: 100 * 100, // ₱100 per copy in cents
+        },
+        quantity: copies,
+      });
+    }
+    
+    if (formData.requestTypes.others.selected) {
+      const copies = formData.requestTypes.others.copies || 1;
+      lineItems.push({
+        price_data: {
+          currency: 'php',
+          product_data: {
+            name: 'Other Documents',
+            description: `${copies} copy/copies${formData.requestTypes.others.ctc ? ' with CTC/Dry Seal' : ''}`,
+          },
+          unit_amount: 100 * 100, // ₱100 per copy in cents
+        },
+        quantity: copies,
+      });
+    }
+    
+    if (formData.requestTypes.soa.selected) {
+      const copies = formData.requestTypes.soa.copies || 1;
+      lineItems.push({
+        price_data: {
+          currency: 'php',
+          product_data: {
+            name: 'Statement of Account',
+            description: `${copies} copy/copies${formData.requestTypes.soa.ctc ? ' with CTC/Dry Seal' : ''}`,
+          },
+          unit_amount: 150 * 100, // ₱150 per copy in cents
+        },
+        quantity: copies,
+      });
+    }
+    
+    if (formData.requestTypes.registrationForm.selected) {
+      const copies = formData.requestTypes.registrationForm.copies || 1;
+      lineItems.push({
+        price_data: {
+          currency: 'php',
+          product_data: {
+            name: 'Test Registration Form',
+            description: `${copies} copy/copies${formData.requestTypes.registrationForm.ctc ? ' with CTC/Dry Seal' : ''}`,
+          },
+          unit_amount: 120 * 100, // ₱120 per copy in cents
+        },
+        quantity: copies,
+      });
+    }
+    
+    if (formData.requestTypes.com.selected) {
+      const copies = formData.requestTypes.com.copies || 1;
+      lineItems.push({
+        price_data: {
+          currency: 'php',
+          product_data: {
+            name: 'Certificate of Matriculation',
+            description: `${copies} copy/copies${formData.requestTypes.com.ctc ? ' with CTC/Dry Seal' : ''}`,
+          },
+          unit_amount: 120 * 100, // ₱120 per copy in cents
+        },
+        quantity: copies,
+      });
+    }
+    
+    if (formData.requestTypes.coe.selected) {
+      const copies = formData.requestTypes.coe.copies || 1;
+      lineItems.push({
+        price_data: {
+          currency: 'php',
+          product_data: {
+            name: 'Certificate of Enrollment',
+            description: `${copies} copy/copies${formData.requestTypes.coe.ctc ? ' with CTC/Dry Seal' : ''}`,
+          },
+          unit_amount: 120 * 100, // ₱120 per copy in cents
+        },
+        quantity: copies,
+      });
+    }
+    
+    if (formData.requestTypes.coa.selected) {
+      const copies = formData.requestTypes.coa.copies || 1;
+      lineItems.push({
+        price_data: {
+          currency: 'php',
+          product_data: {
+            name: 'Certificate of Attendance',
+            description: `${copies} copy/copies${formData.requestTypes.coa.ctc ? ' with CTC/Dry Seal' : ''}`,
+          },
+          unit_amount: 120 * 100, // ₱120 per copy in cents
+        },
+        quantity: copies,
+      });
+    }
+    
+    if (formData.requestTypes.noScholarship.selected) {
+      const copies = formData.requestTypes.noScholarship.copies || 1;
+      lineItems.push({
+        price_data: {
+          currency: 'php',
+          product_data: {
+            name: 'Certification of No Scholarship',
+            description: `${copies} copy/copies${formData.requestTypes.noScholarship.ctc ? ' with CTC/Dry Seal' : ''}`,
+          },
+          unit_amount: 150 * 100, // ₱150 per copy in cents
+        },
+        quantity: copies,
+      });
+    }
+    
+    // If no line items were added, use a fallback
+    if (lineItems.length === 0) {
+      lineItems.push({
+        price_data: {
+          currency: 'php',
+          product_data: {
+            name: 'Document Request Fee',
+            description: 'Fee for document request processing',
+          },
+          unit_amount: totalAmount * 100, // Convert to cents
+        },
+        quantity: 1,
+      });
+    }
+    
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'php',
-            product_data: {
-              name: 'Document Request Fee',
-              description: 'Fee for document request processing',
-            },
-            unit_amount: totalAmount * 100, // Convert to cents
-          },
-          quantity: 1,
-        },
-      ],
+      line_items: lineItems,
       mode: 'payment',
       success_url: `${redirectUrl}?session_id={CHECKOUT_SESSION_ID}&status=success&ref=${clientReferenceId}`,
       cancel_url: `${redirectUrl}?status=cancelled&ref=${clientReferenceId}`,
