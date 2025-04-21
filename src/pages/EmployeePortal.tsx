@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { format, isAfter, isBefore, isEqual, parse } from "date-fns";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { SessionContext } from "../App";
@@ -95,6 +96,7 @@ const EmployeePortal: React.FC = () => {
     direction: 'desc',
   });
   const [activeFilters, setActiveFilters] = useState<number>(0);
+  const [activeTab, setActiveTab] = useState<'pending' | 'approved'>('pending');
 
   useEffect(() => {
     let count = 0;
@@ -147,27 +149,27 @@ const EmployeePortal: React.FC = () => {
     checkUserRole();
   }, [session, navigate]);
 
-  const { data: requests = [], isLoading: requestsLoading, error, refetch } = useQuery({
-    queryKey: ['employee-requests'],
+  const { data: employeeRequests = [], isLoading: requestsLoading, error, refetch } = useQuery({
+    queryKey: ['employee-requests-all'],
     queryFn: async () => {
       try {
         const { data: requestsData, error: requestsError } = await supabase
           .from('requests')
           .select('*')
-          .eq('status', 'awaiting_pickup')
+          .in('status', ['awaiting_pickup', 'approved'])
           .order('created_at', { ascending: false });
-        
+
         if (requestsError) throw requestsError;
-        
+
         const requestIds = requestsData.map(req => req.id);
-        
+
         const { data: transactionsData, error: transactionsError } = await supabase
           .from('transactions')
           .select('*')
           .in('request_id', requestIds);
-        
+
         if (transactionsError) throw transactionsError;
-        
+
         const requestsWithTransactions = requestsData.map(request => {
           const transaction = transactionsData.find(t => t.request_id === request.id);
           return {
@@ -175,7 +177,7 @@ const EmployeePortal: React.FC = () => {
             transaction
           };
         });
-        
+
         return requestsWithTransactions as RequestWithTransaction[];
       } catch (err) {
         console.error("Failed to fetch employee requests:", err);
@@ -375,6 +377,9 @@ const EmployeePortal: React.FC = () => {
     }
   };
 
+  const pendingRequests = employeeRequests.filter(r => r.status === 'awaiting_pickup');
+  const approvedRequests = employeeRequests.filter(r => r.status === 'approved');
+
   return (
     <div className="min-h-screen flex">
       <Sidebar 
@@ -382,7 +387,7 @@ const EmployeePortal: React.FC = () => {
         userRoles={userRoles}
         loading={isLoading}
       />
-      
+
       <div className="flex-1 p-10">
         <header className="mb-8">
           <div className="flex justify-between items-center">
@@ -400,277 +405,552 @@ const EmployeePortal: React.FC = () => {
           <p className="text-gray-600 mt-2">Process and schedule pickups for student record requests</p>
         </header>
 
-        <div className="mb-6 flex space-x-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search requests..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0047AB]"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-          <Popover open={filterPopoverOpen} onOpenChange={setFilterPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button 
-                variant="outline" 
-                className="flex items-center"
-              >
-                <Filter className="w-4 h-4 mr-2" />
-                Filter
-                {activeFilters > 0 && (
-                  <span className="ml-2 bg-blue-100 text-blue-800 text-xs font-medium rounded-full px-2 py-0.5">
-                    {activeFilters}
-                  </span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-0" align="end">
-              <div className="bg-white p-4 rounded-lg border border-gray-200 max-h-[80vh] overflow-y-auto">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium">Filter Requests</h3>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={resetFilters} 
-                    className="text-xs"
-                  >
-                    Reset all
-                  </Button>
-                </div>
-                
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium mb-2">Request Type</h4>
-                  <div className="space-y-2">
-                    <div className="flex items-center">
-                      <Checkbox 
-                        id="type-transcript" 
-                        checked={filters.requestType.includes('transcript')} 
-                        onCheckedChange={() => toggleRequestTypeFilter('transcript')}
-                      />
-                      <label htmlFor="type-transcript" className="ml-2 text-sm cursor-pointer">
-                        Transcript of Records
-                      </label>
-                    </div>
-                    <div className="flex items-center">
-                      <Checkbox 
-                        id="type-certificate" 
-                        checked={filters.requestType.includes('certificate')} 
-                        onCheckedChange={() => toggleRequestTypeFilter('certificate')}
-                      />
-                      <label htmlFor="type-certificate" className="ml-2 text-sm cursor-pointer">
-                        Certificate of Grades
-                      </label>
-                    </div>
-                    <div className="flex items-center">
-                      <Checkbox 
-                        id="type-certification" 
-                        checked={filters.requestType.includes('certification')} 
-                        onCheckedChange={() => toggleRequestTypeFilter('certification')}
-                      />
-                      <label htmlFor="type-certification" className="ml-2 text-sm cursor-pointer">
-                        Certification
-                      </label>
-                    </div>
-                    <div className="flex items-center">
-                      <Checkbox 
-                        id="type-statement" 
-                        checked={filters.requestType.includes('statement')} 
-                        onCheckedChange={() => toggleRequestTypeFilter('statement')}
-                      />
-                      <label htmlFor="type-statement" className="ml-2 text-sm cursor-pointer">
-                        Statement of Account
-                      </label>
-                    </div>
-                    <div className="flex items-center">
-                      <Checkbox 
-                        id="type-others" 
-                        checked={filters.requestType.includes('others')} 
-                        onCheckedChange={() => toggleRequestTypeFilter('others')}
-                      />
-                      <label htmlFor="type-others" className="ml-2 text-sm cursor-pointer">
-                        Others
-                      </label>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium mb-2">Payment Method</h4>
-                  <RadioGroup 
-                    value={filters.paymentMethod || ""} 
-                    onValueChange={(value) => setFilters({
-                      ...filters,
-                      paymentMethod: value || null
-                    })}
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="" id="payment-all" />
-                      <Label htmlFor="payment-all" className="text-sm">All methods</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="card" id="payment-card" />
-                      <Label htmlFor="payment-card" className="text-sm">Card</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="cash" id="payment-cash" />
-                      <Label htmlFor="payment-cash" className="text-sm">Cash</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-                
-                <div className="pt-2 border-t border-gray-200 flex justify-end">
-                  <Button 
-                    onClick={() => setFilterPopoverOpen(false)}
-                    className="bg-[#0047AB] hover:bg-[#00377e]"
-                  >
-                    Apply Filters
-                  </Button>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-          
-          <Popover open={sortPopoverOpen} onOpenChange={setSortPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="flex items-center">
-                <ArrowUpDown className="w-4 h-4 mr-2" />
-                Sort
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-48" align="end">
-              <div className="space-y-2 p-2">
-                <h3 className="text-sm font-medium mb-2">Sort by</h3>
-                
-                <div 
-                  className={`flex items-center justify-between p-2 rounded cursor-pointer hover:bg-gray-100 ${
-                    sortConfig.key === 'created_at' ? 'bg-blue-50' : ''
-                  }`}
-                  onClick={() => handleSortChange('created_at')}
-                >
-                  <span className="text-sm">Date Requested</span>
-                  {sortConfig.key === 'created_at' && (
-                    <span className="text-blue-600">
-                      {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                    </span>
-                  )}
-                </div>
-                
-                <div 
-                  className={`flex items-center justify-between p-2 rounded cursor-pointer hover:bg-gray-100 ${
-                    sortConfig.key === 'student_name' ? 'bg-blue-50' : ''
-                  }`}
-                  onClick={() => handleSortChange('student_name')}
-                >
-                  <span className="text-sm">Student Name</span>
-                  {sortConfig.key === 'student_name' && (
-                    <span className="text-blue-600">
-                      {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
+        <Tabs value={activeTab} onValueChange={v => setActiveTab(v as 'pending' | 'approved')} className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="pending">Yet to be Approved</TabsTrigger>
+            <TabsTrigger value="approved">Approved Requests</TabsTrigger>
+          </TabsList>
 
-        {requestsLoading ? (
-          <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
-            <p>Loading requests...</p>
-          </div>
-        ) : error ? (
-          <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
-            <div className="text-red-500 mb-4">
-              <X className="w-16 h-16 mx-auto" />
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Error loading requests</h3>
-            <p className="text-gray-600 mb-6">There was a problem loading the requests.</p>
-            <Button 
-              onClick={() => refetch()} 
-              className="bg-[#0047AB] hover:bg-[#00377e]"
-            >
-              Try Again
-            </Button>
-          </div>
-        ) : filteredAndSortedRequests.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4">
-            {filteredAndSortedRequests.map((request) => (
-              <Card key={request.id} className="overflow-hidden">
-                <CardHeader className="pb-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle>{request.student_name}</CardTitle>
-                      <CardDescription>Student Number: {request.student_number}</CardDescription>
-                    </div>
-                    <span className="inline-flex items-center px-3 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
-                      <Package className="w-3 h-3 mr-1" />
-                      Awaiting Pickup Schedule
-                    </span>
-                  </div>
-                </CardHeader>
-                <CardContent className="pb-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 mb-1">Request Details</h4>
-                      <p className="text-sm mb-1"><span className="font-medium">Type:</span> {getRequestType(request)}</p>
-                      <p className="text-sm mb-1"><span className="font-medium">Purpose:</span> {request.purpose}</p>
-                      <p className="text-sm mb-1"><span className="font-medium">Requested:</span> {formatDate(request.created_at)}</p>
-                      <p className="text-sm mb-1"><span className="font-medium">Contact:</span> {request.contact_number}</p>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 mb-1">Payment Information</h4>
-                      <p className="text-sm mb-1">
-                        <span className="font-medium">Amount:</span> ₱{request.transaction?.amount.toFixed(2) || 'N/A'}
-                      </p>
-                      <p className="text-sm mb-1">
-                        <span className="font-medium">Payment Method:</span> {request.transaction?.payment_method || 'N/A'}
-                      </p>
-                      <p className="text-sm mb-1">
-                        <span className="font-medium">Payment Status:</span> 
-                        <span className="text-green-600 ml-1">
-                          {request.transaction?.payment_status === 'successful' ? 'Paid' : request.transaction?.payment_status || 'N/A'}
-                        </span>
-                      </p>
-                      <p className="text-sm mb-1">
-                        <span className="font-medium">Payment Date:</span> {request.transaction ? formatDate(request.transaction.created_at) : 'N/A'}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="pt-0 flex justify-end">
+          <TabsContent value="pending">
+            <div className="mb-6 flex space-x-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search requests..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0047AB]"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              
+              <Popover open={filterPopoverOpen} onOpenChange={setFilterPopoverOpen}>
+                <PopoverTrigger asChild>
                   <Button 
-                    onClick={() => processRequest(request)} 
-                    className="bg-[#0047AB] hover:bg-[#00377e]"
+                    variant="outline" 
+                    className="flex items-center"
                   >
-                    <CalendarIcon className="w-4 h-4 mr-2" />
-                    Schedule Pickup
+                    <Filter className="w-4 h-4 mr-2" />
+                    Filter
+                    {activeFilters > 0 && (
+                      <span className="ml-2 bg-blue-100 text-blue-800 text-xs font-medium rounded-full px-2 py-0.5">
+                        {activeFilters}
+                      </span>
+                    )}
                   </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
-            <Package className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No requests to process</h3>
-            <p className="text-gray-600 mb-6">
-              {activeFilters > 0 ? 
-                "No requests match your current filters. Try adjusting your filters or resetting them." : 
-                "There are no pending requests waiting for pickup scheduling."}
-            </p>
-            {activeFilters > 0 && (
-              <Button 
-                onClick={resetFilters} 
-                variant="outline" 
-                className="mx-auto"
-              >
-                Reset Filters
-              </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="end">
+                  <div className="bg-white p-4 rounded-lg border border-gray-200 max-h-[80vh] overflow-y-auto">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-medium">Filter Requests</h3>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={resetFilters} 
+                        className="text-xs"
+                      >
+                        Reset all
+                      </Button>
+                    </div>
+                    
+                    <div className="mb-4">
+                      <h4 className="text-sm font-medium mb-2">Request Type</h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center">
+                          <Checkbox 
+                            id="type-transcript" 
+                            checked={filters.requestType.includes('transcript')} 
+                            onCheckedChange={() => toggleRequestTypeFilter('transcript')}
+                          />
+                          <label htmlFor="type-transcript" className="ml-2 text-sm cursor-pointer">
+                            Transcript of Records
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <Checkbox 
+                            id="type-certificate" 
+                            checked={filters.requestType.includes('certificate')} 
+                            onCheckedChange={() => toggleRequestTypeFilter('certificate')}
+                          />
+                          <label htmlFor="type-certificate" className="ml-2 text-sm cursor-pointer">
+                            Certificate of Grades
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <Checkbox 
+                            id="type-certification" 
+                            checked={filters.requestType.includes('certification')} 
+                            onCheckedChange={() => toggleRequestTypeFilter('certification')}
+                          />
+                          <label htmlFor="type-certification" className="ml-2 text-sm cursor-pointer">
+                            Certification
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <Checkbox 
+                            id="type-statement" 
+                            checked={filters.requestType.includes('statement')} 
+                            onCheckedChange={() => toggleRequestTypeFilter('statement')}
+                          />
+                          <label htmlFor="type-statement" className="ml-2 text-sm cursor-pointer">
+                            Statement of Account
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <Checkbox 
+                            id="type-others" 
+                            checked={filters.requestType.includes('others')} 
+                            onCheckedChange={() => toggleRequestTypeFilter('others')}
+                          />
+                          <label htmlFor="type-others" className="ml-2 text-sm cursor-pointer">
+                            Others
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="mb-4">
+                      <h4 className="text-sm font-medium mb-2">Payment Method</h4>
+                      <RadioGroup 
+                        value={filters.paymentMethod || ""} 
+                        onValueChange={(value) => setFilters({
+                          ...filters,
+                          paymentMethod: value || null
+                        })}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="" id="payment-all" />
+                          <Label htmlFor="payment-all" className="text-sm">All methods</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="card" id="payment-card" />
+                          <Label htmlFor="payment-card" className="text-sm">Card</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="cash" id="payment-cash" />
+                          <Label htmlFor="payment-cash" className="text-sm">Cash</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                    
+                    <div className="pt-2 border-t border-gray-200 flex justify-end">
+                      <Button 
+                        onClick={() => setFilterPopoverOpen(false)}
+                        className="bg-[#0047AB] hover:bg-[#00377e]"
+                      >
+                        Apply Filters
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              
+              <Popover open={sortPopoverOpen} onOpenChange={setSortPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="flex items-center">
+                    <ArrowUpDown className="w-4 h-4 mr-2" />
+                    Sort
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48" align="end">
+                  <div className="space-y-2 p-2">
+                    <h3 className="text-sm font-medium mb-2">Sort by</h3>
+                    
+                    <div 
+                      className={`flex items-center justify-between p-2 rounded cursor-pointer hover:bg-gray-100 ${
+                        sortConfig.key === 'created_at' ? 'bg-blue-50' : ''
+                      }`}
+                      onClick={() => handleSortChange('created_at')}
+                    >
+                      <span className="text-sm">Date Requested</span>
+                      {sortConfig.key === 'created_at' && (
+                        <span className="text-blue-600">
+                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div 
+                      className={`flex items-center justify-between p-2 rounded cursor-pointer hover:bg-gray-100 ${
+                        sortConfig.key === 'student_name' ? 'bg-blue-50' : ''
+                      }`}
+                      onClick={() => handleSortChange('student_name')}
+                    >
+                      <span className="text-sm">Student Name</span>
+                      {sortConfig.key === 'student_name' && (
+                        <span className="text-blue-600">
+                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {requestsLoading ? (
+              <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
+                <p>Loading requests...</p>
+              </div>
+            ) : error ? (
+              <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
+                <div className="text-red-500 mb-4">
+                  <X className="w-16 h-16 mx-auto" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">Error loading requests</h3>
+                <p className="text-gray-600 mb-6">There was a problem loading the requests.</p>
+                <Button
+                  onClick={() => refetch()}
+                  className="bg-[#0047AB] hover:bg-[#00377e]"
+                >
+                  Try Again
+                </Button>
+              </div>
+            ) : pendingRequests.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4">
+                {pendingRequests.map((request) => (
+                  <Card key={request.id} className="overflow-hidden">
+                    <CardHeader className="pb-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle>{request.student_name}</CardTitle>
+                          <CardDescription>Student Number: {request.student_number}</CardDescription>
+                        </div>
+                        <span className="inline-flex items-center px-3 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                          <Package className="w-3 h-3 mr-1" />
+                          Awaiting Pickup Schedule
+                        </span>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-500 mb-1">Request Details</h4>
+                          <p className="text-sm mb-1"><span className="font-medium">Type:</span> {getRequestType(request)}</p>
+                          <p className="text-sm mb-1"><span className="font-medium">Purpose:</span> {request.purpose}</p>
+                          <p className="text-sm mb-1"><span className="font-medium">Requested:</span> {formatDate(request.created_at)}</p>
+                          <p className="text-sm mb-1"><span className="font-medium">Contact:</span> {request.contact_number}</p>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-500 mb-1">Payment Information</h4>
+                          <p className="text-sm mb-1">
+                            <span className="font-medium">Amount:</span> ₱{request.transaction?.amount?.toFixed(2) || 'N/A'}
+                          </p>
+                          <p className="text-sm mb-1">
+                            <span className="font-medium">Payment Method:</span> {request.transaction?.payment_method || 'N/A'}
+                          </p>
+                          <p className="text-sm mb-1">
+                            <span className="font-medium">Payment Status:</span>
+                            <span className="text-green-600 ml-1">
+                              {request.transaction?.payment_status === 'successful' ? 'Paid' : request.transaction?.payment_status || 'N/A'}
+                            </span>
+                          </p>
+                          <p className="text-sm mb-1">
+                            <span className="font-medium">Payment Date:</span> {request.transaction ? formatDate(request.transaction.created_at) : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="pt-0 flex justify-end">
+                      <Button
+                        onClick={() => processRequest(request)}
+                        className="bg-[#0047AB] hover:bg-[#00377e]"
+                      >
+                        <CalendarIcon className="w-4 h-4 mr-2" />
+                        Schedule Pickup
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
+                <Package className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                <h3 className="text-xl font-semibold mb-2">No requests to process</h3>
+                <p className="text-gray-600 mb-6">
+                  {activeFilters > 0 ? 
+                    "No requests match your current filters. Try adjusting your filters or resetting them." : 
+                    "There are no pending requests waiting for pickup scheduling."}
+                </p>
+                {activeFilters > 0 && (
+                  <Button 
+                    onClick={resetFilters} 
+                    variant="outline" 
+                    className="mx-auto"
+                  >
+                    Reset Filters
+                  </Button>
+                )}
+              </div>
             )}
-          </div>
-        )}
+          </TabsContent>
+
+          <TabsContent value="approved">
+            <div className="mb-6 flex space-x-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search requests..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0047AB]"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              
+              <Popover open={filterPopoverOpen} onOpenChange={setFilterPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center"
+                  >
+                    <Filter className="w-4 h-4 mr-2" />
+                    Filter
+                    {activeFilters > 0 && (
+                      <span className="ml-2 bg-blue-100 text-blue-800 text-xs font-medium rounded-full px-2 py-0.5">
+                        {activeFilters}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="end">
+                  <div className="bg-white p-4 rounded-lg border border-gray-200 max-h-[80vh] overflow-y-auto">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-medium">Filter Requests</h3>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={resetFilters} 
+                        className="text-xs"
+                      >
+                        Reset all
+                      </Button>
+                    </div>
+                    
+                    <div className="mb-4">
+                      <h4 className="text-sm font-medium mb-2">Request Type</h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center">
+                          <Checkbox 
+                            id="type-transcript" 
+                            checked={filters.requestType.includes('transcript')} 
+                            onCheckedChange={() => toggleRequestTypeFilter('transcript')}
+                          />
+                          <label htmlFor="type-transcript" className="ml-2 text-sm cursor-pointer">
+                            Transcript of Records
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <Checkbox 
+                            id="type-certificate" 
+                            checked={filters.requestType.includes('certificate')} 
+                            onCheckedChange={() => toggleRequestTypeFilter('certificate')}
+                          />
+                          <label htmlFor="type-certificate" className="ml-2 text-sm cursor-pointer">
+                            Certificate of Grades
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <Checkbox 
+                            id="type-certification" 
+                            checked={filters.requestType.includes('certification')} 
+                            onCheckedChange={() => toggleRequestTypeFilter('certification')}
+                          />
+                          <label htmlFor="type-certification" className="ml-2 text-sm cursor-pointer">
+                            Certification
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <Checkbox 
+                            id="type-statement" 
+                            checked={filters.requestType.includes('statement')} 
+                            onCheckedChange={() => toggleRequestTypeFilter('statement')}
+                          />
+                          <label htmlFor="type-statement" className="ml-2 text-sm cursor-pointer">
+                            Statement of Account
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <Checkbox 
+                            id="type-others" 
+                            checked={filters.requestType.includes('others')} 
+                            onCheckedChange={() => toggleRequestTypeFilter('others')}
+                          />
+                          <label htmlFor="type-others" className="ml-2 text-sm cursor-pointer">
+                            Others
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="mb-4">
+                      <h4 className="text-sm font-medium mb-2">Payment Method</h4>
+                      <RadioGroup 
+                        value={filters.paymentMethod || ""} 
+                        onValueChange={(value) => setFilters({
+                          ...filters,
+                          paymentMethod: value || null
+                        })}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="" id="payment-all" />
+                          <Label htmlFor="payment-all" className="text-sm">All methods</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="card" id="payment-card" />
+                          <Label htmlFor="payment-card" className="text-sm">Card</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="cash" id="payment-cash" />
+                          <Label htmlFor="payment-cash" className="text-sm">Cash</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                    
+                    <div className="pt-2 border-t border-gray-200 flex justify-end">
+                      <Button 
+                        onClick={() => setFilterPopoverOpen(false)}
+                        className="bg-[#0047AB] hover:bg-[#00377e]"
+                      >
+                        Apply Filters
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              
+              <Popover open={sortPopoverOpen} onOpenChange={setSortPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="flex items-center">
+                    <ArrowUpDown className="w-4 h-4 mr-2" />
+                    Sort
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48" align="end">
+                  <div className="space-y-2 p-2">
+                    <h3 className="text-sm font-medium mb-2">Sort by</h3>
+                    
+                    <div 
+                      className={`flex items-center justify-between p-2 rounded cursor-pointer hover:bg-gray-100 ${
+                        sortConfig.key === 'created_at' ? 'bg-blue-50' : ''
+                      }`}
+                      onClick={() => handleSortChange('created_at')}
+                    >
+                      <span className="text-sm">Date Requested</span>
+                      {sortConfig.key === 'created_at' && (
+                        <span className="text-blue-600">
+                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div 
+                      className={`flex items-center justify-between p-2 rounded cursor-pointer hover:bg-gray-100 ${
+                        sortConfig.key === 'student_name' ? 'bg-blue-50' : ''
+                      }`}
+                      onClick={() => handleSortChange('student_name')}
+                    >
+                      <span className="text-sm">Student Name</span>
+                      {sortConfig.key === 'student_name' && (
+                        <span className="text-blue-600">
+                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {requestsLoading ? (
+              <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
+                <p>Loading approved requests...</p>
+              </div>
+            ) : error ? (
+              <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
+                <div className="text-red-500 mb-4">
+                  <X className="w-16 h-16 mx-auto" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">Error loading requests</h3>
+                <p className="text-gray-600 mb-6">There was a problem loading the requests.</p>
+                <Button
+                  onClick={() => refetch()}
+                  className="bg-[#0047AB] hover:bg-[#00377e]"
+                >
+                  Try Again
+                </Button>
+              </div>
+            ) : approvedRequests.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4">
+                {approvedRequests.map((request) => (
+                  <Card key={request.id} className="overflow-hidden">
+                    <CardHeader className="pb-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle>{request.student_name}</CardTitle>
+                          <CardDescription>Student Number: {request.student_number}</CardDescription>
+                        </div>
+                        <span className="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                          <Check className="w-3 h-3 mr-1" />
+                          Approved
+                        </span>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-500 mb-1">Request Details</h4>
+                          <p className="text-sm mb-1"><span className="font-medium">Type:</span> {getRequestType(request)}</p>
+                          <p className="text-sm mb-1"><span className="font-medium">Purpose:</span> {request.purpose}</p>
+                          <p className="text-sm mb-1"><span className="font-medium">Requested:</span> {formatDate(request.created_at)}</p>
+                          <p className="text-sm mb-1"><span className="font-medium">Contact:</span> {request.contact_number}</p>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-500 mb-1">Payment Information</h4>
+                          <p className="text-sm mb-1">
+                            <span className="font-medium">Amount:</span> ₱{request.transaction?.amount?.toFixed(2) || 'N/A'}
+                          </p>
+                          <p className="text-sm mb-1">
+                            <span className="font-medium">Payment Method:</span> {request.transaction?.payment_method || 'N/A'}
+                          </p>
+                          <p className="text-sm mb-1">
+                            <span className="font-medium">Payment Status:</span>
+                            <span className="text-green-600 ml-1">
+                              {request.transaction?.payment_status === 'successful' ? 'Paid' : request.transaction?.payment_status || 'N/A'}
+                            </span>
+                          </p>
+                          <p className="text-sm mb-1">
+                            <span className="font-medium">Payment Date:</span> {request.transaction ? formatDate(request.transaction.created_at) : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="pt-0 flex-col items-start">
+                      {request.pickup_date && (
+                        <p className="text-sm text-gray-500 mb-2">
+                          <strong>Pickup Date:</strong> {formatDate(request.pickup_date)}
+                        </p>
+                      )}
+                      {request.notes && (
+                        <p className="text-sm text-gray-500 italic">
+                          <strong>Notes:</strong> {request.notes}
+                        </p>
+                      )}
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
+                <Check className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                <h3 className="text-xl font-semibold mb-2">No approved requests</h3>
+                <p className="text-gray-600 mb-6">
+                  There are no requests that have been approved yet.
+                </p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
