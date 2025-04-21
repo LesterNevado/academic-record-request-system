@@ -23,7 +23,7 @@ const Dashboard: React.FC = () => {
   }>({
     name: null,
     email: null,
-    avatarUrl: null
+    avatarUrl: null,
   });
   const [loading, setLoading] = useState(true);
   const [requestCount, setRequestCount] = useState(0);
@@ -33,6 +33,7 @@ const Dashboard: React.FC = () => {
   // Local state to hold roles fetched in this component from supabase rpc.
   const [roles, setRoles] = useState<UserRole[]>(userRoles || []);
 
+  // Use a ref to ensure we do not log faculty login multiple times per session.
   const activityLoggedRef = useRef(false);
 
   useEffect(() => {
@@ -60,7 +61,10 @@ const Dashboard: React.FC = () => {
           setRoles(fetchedRoles || []);
         }
 
-        if (!fetchedRoles || (!fetchedRoles.includes('faculty') && !fetchedRoles.includes('admin'))) {
+        if (
+          !fetchedRoles ||
+          (!fetchedRoles.includes('faculty') && !fetchedRoles.includes('admin'))
+        ) {
           const { count, error } = await supabase
             .from('requests')
             .select('*', { count: 'exact', head: true })
@@ -70,15 +74,22 @@ const Dashboard: React.FC = () => {
             setRequestCount(count || 0);
           }
         } else {
-          const [{ count: pending = 0 } = {}, { count: approved = 0 } = {}] = await Promise.all([
-            supabase.from('requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-            supabase.from('requests').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
-          ]);
+          const [{ count: pending = 0 } = {}, { count: approved = 0 } = {}] =
+            await Promise.all([
+              supabase
+                .from('requests')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'pending'),
+              supabase
+                .from('requests')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'approved'),
+            ]);
           setPendingCount(pending ?? 0);
           setApprovedCount(approved ?? 0);
         }
       } catch (error) {
-        console.error("Error getting session:", error);
+        console.error('Error getting session:', error);
         navigate('/');
       } finally {
         setLoading(false);
@@ -89,42 +100,58 @@ const Dashboard: React.FC = () => {
   }, [navigate]);
 
   useEffect(() => {
+    // To ensure login activity is logged only once, use localStorage flag key.
+    // This persists across refreshes but resets on logout or new login.
     async function logFacultyLoginActivity() {
       if (
         session?.user &&
         Array.isArray(userRoles) &&
-        userRoles.includes("faculty") &&
+        userRoles.includes('faculty') &&
         !activityLoggedRef.current
       ) {
-        activityLoggedRef.current = true;
-        try {
-          console.log("[Dashboard] User is faculty, attempting to log login activity...");
-          const { data: logResult, error: logError } = await supabase.rpc(
-            "log_activity",
-            {
-              p_user_id: session.user.id,
-              p_activity_type: "login",
-              p_details: `User logged in - ${session.user.email}`,
-              p_related_user_id: null,
-              p_related_id: null,
+        // Check localStorage if we have logged login before for this userId
+        const loggedKey = `faculty_login_logged_${session.user.id}`;
+        const alreadyLogged = localStorage.getItem(loggedKey);
+        if (!alreadyLogged) {
+          activityLoggedRef.current = true;
+          try {
+            console.log(
+              '[Dashboard] User is faculty, attempting to log login activity once...'
+            );
+            const { data: logResult, error: logError } = await supabase.rpc(
+              'log_activity',
+              {
+                p_user_id: session.user.id,
+                p_activity_type: 'login',
+                p_details: `User logged in - ${session.user.email}`,
+                p_related_user_id: null,
+                p_related_id: null,
+              }
+            );
+            if (logError) {
+              console.error(
+                '[Dashboard] Error logging login activity for faculty:',
+                logError
+              );
+              toast.error('Failed to log faculty login activity.');
+            } else {
+              console.log(
+                '[Dashboard] Successfully logged login activity for faculty user.',
+                logResult
+              );
+              // Set flag so that it won't log again on refresh or revisit
+              localStorage.setItem(loggedKey, 'true');
             }
-          );
-          if (logError) {
-            console.error("[Dashboard] Error logging login activity for faculty:", logError);
-            toast.error("Failed to log faculty login activity.");
-          } else {
-            console.log("[Dashboard] Successfully logged login activity for faculty user.", logResult);
+          } catch (err) {
+            console.error(
+              '[Dashboard] Exception during logging login activity:',
+              err
+            );
           }
-        } catch (err) {
-          console.error("[Dashboard] Exception during logging login activity:", err);
-        }
-      } else {
-        if (!session?.user) {
-          console.log("[Dashboard] No session user yet, not attempting to log login activity.");
-        } else if (!userRoles?.includes("faculty")) {
-          console.log("[Dashboard] User is not faculty, skipping login activity logging.");
-        } else if (activityLoggedRef.current) {
-          console.log("[Dashboard] Login activity has already been attempted/logged for this session.");
+        } else {
+          console.log(
+            '[Dashboard] Faculty login activity already logged this session, skipping.'
+          );
         }
       }
     }
@@ -261,3 +288,4 @@ const Dashboard: React.FC = () => {
 };
 
 export default Dashboard;
+
