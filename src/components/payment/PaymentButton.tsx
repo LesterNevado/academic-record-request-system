@@ -71,11 +71,6 @@ export const PaymentButton: React.FC<PaymentButtonProps> = ({
         const copies = requestFormData.requestTypes.coa.copies || 1;
         totalAmount += 120 * copies; // ₱120 per copy
       }
-      
-      if (requestFormData.requestTypes.noScholarship.selected) {
-        const copies = requestFormData.requestTypes.noScholarship.copies || 1;
-        totalAmount += 150 * copies; // ₱150 per copy
-      }
 
       console.log("Starting payment process with total amount:", totalAmount);
       console.log("Request data summary:", {

@@ -158,10 +158,6 @@ export const PaymentStatus: React.FC = () => {
             coa_copies: formData.requestTypes.coa && formData.requestTypes.coa.selected ? formData.requestTypes.coa.copies : null,
             coa_ctc: formData.requestTypes.coa && formData.requestTypes.coa.selected ? formData.requestTypes.coa.ctc : false,
             
-            no_scholarship_selected: formData.requestTypes.noScholarship && formData.requestTypes.noScholarship.selected ? true : false,
-            no_scholarship_copies: formData.requestTypes.noScholarship && formData.requestTypes.noScholarship.selected ? formData.requestTypes.noScholarship.copies : null,
-            no_scholarship_ctc: formData.requestTypes.noScholarship && formData.requestTypes.noScholarship.selected ? formData.requestTypes.noScholarship.ctc : false,
-            
             pickup_date: null,
             processed_by: null,
             notes: null

@@ -65,14 +65,13 @@ type Request = Tables<"requests"> & {
   com_selected: boolean;
   coe_selected: boolean;
   coa_selected: boolean;
-  no_scholarship_selected: boolean;
   processor_name?: string | null;
 };
 
 type SortOption = "newest" | "oldest" | "name_asc" | "name_desc" | "status";
 type DocumentType = 
   "all" | "transcript" | "certificate" | "certification" | "soa" | "others" | 
-  "registration_form" | "com" | "coe" | "coa" | "no_scholarship";
+  "registration_form" | "com" | "coe" | "coa";
 
 const Requests: React.FC = () => {
   const navigate = useNavigate();
@@ -219,7 +218,6 @@ const Requests: React.FC = () => {
     if (request.com_selected) types.push("Certificate of Matriculation");
     if (request.coe_selected) types.push("Certificate of Enrollment");
     if (request.coa_selected) types.push("Certificate of No Availed Scholarship");
-    if (request.no_scholarship_selected) types.push("Certificate of No Scholarship");
     if (request.others_selected) types.push("Others");
     
     return types.join(", ");
@@ -237,7 +235,6 @@ const Requests: React.FC = () => {
       case "com": return request.com_selected;
       case "coe": return request.coe_selected;
       case "coa": return request.coa_selected;
-      case "no_scholarship": return request.no_scholarship_selected;
       case "others": return request.others_selected;
       default: return true;
     }
@@ -433,7 +430,6 @@ const Requests: React.FC = () => {
                 {documentType === "com" && "Certificate of Matriculation"}
                 {documentType === "coe" && "Certificate of Enrollment"}
                 {documentType === "coa" && "Certificate of No Availed Scholarship"}
-                {documentType === "no_scholarship" && "Certificate of No Scholarship"}
                 {documentType === "others" && "Others"}
                 <button
                   onClick={() => setDocumentType("all")}
@@ -500,7 +496,6 @@ const Requests: React.FC = () => {
                   <ToggleGroupItem value="com">Certificate of Matriculation</ToggleGroupItem>
                   <ToggleGroupItem value="coe">Certificate of Enrollment</ToggleGroupItem>
                   <ToggleGroupItem value="coa">Certificate of No Availed Scholarship</ToggleGroupItem>
-                  <ToggleGroupItem value="no_scholarship">Certificate of No Scholarship</ToggleGroupItem>
                   <ToggleGroupItem value="others">Others</ToggleGroupItem>
                 </ToggleGroup>
               </div>

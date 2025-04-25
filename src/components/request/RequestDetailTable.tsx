@@ -101,14 +101,6 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
             <TableCell>-</TableCell>
           </TableRow>
         )}
-        {request.no_scholarship_selected && (
-          <TableRow>
-            <TableCell className="font-medium">Certificate of No Scholarship</TableCell>
-            <TableCell>{request.no_scholarship_copies || 1}</TableCell>
-            <TableCell className="text-center">{request.no_scholarship_ctc ? "Yes" : "No"}</TableCell>
-            <TableCell>-</TableCell>
-          </TableRow>
-        )}
         {request.soa_selected && (
           <TableRow>
             <TableCell className="font-medium">Statement of Account (SOA)</TableCell>
