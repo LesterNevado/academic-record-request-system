@@ -182,21 +182,6 @@ serve(async (req) => {
       });
     }
     
-    if (formData.requestTypes.noScholarship.selected) {
-      const copies = formData.requestTypes.noScholarship.copies || 1;
-      lineItems.push({
-        price_data: {
-          currency: 'php',
-          product_data: {
-            name: 'Certification of No Scholarship',
-            description: `${copies} copy/copies${formData.requestTypes.noScholarship.ctc ? ' with CTC/Dry Seal' : ''}`,
-          },
-          unit_amount: 150 * 100, // ₱150 per copy in cents
-        },
-        quantity: copies,
-      });
-    }
-    
     // If no line items were added, use a fallback
     if (lineItems.length === 0) {
       lineItems.push({
