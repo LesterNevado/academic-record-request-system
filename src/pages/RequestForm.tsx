@@ -446,9 +446,8 @@ const RequestForm: React.FC = () => {
                           case "coe": label = "Certificate of Enrollment (COE)"; break;
                           case "coa": label = "Certificate of No Availed Scholarship"; break;
                           case "soa": label = "Statement of Account (SOA)"; break;
-                          case "noScholarship": label = "Certificate of No Scholarship"; break;
                           case "certification": label = "Certification"; showDetailsInput = true; break;
-                          case "others": label = "Others (Please Specify)"; showDetailsInput = true; break;
+                          case "others": label = "Others"; showDetailsInput = true; break;
                           default: label = key; break;
                         }
 
