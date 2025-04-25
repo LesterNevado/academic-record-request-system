@@ -296,6 +296,28 @@ const RequestForm: React.FC = () => {
 
   const requiredFieldStyle = "text-[#ea384c]";
 
+  const requestTypeConfig = {
+    transcript: { price: 100, name: "Transcript of Records (TOR)", requiredDetails: false },
+    certificate: { price: 100, name: "Certificate of Grades (COG)", requiredDetails: false },
+    registrationForm: { price: 120, name: "Registration Form", requiredDetails: true },
+    com: { price: 120, name: "Certificate of Matriculation (COM)", requiredDetails: false },
+    coa: { price: 120, name: "Certificate of No Availed Scholarship", requiredDetails: false },
+    coe: { price: 120, name: "Certificate of Enrollment (COE)", requiredDetails: false },
+    soa: { price: 150, name: "Statement of Account (SOA)", requiredDetails: false },
+    certification: { price: 100, name: "Certification", requiredDetails: true },
+    others: { price: 100, name: "Others", requiredDetails: true },
+  };
+
+  // Remove one of the scholarship fields (the duplicate one)
+  const requestTypes = Object.entries(requestTypeConfig).map(([key, value]) => ({
+    key,
+    ...value,
+    selected: false,
+    copies: 1,
+    ctc: false,
+    details: ""
+  }));
+
   return (
     <div className="min-h-screen flex">
       <Sidebar 
@@ -424,7 +446,7 @@ const RequestForm: React.FC = () => {
                           case "coe": label = "Certificate of Enrollment (COE)"; break;
                           case "coa": label = "Certificate of No Availed Scholarship"; break;
                           case "soa": label = "Statement of Account (SOA)"; break;
-                          case "noScholarship": label = "Certificate of No Availed Scholarship"; break;
+                          case "noScholarship": label = "Certificate of No Scholarship"; break;
                           case "certification": label = "Certification"; showDetailsInput = true; break;
                           case "others": label = "Others (Please Specify)"; showDetailsInput = true; break;
                           default: label = key; break;
@@ -439,7 +461,7 @@ const RequestForm: React.FC = () => {
                                 onCheckedChange={() => handleCheckboxChange(key as keyof RequestTypes)}
                               />
                               <Label htmlFor={key} className="font-normal">
-                                {label} {showDetailsInput && "(Required if Checked)"}
+                                {label}
                               </Label>
                             </div>
                             <div className="col-span-1 flex justify-center">
