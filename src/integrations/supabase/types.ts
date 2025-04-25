@@ -110,9 +110,6 @@ export type Database = {
           created_at: string
           home_address: string
           id: string
-          no_scholarship_copies: number | null
-          no_scholarship_ctc: boolean
-          no_scholarship_selected: boolean
           notes: string | null
           others_copies: number | null
           others_ctc: boolean
@@ -160,9 +157,6 @@ export type Database = {
           created_at?: string
           home_address: string
           id?: string
-          no_scholarship_copies?: number | null
-          no_scholarship_ctc?: boolean
-          no_scholarship_selected?: boolean
           notes?: string | null
           others_copies?: number | null
           others_ctc?: boolean
@@ -210,9 +204,6 @@ export type Database = {
           created_at?: string
           home_address?: string
           id?: string
-          no_scholarship_copies?: number | null
-          no_scholarship_ctc?: boolean
-          no_scholarship_selected?: boolean
           notes?: string | null
           others_copies?: number | null
           others_ctc?: boolean

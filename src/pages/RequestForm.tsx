@@ -17,7 +17,7 @@ interface RequestType {
   copies: number;
   price: number;
   ctc: boolean;
-  details: string; // made mandatory as string (even if empty)
+  details: string;
 }
 
 type RequestTypes = {
@@ -28,7 +28,6 @@ type RequestTypes = {
   coa: RequestType;
   coe: RequestType;
   soa: RequestType;
-  noScholarship: RequestType;
   certification: RequestType;
   others: RequestType;
 };
@@ -62,7 +61,6 @@ const RequestForm: React.FC = () => {
       coa: { selected: false, copies: 1, price: 120, ctc: false, details: "" },
       coe: { selected: false, copies: 1, price: 120, ctc: false, details: "" },
       soa: { selected: false, copies: 1, price: 150, ctc: false, details: "" },
-      noScholarship: { selected: false, copies: 1, price: 150, ctc: false, details: "" },
       certification: { selected: false, copies: 1, price: 100, ctc: false, details: "" },
       others: { selected: false, copies: 1, price: 100, ctc: false, details: "" }
     } as RequestTypes
@@ -308,7 +306,6 @@ const RequestForm: React.FC = () => {
     others: { price: 100, name: "Others", requiredDetails: true },
   };
 
-  // Remove one of the scholarship fields (the duplicate one)
   const requestTypes = Object.entries(requestTypeConfig).map(([key, value]) => ({
     key,
     ...value,
@@ -353,7 +350,6 @@ const RequestForm: React.FC = () => {
                       {key === "coe" && "Certificate of Enrollment (COE)"}
                       {key === "coa" && "Certificate of No Availed Scholarship"}
                       {key === "soa" && "Statement of Account (SOA)"}
-                      {key === "noScholarship" && "Certificate of No Availed Scholarship"}
                       {key === "certification" && `Certification (${value.details ?? ""})`}
                       {key === "others" && `Others (${value.details ?? ""})`}
                       : {value.copies} {value.copies > 1 ? 'copies' : 'copy'}
