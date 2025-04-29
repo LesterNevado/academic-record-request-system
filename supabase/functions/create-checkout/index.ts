@@ -8,6 +8,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Stripe product catalog IDs
+const PRODUCT_IDS = {
+  TRANSCRIPT: 'prod_RwLCH4NZ06JAwf',           // Transcript of Records (TOR)
+  CERTIFICATE: 'prod_RwMfUjiS0c3VHH',          // Certificate of Grades (COG)
+  REGISTRATION_FORM: 'prod_SAes8dAmfqLx1J',    // Registration Form
+  COM: 'prod_SAeszcogAo7TBN',                  // Certificate of Matriculation
+  COA: 'prod_SAetw6jNGNmy3r',                  // Certificate of No Availed Scholarship
+  COE: 'prod_SAetkOppf5DtPu',                  // Certificate of Enrollment
+  SOA: 'prod_S38hFN6e4Umkv4',                  // Statement of Account
+  CERTIFICATION: 'prod_RwMgZPEEMBDHlQ',        // Certification
+  OTHERS: 'prod_RwMgmzeBE2urMr',               // Others
+  CTC_DRY_SEAL: 'prod_S394g7wuMLDPXS',         // CTC/Dry Seal
+};
+
 serve(async (req) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
@@ -43,7 +57,7 @@ serve(async (req) => {
     // Create a reference for the request
     const clientReferenceId = crypto.randomUUID();
     
-    // Prepare line items for Stripe checkout
+    // Prepare line items for Stripe checkout using product IDs
     const lineItems = [];
     
     // Add line items based on selected document types
@@ -52,14 +66,23 @@ serve(async (req) => {
       lineItems.push({
         price_data: {
           currency: 'php',
-          product_data: {
-            name: 'Transcript of Records',
-            description: `${copies} copy/copies${formData.requestTypes.transcript.ctc ? ' with CTC/Dry Seal' : ''}`,
-          },
+          product: PRODUCT_IDS.TRANSCRIPT,
           unit_amount: 100 * 100, // ₱100 per copy in cents
         },
         quantity: copies,
       });
+      
+      // Add CTC/Dry Seal as a separate line item if selected
+      if (formData.requestTypes.transcript.ctc) {
+        lineItems.push({
+          price_data: {
+            currency: 'php',
+            product: PRODUCT_IDS.CTC_DRY_SEAL,
+            unit_amount: 50 * 100, // ₱50 per CTC/Dry Seal in cents
+          },
+          quantity: copies, // One CTC/Dry Seal per copy
+        });
+      }
     }
     
     if (formData.requestTypes.certificate.selected) {
@@ -67,14 +90,22 @@ serve(async (req) => {
       lineItems.push({
         price_data: {
           currency: 'php',
-          product_data: {
-            name: 'Certificate',
-            description: `${copies} copy/copies${formData.requestTypes.certificate.ctc ? ' with CTC/Dry Seal' : ''}`,
-          },
+          product: PRODUCT_IDS.CERTIFICATE,
           unit_amount: 100 * 100, // ₱100 per copy in cents
         },
         quantity: copies,
       });
+      
+      if (formData.requestTypes.certificate.ctc) {
+        lineItems.push({
+          price_data: {
+            currency: 'php',
+            product: PRODUCT_IDS.CTC_DRY_SEAL,
+            unit_amount: 50 * 100, // ₱50 per CTC/Dry Seal in cents
+          },
+          quantity: copies,
+        });
+      }
     }
     
     if (formData.requestTypes.certification.selected) {
@@ -82,14 +113,22 @@ serve(async (req) => {
       lineItems.push({
         price_data: {
           currency: 'php',
-          product_data: {
-            name: 'Certification',
-            description: `${copies} copy/copies${formData.requestTypes.certification.ctc ? ' with CTC/Dry Seal' : ''}`,
-          },
+          product: PRODUCT_IDS.CERTIFICATION,
           unit_amount: 100 * 100, // ₱100 per copy in cents
         },
         quantity: copies,
       });
+      
+      if (formData.requestTypes.certification.ctc) {
+        lineItems.push({
+          price_data: {
+            currency: 'php',
+            product: PRODUCT_IDS.CTC_DRY_SEAL,
+            unit_amount: 50 * 100, // ₱50 per CTC/Dry Seal in cents
+          },
+          quantity: copies,
+        });
+      }
     }
     
     if (formData.requestTypes.others.selected) {
@@ -97,14 +136,22 @@ serve(async (req) => {
       lineItems.push({
         price_data: {
           currency: 'php',
-          product_data: {
-            name: 'Other Documents',
-            description: `${copies} copy/copies${formData.requestTypes.others.ctc ? ' with CTC/Dry Seal' : ''}`,
-          },
+          product: PRODUCT_IDS.OTHERS,
           unit_amount: 100 * 100, // ₱100 per copy in cents
         },
         quantity: copies,
       });
+      
+      if (formData.requestTypes.others.ctc) {
+        lineItems.push({
+          price_data: {
+            currency: 'php',
+            product: PRODUCT_IDS.CTC_DRY_SEAL,
+            unit_amount: 50 * 100, // ₱50 per CTC/Dry Seal in cents
+          },
+          quantity: copies,
+        });
+      }
     }
     
     if (formData.requestTypes.soa.selected) {
@@ -112,14 +159,22 @@ serve(async (req) => {
       lineItems.push({
         price_data: {
           currency: 'php',
-          product_data: {
-            name: 'Statement of Account',
-            description: `${copies} copy/copies${formData.requestTypes.soa.ctc ? ' with CTC/Dry Seal' : ''}`,
-          },
+          product: PRODUCT_IDS.SOA,
           unit_amount: 150 * 100, // ₱150 per copy in cents
         },
         quantity: copies,
       });
+      
+      if (formData.requestTypes.soa.ctc) {
+        lineItems.push({
+          price_data: {
+            currency: 'php',
+            product: PRODUCT_IDS.CTC_DRY_SEAL,
+            unit_amount: 50 * 100, // ₱50 per CTC/Dry Seal in cents
+          },
+          quantity: copies,
+        });
+      }
     }
     
     if (formData.requestTypes.registrationForm.selected) {
@@ -127,14 +182,22 @@ serve(async (req) => {
       lineItems.push({
         price_data: {
           currency: 'php',
-          product_data: {
-            name: 'Test Registration Form',
-            description: `${copies} copy/copies${formData.requestTypes.registrationForm.ctc ? ' with CTC/Dry Seal' : ''}`,
-          },
+          product: PRODUCT_IDS.REGISTRATION_FORM,
           unit_amount: 120 * 100, // ₱120 per copy in cents
         },
         quantity: copies,
       });
+      
+      if (formData.requestTypes.registrationForm.ctc) {
+        lineItems.push({
+          price_data: {
+            currency: 'php',
+            product: PRODUCT_IDS.CTC_DRY_SEAL,
+            unit_amount: 50 * 100, // ₱50 per CTC/Dry Seal in cents
+          },
+          quantity: copies,
+        });
+      }
     }
     
     if (formData.requestTypes.com.selected) {
@@ -142,14 +205,22 @@ serve(async (req) => {
       lineItems.push({
         price_data: {
           currency: 'php',
-          product_data: {
-            name: 'Certificate of Matriculation',
-            description: `${copies} copy/copies${formData.requestTypes.com.ctc ? ' with CTC/Dry Seal' : ''}`,
-          },
+          product: PRODUCT_IDS.COM,
           unit_amount: 120 * 100, // ₱120 per copy in cents
         },
         quantity: copies,
       });
+      
+      if (formData.requestTypes.com.ctc) {
+        lineItems.push({
+          price_data: {
+            currency: 'php',
+            product: PRODUCT_IDS.CTC_DRY_SEAL,
+            unit_amount: 50 * 100, // ₱50 per CTC/Dry Seal in cents
+          },
+          quantity: copies,
+        });
+      }
     }
     
     if (formData.requestTypes.coe.selected) {
@@ -157,14 +228,22 @@ serve(async (req) => {
       lineItems.push({
         price_data: {
           currency: 'php',
-          product_data: {
-            name: 'Certificate of Enrollment',
-            description: `${copies} copy/copies${formData.requestTypes.coe.ctc ? ' with CTC/Dry Seal' : ''}`,
-          },
+          product: PRODUCT_IDS.COE,
           unit_amount: 120 * 100, // ₱120 per copy in cents
         },
         quantity: copies,
       });
+      
+      if (formData.requestTypes.coe.ctc) {
+        lineItems.push({
+          price_data: {
+            currency: 'php',
+            product: PRODUCT_IDS.CTC_DRY_SEAL,
+            unit_amount: 50 * 100, // ₱50 per CTC/Dry Seal in cents
+          },
+          quantity: copies,
+        });
+      }
     }
     
     if (formData.requestTypes.coa.selected) {
@@ -172,14 +251,22 @@ serve(async (req) => {
       lineItems.push({
         price_data: {
           currency: 'php',
-          product_data: {
-            name: 'Certificate of Attendance',
-            description: `${copies} copy/copies${formData.requestTypes.coa.ctc ? ' with CTC/Dry Seal' : ''}`,
-          },
+          product: PRODUCT_IDS.COA,
           unit_amount: 120 * 100, // ₱120 per copy in cents
         },
         quantity: copies,
       });
+      
+      if (formData.requestTypes.coa.ctc) {
+        lineItems.push({
+          price_data: {
+            currency: 'php',
+            product: PRODUCT_IDS.CTC_DRY_SEAL,
+            unit_amount: 50 * 100, // ₱50 per CTC/Dry Seal in cents
+          },
+          quantity: copies,
+        });
+      }
     }
     
     // If no line items were added, use a fallback
