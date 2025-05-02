@@ -1,5 +1,4 @@
 
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -68,6 +67,15 @@ export const PaymentButton: React.FC<PaymentButtonProps> = ({
         totalAmount += 120 * copies; // ₱120 per copy
       }
 
+      // Add CTC/Dry Seal fees if selected
+      Object.keys(requestFormData.requestTypes).forEach(key => {
+        if (requestFormData.requestTypes[key].selected && 
+            requestFormData.requestTypes[key].ctc) {
+          const copies = requestFormData.requestTypes[key].copies || 1;
+          totalAmount += 50 * copies; // ₱50 per CTC/Dry Seal
+        }
+      });
+
       console.log("Starting payment process with total amount:", totalAmount);
       console.log("Request data summary:", {
         studentName: requestFormData.studentName,
@@ -82,7 +90,7 @@ export const PaymentButton: React.FC<PaymentButtonProps> = ({
           }))
       });
 
-      // Call Supabase Edge Function to create checkout session
+      // Call Supabase Edge Function to create checkout session with proper error handling
       console.log("Invoking create-checkout function...");
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: {
