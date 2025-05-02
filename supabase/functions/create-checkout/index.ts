@@ -10,7 +10,6 @@ const corsHeaders = {
 
 // Stripe product catalog IDs
 const PRODUCT_IDS = {
-  TRANSCRIPT: 'prod_RwLCH4NZ06JAwf',           // Transcript of Records (TOR)
   CERTIFICATE: 'prod_RwMfUjiS0c3VHH',          // Certificate of Grades (COG)
   REGISTRATION_FORM: 'prod_SAes8dAmfqLx1J',    // Registration Form
   COM: 'prod_SAeszcogAo7TBN',                  // Certificate of Matriculation
@@ -59,31 +58,6 @@ serve(async (req) => {
     
     // Prepare line items for Stripe checkout using product IDs
     const lineItems = [];
-    
-    // Add line items based on selected document types
-    if (formData.requestTypes.transcript.selected) {
-      const copies = formData.requestTypes.transcript.copies || 1;
-      lineItems.push({
-        price_data: {
-          currency: 'php',
-          product: PRODUCT_IDS.TRANSCRIPT,
-          unit_amount: 100 * 100, // ₱100 per copy in cents
-        },
-        quantity: copies,
-      });
-      
-      // Add CTC/Dry Seal as a separate line item if selected
-      if (formData.requestTypes.transcript.ctc) {
-        lineItems.push({
-          price_data: {
-            currency: 'php',
-            product: PRODUCT_IDS.CTC_DRY_SEAL,
-            unit_amount: 50 * 100, // ₱50 per CTC/Dry Seal in cents
-          },
-          quantity: copies, // One CTC/Dry Seal per copy
-        });
-      }
-    }
     
     if (formData.requestTypes.certificate.selected) {
       const copies = formData.requestTypes.certificate.copies || 1;

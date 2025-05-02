@@ -1,4 +1,5 @@
 
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,11 +27,6 @@ export const PaymentButton: React.FC<PaymentButtonProps> = ({
 
       // Get total amount from form data
       let totalAmount = 0;
-      
-      if (requestFormData.requestTypes.transcript.selected) {
-        const copies = requestFormData.requestTypes.transcript.copies || 1;
-        totalAmount += 100 * copies; // ₱100 per copy
-      }
       
       if (requestFormData.requestTypes.certificate.selected) {
         const copies = requestFormData.requestTypes.certificate.copies || 1;

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
@@ -21,7 +22,6 @@ interface RequestType {
 }
 
 type RequestTypes = {
-  transcript: RequestType;
   certificate: RequestType;
   registrationForm: RequestType;
   com: RequestType; 
@@ -54,7 +54,6 @@ const RequestForm: React.FC = () => {
     homeAddress: "",
     purpose: "",
     requestTypes: {
-      transcript: { selected: false, copies: 1, price: 100, ctc: false, details: "" },
       certificate: { selected: false, copies: 1, price: 100, ctc: false, details: "" },
       registrationForm: { selected: false, copies: 1, price: 120, ctc: false, details: "" },
       com: { selected: false, copies: 1, price: 120, ctc: false, details: "" },
@@ -295,7 +294,6 @@ const RequestForm: React.FC = () => {
   const requiredFieldStyle = "text-[#ea384c]";
 
   const requestTypeConfig = {
-    transcript: { price: 100, name: "Transcript of Records (TOR)", requiredDetails: false },
     certificate: { price: 100, name: "Certificate of Grades (COG)", requiredDetails: false },
     registrationForm: { price: 120, name: "Registration Form", requiredDetails: true },
     com: { price: 120, name: "Certificate of Matriculation (COM)", requiredDetails: false },
@@ -314,6 +312,60 @@ const RequestForm: React.FC = () => {
     ctc: false,
     details: ""
   }));
+
+  useEffect(() => {
+    const updateUserProfile = async () => {
+      if (!session) {
+        navigate('/');
+        return;
+      }
+
+      const { user } = session;
+      const name = user.user_metadata.name || user.user_metadata.full_name;
+      const email = user.email;
+      const avatarUrl = user.user_metadata.avatar_url;
+
+      setUserProfile({
+        name,
+        email,
+        avatarUrl
+      });
+      
+      if (name) {
+        setFormData(prev => ({
+          ...prev,
+          studentName: name
+        }));
+      }
+      
+      if (!contextRoles || contextRoles.length === 0) {
+        const { data: roles, error: rolesError } = await supabase.rpc(
+          'get_user_roles',
+          { user_id: user.id }
+        );
+        
+        if (rolesError) {
+          console.error("Error fetching roles:", rolesError);
+          toast.error(`Error fetching roles: ${rolesError.message}`);
+        } else {
+          console.log("User roles:", roles);
+          setUserRoles(roles || []);
+          
+          if (roles && (roles.includes('faculty') || roles.includes('admin'))) {
+            toast.error('Faculty and Admin users cannot create requests');
+            navigate('/dashboard');
+          }
+        }
+      } else {
+        if (contextRoles.includes('faculty') || contextRoles.includes('admin')) {
+          toast.error('Faculty and Admin users cannot create requests');
+          navigate('/dashboard');
+        }
+      }
+    };
+
+    updateUserProfile();
+  }, [session, navigate, contextRoles]);
 
   return (
     <div className="min-h-screen flex">
@@ -343,7 +395,6 @@ const RequestForm: React.FC = () => {
                 {Object.entries(formData.requestTypes).map(([key, value]) => (
                   value.selected && (
                     <li key={key}>
-                      {key === "transcript" && "Transcript of Records (TOR)"}
                       {key === "certificate" && "Certificate of Grades (COG)"}
                       {key === "registrationForm" && "Registration Form"}
                       {key === "com" && "Certificate of Matriculation (COM)"}
@@ -435,7 +486,6 @@ const RequestForm: React.FC = () => {
                         let showDetailsInput = false;
 
                         switch(key){
-                          case "transcript": label = "Transcript of Records (TOR)"; break;
                           case "certificate": label = "Certificate of Grades (COG)"; break;
                           case "registrationForm": label = "Registration Form"; break;
                           case "com": label = "Certificate of Matriculation (COM)"; break;
