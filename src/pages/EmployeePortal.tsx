@@ -46,6 +46,10 @@ type RequestWithTransaction = {
   certificate_selected: boolean;
   certification_selected: boolean;
   soa_selected: boolean;
+  registration_form_selected: boolean;
+  com_selected: boolean;
+  coe_selected: boolean;
+  coa_selected: boolean;
   others_selected: boolean;
   
   transaction?: {
@@ -215,6 +219,10 @@ const EmployeePortal: React.FC = () => {
     if (request.certificate_selected) types.push("Certificate of Grades");
     if (request.certification_selected) types.push("Certification");
     if (request.soa_selected) types.push("Statement of Account");
+    if (request.registration_form_selected) types.push("Registration Form");
+    if (request.com_selected) types.push("Certificate of Matriculation");
+    if (request.coe_selected) types.push("Certificate of Enrollment");
+    if (request.coa_selected) types.push("Certificate of No Availed Scholarship");
     if (request.others_selected) types.push("Others");
     
     return types.join(", ");
@@ -235,6 +243,10 @@ const EmployeePortal: React.FC = () => {
         if (request.certificate_selected) requestTypes.push("certificate");
         if (request.certification_selected) requestTypes.push("certification");
         if (request.soa_selected) requestTypes.push("statement");
+        if (request.registration_form_selected) requestTypes.push("registration_form");
+        if (request.com_selected) requestTypes.push("com");
+        if (request.coe_selected) requestTypes.push("coe");
+        if (request.coa_selected) requestTypes.push("coa");
         if (request.others_selected) requestTypes.push("others");
         
         const hasMatchingType = filters.requestType.some(type => requestTypes.includes(type));
@@ -494,6 +506,46 @@ const EmployeePortal: React.FC = () => {
                           />
                           <label htmlFor="type-statement" className="ml-2 text-sm cursor-pointer">
                             Statement of Account
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <Checkbox 
+                            id="type-registration_form" 
+                            checked={filters.requestType.includes('registration_form')} 
+                            onCheckedChange={() => toggleRequestTypeFilter('registration_form')}
+                          />
+                          <label htmlFor="type-registration_form" className="ml-2 text-sm cursor-pointer">
+                            Registration Form
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <Checkbox 
+                            id="type-com" 
+                            checked={filters.requestType.includes('com')} 
+                            onCheckedChange={() => toggleRequestTypeFilter('com')}
+                          />
+                          <label htmlFor="type-com" className="ml-2 text-sm cursor-pointer">
+                            Certificate of Matriculation
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <Checkbox 
+                            id="type-coe" 
+                            checked={filters.requestType.includes('coe')} 
+                            onCheckedChange={() => toggleRequestTypeFilter('coe')}
+                          />
+                          <label htmlFor="type-coe" className="ml-2 text-sm cursor-pointer">
+                            Certificate of Enrollment
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <Checkbox 
+                            id="type-coa" 
+                            checked={filters.requestType.includes('coa')} 
+                            onCheckedChange={() => toggleRequestTypeFilter('coa')}
+                          />
+                          <label htmlFor="type-coa" className="ml-2 text-sm cursor-pointer">
+                            Certificate of No Availed Scholarship
                           </label>
                         </div>
                         <div className="flex items-center">
@@ -768,6 +820,46 @@ const EmployeePortal: React.FC = () => {
                           />
                           <label htmlFor="type-statement" className="ml-2 text-sm cursor-pointer">
                             Statement of Account
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <Checkbox 
+                            id="type-registration_form" 
+                            checked={filters.requestType.includes('registration_form')} 
+                            onCheckedChange={() => toggleRequestTypeFilter('registration_form')}
+                          />
+                          <label htmlFor="type-registration_form" className="ml-2 text-sm cursor-pointer">
+                            Registration Form
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <Checkbox 
+                            id="type-com" 
+                            checked={filters.requestType.includes('com')} 
+                            onCheckedChange={() => toggleRequestTypeFilter('com')}
+                          />
+                          <label htmlFor="type-com" className="ml-2 text-sm cursor-pointer">
+                            Certificate of Matriculation
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <Checkbox 
+                            id="type-coe" 
+                            checked={filters.requestType.includes('coe')} 
+                            onCheckedChange={() => toggleRequestTypeFilter('coe')}
+                          />
+                          <label htmlFor="type-coe" className="ml-2 text-sm cursor-pointer">
+                            Certificate of Enrollment
+                          </label>
+                        </div>
+                        <div className="flex items-center">
+                          <Checkbox 
+                            id="type-coa" 
+                            checked={filters.requestType.includes('coa')} 
+                            onCheckedChange={() => toggleRequestTypeFilter('coa')}
+                          />
+                          <label htmlFor="type-coa" className="ml-2 text-sm cursor-pointer">
+                            Certificate of No Availed Scholarship
                           </label>
                         </div>
                         <div className="flex items-center">
