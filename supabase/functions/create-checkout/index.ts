@@ -59,7 +59,7 @@ serve(async (req) => {
     // Prepare line items for Stripe checkout using product IDs
     const lineItems = [];
     
-    if (formData.requestTypes.certificate.selected) {
+    if (formData.requestTypes.certificate && formData.requestTypes.certificate.selected) {
       const copies = formData.requestTypes.certificate.copies || 1;
       lineItems.push({
         price_data: {
@@ -82,7 +82,7 @@ serve(async (req) => {
       }
     }
     
-    if (formData.requestTypes.certification.selected) {
+    if (formData.requestTypes.certification && formData.requestTypes.certification.selected) {
       const copies = formData.requestTypes.certification.copies || 1;
       lineItems.push({
         price_data: {
@@ -105,7 +105,7 @@ serve(async (req) => {
       }
     }
     
-    if (formData.requestTypes.others.selected) {
+    if (formData.requestTypes.others && formData.requestTypes.others.selected) {
       const copies = formData.requestTypes.others.copies || 1;
       lineItems.push({
         price_data: {
@@ -128,7 +128,7 @@ serve(async (req) => {
       }
     }
     
-    if (formData.requestTypes.soa.selected) {
+    if (formData.requestTypes.soa && formData.requestTypes.soa.selected) {
       const copies = formData.requestTypes.soa.copies || 1;
       lineItems.push({
         price_data: {
@@ -151,7 +151,7 @@ serve(async (req) => {
       }
     }
     
-    if (formData.requestTypes.registrationForm.selected) {
+    if (formData.requestTypes.registrationForm && formData.requestTypes.registrationForm.selected) {
       const copies = formData.requestTypes.registrationForm.copies || 1;
       lineItems.push({
         price_data: {
@@ -174,7 +174,7 @@ serve(async (req) => {
       }
     }
     
-    if (formData.requestTypes.com.selected) {
+    if (formData.requestTypes.com && formData.requestTypes.com.selected) {
       const copies = formData.requestTypes.com.copies || 1;
       lineItems.push({
         price_data: {
@@ -197,7 +197,7 @@ serve(async (req) => {
       }
     }
     
-    if (formData.requestTypes.coe.selected) {
+    if (formData.requestTypes.coe && formData.requestTypes.coe.selected) {
       const copies = formData.requestTypes.coe.copies || 1;
       lineItems.push({
         price_data: {
@@ -220,7 +220,7 @@ serve(async (req) => {
       }
     }
     
-    if (formData.requestTypes.coa.selected) {
+    if (formData.requestTypes.coa && formData.requestTypes.coa.selected) {
       const copies = formData.requestTypes.coa.copies || 1;
       lineItems.push({
         price_data: {

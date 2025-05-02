@@ -27,49 +27,50 @@ export const PaymentButton: React.FC<PaymentButtonProps> = ({
       // Get total amount from form data
       let totalAmount = 0;
       
-      if (requestFormData.requestTypes.certificate.selected) {
+      if (requestFormData.requestTypes.certificate && requestFormData.requestTypes.certificate.selected) {
         const copies = requestFormData.requestTypes.certificate.copies || 1;
         totalAmount += 100 * copies; // ₱100 per copy
       }
       
-      if (requestFormData.requestTypes.certification.selected) {
+      if (requestFormData.requestTypes.certification && requestFormData.requestTypes.certification.selected) {
         const copies = requestFormData.requestTypes.certification.copies || 1;
         totalAmount += 100 * copies; // ₱100 per copy
       }
       
-      if (requestFormData.requestTypes.others.selected) {
+      if (requestFormData.requestTypes.others && requestFormData.requestTypes.others.selected) {
         const copies = requestFormData.requestTypes.others.copies || 1;
         totalAmount += 100 * copies; // ₱100 per copy
       }
       
-      if (requestFormData.requestTypes.soa.selected) {
+      if (requestFormData.requestTypes.soa && requestFormData.requestTypes.soa.selected) {
         const copies = requestFormData.requestTypes.soa.copies || 1;
         totalAmount += 150 * copies; // ₱150 per copy
       }
       
-      if (requestFormData.requestTypes.registrationForm.selected) {
+      if (requestFormData.requestTypes.registrationForm && requestFormData.requestTypes.registrationForm.selected) {
         const copies = requestFormData.requestTypes.registrationForm.copies || 1;
         totalAmount += 120 * copies; // ₱120 per copy
       }
       
-      if (requestFormData.requestTypes.com.selected) {
+      if (requestFormData.requestTypes.com && requestFormData.requestTypes.com.selected) {
         const copies = requestFormData.requestTypes.com.copies || 1;
         totalAmount += 120 * copies; // ₱120 per copy
       }
       
-      if (requestFormData.requestTypes.coe.selected) {
+      if (requestFormData.requestTypes.coe && requestFormData.requestTypes.coe.selected) {
         const copies = requestFormData.requestTypes.coe.copies || 1;
         totalAmount += 120 * copies; // ₱120 per copy
       }
       
-      if (requestFormData.requestTypes.coa.selected) {
+      if (requestFormData.requestTypes.coa && requestFormData.requestTypes.coa.selected) {
         const copies = requestFormData.requestTypes.coa.copies || 1;
         totalAmount += 120 * copies; // ₱120 per copy
       }
 
       // Add CTC/Dry Seal fees if selected
       Object.keys(requestFormData.requestTypes).forEach(key => {
-        if (requestFormData.requestTypes[key].selected && 
+        if (requestFormData.requestTypes[key] && 
+            requestFormData.requestTypes[key].selected && 
             requestFormData.requestTypes[key].ctc) {
           const copies = requestFormData.requestTypes[key].copies || 1;
           totalAmount += 50 * copies; // ₱50 per CTC/Dry Seal
@@ -82,7 +83,7 @@ export const PaymentButton: React.FC<PaymentButtonProps> = ({
         studentNumber: requestFormData.studentNumber,
         purpose: requestFormData.purpose,
         requestTypes: Object.keys(requestFormData.requestTypes)
-          .filter(key => requestFormData.requestTypes[key].selected)
+          .filter(key => requestFormData.requestTypes[key] && requestFormData.requestTypes[key].selected)
           .map(key => ({
             type: key,
             copies: requestFormData.requestTypes[key].copies,

@@ -102,10 +102,6 @@ serve(async (req) => {
     const requestTypes = [];
     let totalCopies = 0;
     
-    if (requestData.transcript_selected) {
-      requestTypes.push("Transcript of Records");
-      totalCopies += requestData.transcript_copies || 0;
-    }
     if (requestData.certificate_selected) {
       requestTypes.push("Certificate of Grades");
       totalCopies += requestData.certificate_copies || 0;

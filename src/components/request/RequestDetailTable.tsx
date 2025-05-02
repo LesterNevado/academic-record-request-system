@@ -53,14 +53,6 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
         </TableRow>
       </TableHeader>
       <TableBody>
-        {request.transcript_selected && (
-          <TableRow>
-            <TableCell className="font-medium">Transcript of Records (TOR)</TableCell>
-            <TableCell>{request.transcript_copies || 1}</TableCell>
-            <TableCell className="text-center">{request.transcript_ctc ? "Yes" : "No"}</TableCell>
-            <TableCell>-</TableCell>
-          </TableRow>
-        )}
         {request.certificate_selected && (
           <TableRow>
             <TableCell className="font-medium">Certificate of Grades (COG)</TableCell>

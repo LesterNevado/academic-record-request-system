@@ -63,7 +63,7 @@ export const PaymentStatus: React.FC = () => {
             studentName: formData.studentName,
             amount: paymentAmount,
             requestTypes: Object.keys(formData.requestTypes)
-              .filter(key => formData.requestTypes[key].selected)
+              .filter(key => formData.requestTypes[key] && formData.requestTypes[key].selected)
               .map(key => key)
           });
           
@@ -119,23 +119,19 @@ export const PaymentStatus: React.FC = () => {
             status: 'awaiting_pickup', // Set status directly to 'awaiting_pickup'
             
             // Document type selections and copies
-            transcript_selected: formData.requestTypes.transcript.selected,
-            transcript_copies: formData.requestTypes.transcript.selected ? formData.requestTypes.transcript.copies : null,
-            transcript_ctc: formData.requestTypes.transcript.selected ? formData.requestTypes.transcript.ctc : false,
+            certificate_selected: formData.requestTypes.certificate && formData.requestTypes.certificate.selected ? true : false,
+            certificate_copies: formData.requestTypes.certificate && formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.copies : null,
+            certificate_ctc: formData.requestTypes.certificate && formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.ctc : false,
             
-            certificate_selected: formData.requestTypes.certificate.selected,
-            certificate_copies: formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.copies : null,
-            certificate_ctc: formData.requestTypes.certificate.selected ? formData.requestTypes.certificate.ctc : false,
+            certification_selected: formData.requestTypes.certification && formData.requestTypes.certification.selected ? true : false,
+            certification_copies: formData.requestTypes.certification && formData.requestTypes.certification.selected ? formData.requestTypes.certification.copies : null,
+            certification_ctc: formData.requestTypes.certification && formData.requestTypes.certification.selected ? formData.requestTypes.certification.ctc : false,
+            certification_details: formData.requestTypes.certification && formData.requestTypes.certification.selected ? formData.requestTypes.certification.details : null,
             
-            certification_selected: formData.requestTypes.certification.selected,
-            certification_copies: formData.requestTypes.certification.selected ? formData.requestTypes.certification.copies : null,
-            certification_ctc: formData.requestTypes.certification.selected ? formData.requestTypes.certification.ctc : false,
-            certification_details: formData.requestTypes.certification.selected ? formData.requestTypes.certification.details : null,
-            
-            others_selected: formData.requestTypes.others.selected,
-            others_copies: formData.requestTypes.others.selected ? formData.requestTypes.others.copies : null,
-            others_ctc: formData.requestTypes.others.selected ? formData.requestTypes.others.ctc : false,
-            others_details: formData.requestTypes.others.selected ? formData.requestTypes.others.details : null,
+            others_selected: formData.requestTypes.others && formData.requestTypes.others.selected ? true : false,
+            others_copies: formData.requestTypes.others && formData.requestTypes.others.selected ? formData.requestTypes.others.copies : null,
+            others_ctc: formData.requestTypes.others && formData.requestTypes.others.selected ? formData.requestTypes.others.ctc : false,
+            others_details: formData.requestTypes.others && formData.requestTypes.others.selected ? formData.requestTypes.others.details : null,
             
             soa_selected: formData.requestTypes.soa && formData.requestTypes.soa.selected ? true : false,
             soa_copies: formData.requestTypes.soa && formData.requestTypes.soa.selected ? formData.requestTypes.soa.copies : null,
@@ -160,7 +156,12 @@ export const PaymentStatus: React.FC = () => {
             
             pickup_date: null,
             processed_by: null,
-            notes: null
+            notes: null,
+            
+            // Remove transcript fields
+            transcript_selected: false,
+            transcript_copies: null,
+            transcript_ctc: false
           };
           
           // Submit request to Supabase
