@@ -1,3 +1,4 @@
+
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { SessionContext } from "@/App";
 import { supabase } from "@/integrations/supabase/client";
@@ -78,7 +79,7 @@ const Dashboard: React.FC = () => {
               supabase
                 .from('requests')
                 .select('*', { count: 'exact', head: true })
-                .eq('status', 'pending'),
+                .in('status', ['pending', 'awaiting_pickup']),
               supabase
                 .from('requests')
                 .select('*', { count: 'exact', head: true })
