@@ -12,9 +12,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tables } from "@/integrations/supabase/types";
 import { format } from "date-fns";
-import { CheckCircle2, XCircle } from "lucide-react";
-
-type Request = Tables<"requests">;
+import CTCIndicator from "@/components/ui/CTCIndicator";
+import { Request } from "@/utils/requestUtils";
 
 interface RequestDetailTableProps {
   request: Request;
@@ -41,18 +40,6 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
     const date = new Date(dateString);
     return format(date, 'MMM d, yyyy');
   };
-
-  const CTCIndicator = ({ hasCTC }: { hasCTC: boolean }) => (
-    hasCTC ? 
-      <div className="flex items-center justify-center">
-        <CheckCircle2 className="w-5 h-5 text-green-600 mr-1" />
-        <span className="text-green-600 font-medium">Yes</span>
-      </div> : 
-      <div className="flex items-center justify-center">
-        <XCircle className="w-5 h-5 text-red-500 mr-1" />
-        <span className="text-red-500">No</span>
-      </div>
-  );
 
   return (
     <Table>
