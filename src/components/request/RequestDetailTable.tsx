@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tables } from "@/integrations/supabase/types";
 import { format } from "date-fns";
+import { CheckCircle2, XCircle } from "lucide-react";
 
 type Request = Tables<"requests">;
 
@@ -41,6 +42,18 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
     return format(date, 'MMM d, yyyy');
   };
 
+  const CTCIndicator = ({ hasCTC }: { hasCTC: boolean }) => (
+    hasCTC ? 
+      <div className="flex items-center justify-center">
+        <CheckCircle2 className="w-5 h-5 text-green-600 mr-1" />
+        <span className="text-green-600 font-medium">Yes</span>
+      </div> : 
+      <div className="flex items-center justify-center">
+        <XCircle className="w-5 h-5 text-red-500 mr-1" />
+        <span className="text-red-500">No</span>
+      </div>
+  );
+
   return (
     <Table>
       <TableCaption>Request Details</TableCaption>
@@ -57,7 +70,9 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
           <TableRow>
             <TableCell className="font-medium">Certificate of Grades (COG)</TableCell>
             <TableCell>{request.certificate_copies || 1}</TableCell>
-            <TableCell className="text-center">{request.certificate_ctc ? "Yes" : "No"}</TableCell>
+            <TableCell className="text-center">
+              <CTCIndicator hasCTC={request.certificate_ctc} />
+            </TableCell>
             <TableCell>-</TableCell>
           </TableRow>
         )}
@@ -65,7 +80,9 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
           <TableRow>
             <TableCell className="font-medium">Registration Form</TableCell>
             <TableCell>{request.registration_form_copies || 1}</TableCell>
-            <TableCell className="text-center">{request.registration_form_ctc ? "Yes" : "No"}</TableCell>
+            <TableCell className="text-center">
+              <CTCIndicator hasCTC={request.registration_form_ctc} />
+            </TableCell>
             <TableCell>{request.registration_form_details || "-"}</TableCell>
           </TableRow>
         )}
@@ -73,7 +90,9 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
           <TableRow>
             <TableCell className="font-medium">Certificate of Matriculation (COM)</TableCell>
             <TableCell>{request.com_copies || 1}</TableCell>
-            <TableCell className="text-center">{request.com_ctc ? "Yes" : "No"}</TableCell>
+            <TableCell className="text-center">
+              <CTCIndicator hasCTC={request.com_ctc} />
+            </TableCell>
             <TableCell>-</TableCell>
           </TableRow>
         )}
@@ -81,7 +100,9 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
           <TableRow>
             <TableCell className="font-medium">Certificate of Enrollment (COE)</TableCell>
             <TableCell>{request.coe_copies || 1}</TableCell>
-            <TableCell className="text-center">{request.coe_ctc ? "Yes" : "No"}</TableCell>
+            <TableCell className="text-center">
+              <CTCIndicator hasCTC={request.coe_ctc} />
+            </TableCell>
             <TableCell>-</TableCell>
           </TableRow>
         )}
@@ -89,7 +110,9 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
           <TableRow>
             <TableCell className="font-medium">Certificate of No Availed Scholarship</TableCell>
             <TableCell>{request.coa_copies || 1}</TableCell>
-            <TableCell className="text-center">{request.coa_ctc ? "Yes" : "No"}</TableCell>
+            <TableCell className="text-center">
+              <CTCIndicator hasCTC={request.coa_ctc} />
+            </TableCell>
             <TableCell>-</TableCell>
           </TableRow>
         )}
@@ -97,7 +120,9 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
           <TableRow>
             <TableCell className="font-medium">Statement of Account (SOA)</TableCell>
             <TableCell>{request.soa_copies || 1}</TableCell>
-            <TableCell className="text-center">{request.soa_ctc ? "Yes" : "No"}</TableCell>
+            <TableCell className="text-center">
+              <CTCIndicator hasCTC={request.soa_ctc} />
+            </TableCell>
             <TableCell>-</TableCell>
           </TableRow>
         )}
@@ -105,7 +130,9 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
           <TableRow>
             <TableCell className="font-medium">Certification</TableCell>
             <TableCell>{request.certification_copies || 1}</TableCell>
-            <TableCell className="text-center">{request.certification_ctc ? "Yes" : "No"}</TableCell>
+            <TableCell className="text-center">
+              <CTCIndicator hasCTC={request.certification_ctc} />
+            </TableCell>
             <TableCell>{request.certification_details || "-"}</TableCell>
           </TableRow>
         )}
@@ -113,7 +140,9 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
           <TableRow>
             <TableCell className="font-medium">Others</TableCell>
             <TableCell>{request.others_copies || 1}</TableCell>
-            <TableCell className="text-center">{request.others_ctc ? "Yes" : "No"}</TableCell>
+            <TableCell className="text-center">
+              <CTCIndicator hasCTC={request.others_ctc} />
+            </TableCell>
             <TableCell>{request.others_details || "-"}</TableCell>
           </TableRow>
         )}
