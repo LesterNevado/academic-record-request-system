@@ -1,69 +1,118 @@
-# Welcome to your Lovable project
+# NEU Academic Record Request System (ARRS)
 
-## Project info
+## Overview
+URL: https://academic-record-request-system.lovable.app/
 
-**URL**: https://lovable.dev/projects/b8ed8565-a8b6-4f39-a21b-8e96f5c3c80a
+The New Era University Academic Record Request System (NEU ARRS) is a comprehensive web application designed to streamline the process of requesting, managing, and processing academic documents for students, faculty, and administrators. This system automates the traditionally manual process of requesting official academic records such as transcripts, certificates, and other essential documents.
 
-## How can I edit this code?
+## Key Features
+### User Roles and Permissions
+- **Student Portal:** Request academic documents, track request status, and receive notifications
+- **Employee/Faculty Portal:** Process student requests, schedule document pickups, and manage academic record requests
+- **Admin Portal:** User role management, system oversight, and access to detailed analytics
+  
+### Document Request Types
+The system supports various academic document requests:
+- Certificate of Grades (COG)
+- Registration Form
+- Certificate of Matriculation (COM)
+- Certificate of Enrollment (COE)
+- Certificate of No Availed Scholarship (COA)
+- Statement of Account (SOA)
+- Certifications with custom details
+- Other document types with specifications
+  
+### Payment Integration
+- Secure payment processing via Stripe
+- Support for different document pricing based on type
+- Additional fees for CTC/Dry Seal services
+- Automatic payment confirmation and receipt generation
 
-There are several ways of editing your application.
+### Request Processing Workflow
+1. Student submits document request with required details
+2. Payment processing through secure Stripe checkout
+3. Request enters "Awaiting Pickup" status after successful payment
+4. Faculty/Employees review and process requests
+5. Document pickup date is scheduled and notes added
+6. Automated email notifications sent to students
+7. Request status updated to "Approved" with pickup details
 
-**Use Lovable**
+### Activity Tracking & Logs
+- Comprehensive activity logging for faculty/employee actions
+- Detailed logs for login, sign out, and document processing activities
+- Searchable and filterable activity history
+- Related user tracking for supervisory oversight
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/b8ed8565-a8b6-4f39-a21b-8e96f5c3c80a) and start prompting.
+### Responsive Design
+- Mobile-friendly interface optimized for all devices
+- Intuitive dashboard for each user role
+- Clean, modern UI built with Tailwind CSS and shadcn-ui components
 
-Changes made via Lovable will be committed automatically to this repo.
+## Technology Stack
+- Frontend: React, TypeScript, Tailwind CSS, shadcn-ui
+- State Management: React Context API, TanStack Query
+- Backend: Supabase (Database, Authentication, Storage)
+- Payments: Stripe Integration
+- Email Notifications: Custom email service via Supabase Edge Functions
+- Authentication: Google OAuth through Supabase Auth
+- Deployment: Lovable
 
-**Use your preferred IDE**
+## System Requirements
+- Modern web browser (Chrome, Firefox, Safari, Edge)
+- Internet connection
+- Institutional email address for authentication (@neu.edu.ph)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Installation & Setup
+For developers who want to extend or modify the system:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```
+# Clone the repository
+git clone <repository-url>
 
-Follow these steps:
+# Navigate to project directory
+cd neu-academic-records-system
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Install dependencies
+npm install
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Usage
+### Student Flow
+1. Login with institutional email
+2. Navigate to "New Request" in the dashboard
+3. Fill in required document details and student information
+4. Select document type(s) and specify quantity
+5. Complete payment through Stripe
+6. Monitor request status in "My Requests" page
+7. Receive email notification when documents are ready for pickup
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Employee/Faculty Flow
+1. Login with institutional email
+2. Access the Employee Portal dashboard
+3. View pending requests in the "Yet to be Approved" tab
+4. Review request details and process accordingly
+5. Schedule pickup dates and add processing notes
+6. Approve requests, triggering email notification to students
+7. Track activities in the logs section
 
-**Use GitHub Codespaces**
+### Admin Flow
+1. Login with administrative credentials
+2. Access the Admin Portal
+3. Manage user roles and permissions
+4. View system-wide request statistics
+5. Monitor employee activities through comprehensive logs
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Security Features
+- Role-based access control
+- Institutional email authentication
+- Secure payment processing
+- Activity logging for audit trails
 
-## What technologies are used for this project?
+## Support
+For support inquiries, please contact the NEU-CICS department or system administrators through the institutional email.
 
-This project is built with .
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/b8ed8565-a8b6-4f39-a21b-8e96f5c3c80a) and click on Share -> Publish.
-
-## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+## License
+© New Era University. All rights reserved.
