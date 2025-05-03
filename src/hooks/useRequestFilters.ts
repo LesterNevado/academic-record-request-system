@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { DocumentType, Request, SortOption, matchesDocumentTypeFilter } from "@/utils/requestUtils";
+import { DocumentType, Request, SortOption, matchesDocumentTypeFilter, getRequestType } from "@/utils/requestUtils";
 
 interface DateRange {
   from: string | null;
@@ -50,10 +50,8 @@ export const useRequestFilters = ({ requests }: UseRequestFiltersProps) => {
     if (!Array.isArray(requests)) return [];
     
     const filtered = requests.filter(request => {
-      // First check if request type exists before trying to match
-      const requestType = typeof request.getRequestType === 'function' 
-        ? request.getRequestType() 
-        : '';
+      // Use the imported getRequestType function instead of trying to call it as a method
+      const requestType = getRequestType(request);
         
       const matchesSearch = 
         request.student_name.toLowerCase().includes(searchTerm.toLowerCase()) || 

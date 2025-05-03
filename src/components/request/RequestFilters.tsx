@@ -236,7 +236,13 @@ export const RequestFilters: React.FC<RequestFiltersProps> = ({
                   <Input
                     type="date"
                     value={filters.dateRange.from || ''}
-                    onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value || null }))}
+                    onChange={(e) => {
+                      const newFrom = e.target.value || null;
+                      setDateRange({
+                        from: newFrom,
+                        to: filters.dateRange.to
+                      });
+                    }}
                   />
                 </div>
                 <div>
@@ -244,7 +250,13 @@ export const RequestFilters: React.FC<RequestFiltersProps> = ({
                   <Input
                     type="date"
                     value={filters.dateRange.to || ''}
-                    onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value || null }))}
+                    onChange={(e) => {
+                      const newTo = e.target.value || null;
+                      setDateRange({
+                        from: filters.dateRange.from,
+                        to: newTo
+                      });
+                    }}
                   />
                 </div>
               </div>
