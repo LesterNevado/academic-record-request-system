@@ -71,7 +71,7 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
             <TableCell className="font-medium">Certificate of Grades (COG)</TableCell>
             <TableCell>{request.certificate_copies || 1}</TableCell>
             <TableCell className="text-center">
-              <CTCIndicator hasCTC={request.certificate_ctc} />
+              <CTCIndicator hasCTC={Boolean(request.certificate_ctc)} />
             </TableCell>
             <TableCell>-</TableCell>
           </TableRow>
@@ -81,7 +81,7 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
             <TableCell className="font-medium">Registration Form</TableCell>
             <TableCell>{request.registration_form_copies || 1}</TableCell>
             <TableCell className="text-center">
-              <CTCIndicator hasCTC={request.registration_form_ctc} />
+              <CTCIndicator hasCTC={Boolean(request.registration_form_ctc)} />
             </TableCell>
             <TableCell>{request.registration_form_details || "-"}</TableCell>
           </TableRow>
@@ -91,7 +91,7 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
             <TableCell className="font-medium">Certificate of Matriculation (COM)</TableCell>
             <TableCell>{request.com_copies || 1}</TableCell>
             <TableCell className="text-center">
-              <CTCIndicator hasCTC={request.com_ctc} />
+              <CTCIndicator hasCTC={Boolean(request.com_ctc)} />
             </TableCell>
             <TableCell>-</TableCell>
           </TableRow>
@@ -101,7 +101,7 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
             <TableCell className="font-medium">Certificate of Enrollment (COE)</TableCell>
             <TableCell>{request.coe_copies || 1}</TableCell>
             <TableCell className="text-center">
-              <CTCIndicator hasCTC={request.coe_ctc} />
+              <CTCIndicator hasCTC={Boolean(request.coe_ctc)} />
             </TableCell>
             <TableCell>-</TableCell>
           </TableRow>
@@ -111,7 +111,7 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
             <TableCell className="font-medium">Certificate of No Availed Scholarship</TableCell>
             <TableCell>{request.coa_copies || 1}</TableCell>
             <TableCell className="text-center">
-              <CTCIndicator hasCTC={request.coa_ctc} />
+              <CTCIndicator hasCTC={Boolean(request.coa_ctc)} />
             </TableCell>
             <TableCell>-</TableCell>
           </TableRow>
@@ -121,7 +121,7 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
             <TableCell className="font-medium">Statement of Account (SOA)</TableCell>
             <TableCell>{request.soa_copies || 1}</TableCell>
             <TableCell className="text-center">
-              <CTCIndicator hasCTC={request.soa_ctc} />
+              <CTCIndicator hasCTC={Boolean(request.soa_ctc)} />
             </TableCell>
             <TableCell>-</TableCell>
           </TableRow>
@@ -131,7 +131,7 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
             <TableCell className="font-medium">Certification</TableCell>
             <TableCell>{request.certification_copies || 1}</TableCell>
             <TableCell className="text-center">
-              <CTCIndicator hasCTC={request.certification_ctc} />
+              <CTCIndicator hasCTC={Boolean(request.certification_ctc)} />
             </TableCell>
             <TableCell>{request.certification_details || "-"}</TableCell>
           </TableRow>
@@ -141,7 +141,7 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
             <TableCell className="font-medium">Others</TableCell>
             <TableCell>{request.others_copies || 1}</TableCell>
             <TableCell className="text-center">
-              <CTCIndicator hasCTC={request.others_ctc} />
+              <CTCIndicator hasCTC={Boolean(request.others_ctc)} />
             </TableCell>
             <TableCell>{request.others_details || "-"}</TableCell>
           </TableRow>
