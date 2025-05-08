@@ -93,7 +93,7 @@ export const PaymentStatus: React.FC = () => {
             console.log("Transaction already exists with linked request:", existingTransaction);
             // Transaction already exists, just set success state and show message
             setSuccess(true);
-            toast.success("Payment successful! Your request is waiting for faculty approval.");
+            toast.success("Payment successful! Your request is waiting for employee approval.");
             // Clear stored form data
             localStorage.removeItem('pendingRequestData');
             localStorage.removeItem('pendingPaymentAmount');
@@ -262,7 +262,7 @@ export const PaymentStatus: React.FC = () => {
           <CheckCircle className="h-5 w-5 text-green-600" />
           <AlertTitle>Payment Successful</AlertTitle>
           <AlertDescription>
-            Your payment has been processed successfully. Your academic records request will be processed by a faculty member who will schedule a pickup date.
+            Your payment has been processed successfully. Your academic records request will be processed by an employee who will schedule a pickup date.
           </AlertDescription>
         </Alert>
       ) : (
