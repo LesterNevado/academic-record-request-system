@@ -40,17 +40,23 @@ export function Sidebar({ userProfile, userRoles, onSignOut, collapsed, setColla
 
   const handleSignOut = async () => {
     try {
+      // Get session from localStorage or Supabase if available
+      const session = await supabase.auth.getSession();
+      const user = session?.data?.session?.user;
+      if (user?.id) {
+        await supabase.rpc('log_activity', {
+          p_user_id: user.id,
+          p_activity_type: 'sign_out',
+          p_details: `User signed out - ${user.email}`,
+          p_related_user_id: null,
+          p_related_id: null,
+        });
+      }
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      
-      // Clear any local storage or state
       localStorage.clear();
       sessionStorage.clear();
-      
-      // Show success message
       toast.success('Successfully signed out');
-      
-      // Navigate to root path (login page)
       navigate('/');
     } catch (error) {
       console.error('Error signing out:', error);

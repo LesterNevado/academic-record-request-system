@@ -44,6 +44,7 @@ type ActivityLog = {
   created_at: string;
   related_user_name?: string | null;
   related_user_avatar?: string | null;
+  user_role?: string | null;
 };
 
 // Add this helper for colored border
@@ -89,6 +90,7 @@ const EmployeeLogs: React.FC = () => {
     key: 'created_at',
     direction: 'desc'
   });
+  const [roleFilter, setRoleFilter] = useState<string | null>(null);
 
   useEffect(() => {
     if (!session) {
@@ -168,6 +170,7 @@ const EmployeeLogs: React.FC = () => {
         let relatedUserAvatar = null;
         let relatedUserName = null;
         let userName = null;
+        let userRole = null;
         
         // Get the user who performed the action
         if (log.user_id) {
@@ -179,6 +182,15 @@ const EmployeeLogs: React.FC = () => {
             
           if (userProfileData) {
             userName = userProfileData.full_name;
+          }
+          // Fetch user roles for login/sign_out logs
+          if (['login', 'sign_out'].includes(log.activity_type)) {
+            const { data: userRolesData } = await supabase.rpc('get_user_roles', { user_id: log.user_id });
+            if (userRolesData && Array.isArray(userRolesData)) {
+              if (userRolesData.includes('admin')) userRole = 'Admin';
+              else if (userRolesData.includes('faculty')) userRole = 'Employee';
+              else userRole = 'Student';
+            }
           }
         }
         
@@ -206,7 +218,8 @@ const EmployeeLogs: React.FC = () => {
           ...log,
           details,
           related_user_avatar: relatedUserAvatar,
-          related_user_name: relatedUserName
+          related_user_name: relatedUserName,
+          user_role: userRole,
         });
       }
       
@@ -230,6 +243,10 @@ const EmployeeLogs: React.FC = () => {
       result = result.filter(log => log.activity_type === activityFilter);
     }
     
+    if (roleFilter) {
+      result = result.filter(log => log.user_role === roleFilter);
+    }
+    
     if (searchTerm) {
       const lowercaseSearch = searchTerm.toLowerCase();
       result = result.filter(log => 
@@ -249,7 +266,7 @@ const EmployeeLogs: React.FC = () => {
     });
     
     setFilteredLogs(result);
-  }, [logs, searchTerm, activityFilter, sortConfig]);
+  }, [logs, searchTerm, activityFilter, sortConfig, roleFilter]);
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
@@ -311,6 +328,15 @@ const EmployeeLogs: React.FC = () => {
 
   const handleSignOut = async () => {
     try {
+      if (session?.user?.id) {
+        await supabase.rpc('log_activity', {
+          p_user_id: session.user.id,
+          p_activity_type: 'sign_out',
+          p_details: `User signed out - ${session.user.email}`,
+          p_related_user_id: null,
+          p_related_id: null,
+        });
+      }
       await supabase.auth.signOut();
       navigate('/');
     } catch (error) {
@@ -383,6 +409,36 @@ const EmployeeLogs: React.FC = () => {
                             <div className="flex items-center space-x-2">
                               <RadioGroupItem value="schedule_pickup" id="activity-schedule" />
                               <Label htmlFor="activity-schedule" className="text-sm">Schedule Pickup</Label>
+                            </div>
+                          </div>
+                        </RadioGroup>
+                      </div>
+                      <div>
+                        <h4 className="font-medium mb-2 mt-4">User Role</h4>
+                        <div className="border-b border-gray-200 mb-2" />
+                        <RadioGroup
+                          value={roleFilter || ""}
+                          onValueChange={(value) => {
+                            setRoleFilter(value || null);
+                            setFilterPopoverOpen(false);
+                          }}
+                        >
+                          <div className="space-y-4">
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="" id="role-all" />
+                              <Label htmlFor="role-all" className="text-sm">All roles</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="Student" id="role-student" />
+                              <Label htmlFor="role-student" className="text-sm">Student</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="Employee" id="role-employee" />
+                              <Label htmlFor="role-employee" className="text-sm">Employee</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="Admin" id="role-admin" />
+                              <Label htmlFor="role-admin" className="text-sm">Admin</Label>
                             </div>
                           </div>
                         </RadioGroup>
@@ -484,7 +540,7 @@ const EmployeeLogs: React.FC = () => {
                             <span className="text-sm font-medium text-blue-900">{log.related_user_name || "User"}</span>
                           </div>
                         ) : (
-                          <span className="text-gray-400 text-sm">None</span>
+                          <span className="text-gray-400 text-sm">{['login', 'sign_out'].includes(log.activity_type) ? (log.user_role || 'User') : 'None'}</span>
                         )}
                       </TableCell>
                     </TableRow>

@@ -99,21 +99,13 @@ const Dashboard: React.FC = () => {
   }, [navigate]);
 
   useEffect(() => {
-    async function logFacultyLoginActivity() {
-      if (
-        session?.user &&
-        Array.isArray(userRoles) &&
-        userRoles.includes('faculty')
-      ) {
-        const loggedKey = `faculty_login_logged_${session.user.id}`;
-        // Use sessionStorage instead of localStorage: clears on tab close/new session.
+    async function logLoginActivity() {
+      if (session?.user) {
+        const loggedKey = `login_logged_${session.user.id}`;
         const alreadyLogged = sessionStorage.getItem(loggedKey);
         if (!alreadyLogged && prevUserIdRef.current !== session.user.id) {
           prevUserIdRef.current = session.user.id;
           try {
-            console.log(
-              '[Dashboard] User is faculty, attempting to log login activity ONCE after login...'
-            );
             const { data: logResult, error: logError } = await supabase.rpc(
               'log_activity',
               {
@@ -124,41 +116,17 @@ const Dashboard: React.FC = () => {
                 p_related_id: null,
               }
             );
-            if (logError) {
-              console.error(
-                '[Dashboard] Error logging login activity for faculty:',
-                logError
-              );
-              toast.error('Failed to log faculty login activity.');
-            } else {
-              console.log(
-                '[Dashboard] Successfully logged login activity for faculty user.',
-                logResult
-              );
-              sessionStorage.setItem(loggedKey, 'true'); // mark as logged in this browser tab session
+            if (!logError) {
+              sessionStorage.setItem(loggedKey, 'true');
             }
           } catch (err) {
-            console.error(
-              '[Dashboard] Exception during logging login activity:',
-              err
-            );
-          }
-        } else {
-          if (alreadyLogged) {
-            console.log(
-              '[Dashboard] Faculty login activity already logged in this session, skipping.'
-            );
-          } else if (prevUserIdRef.current === session.user.id) {
-            console.log(
-              '[Dashboard] Faculty login activity already logged for this user id, skipping.'
-            );
+            // Optionally handle error
           }
         }
       }
     }
-
-    logFacultyLoginActivity();
-  }, [session, userRoles]);
+    logLoginActivity();
+  }, [session]);
 
   const handleSignOut = async () => {
     try {
