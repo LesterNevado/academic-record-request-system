@@ -540,7 +540,21 @@ const EmployeeLogs: React.FC = () => {
                             <span className="text-sm font-medium text-blue-900">{log.related_user_name || "User"}</span>
                           </div>
                         ) : (
-                          <span className="text-gray-400 text-sm">{['login', 'sign_out'].includes(log.activity_type) ? (log.user_role || 'User') : 'None'}</span>
+                          ['login', 'sign_out'].includes(log.activity_type) ? (
+                            <span className="flex items-center gap-2">
+                              {log.user_role === 'Admin' && (
+                                <span className="rounded px-2 py-0.5 font-semibold text-xs text-white bg-green-500">Admin</span>
+                              )}
+                              {log.user_role === 'Employee' && (
+                                <span className="rounded px-2 py-0.5 font-semibold text-xs text-white bg-yellow-500">Employee</span>
+                              )}
+                              {log.user_role === 'Student' && (
+                                <span className="rounded px-2 py-0.5 font-semibold text-xs text-white bg-blue-500">Student</span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-sm">None</span>
+                          )
                         )}
                       </TableCell>
                     </TableRow>
