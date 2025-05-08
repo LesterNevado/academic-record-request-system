@@ -392,7 +392,7 @@ const EmployeePortal: React.FC = () => {
 
     try {
       // Format the date in YYYY-MM-DD format without timezone conversion
-      const formattedDate = pickupDate.toISOString().split('T')[0];
+      const formattedDate = `${pickupDate.getFullYear()}-${String(pickupDate.getMonth() + 1).padStart(2, '0')}-${String(pickupDate.getDate()).padStart(2, '0')}`;
       
       const { error } = await supabase
         .from('requests')
