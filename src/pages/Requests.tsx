@@ -165,8 +165,8 @@ const RequestCard: React.FC<{ request: Request }> = ({ request }) => {
             ? 'bg-red-200 text-red-900'
             : 'bg-blue-200 text-blue-900'
         }`}>
-          {request.status === 'approved' && 'Approved'}
-          {request.status === 'awaiting_pickup' && 'Pending Pickup'}
+          {request.status === 'approved' && 'Ready for Pickup'}
+          {request.status === 'awaiting_pickup' && 'Pending'}
           {request.status === 'rejected' && 'Rejected'}
           {request.status === 'pending' && 'Pending'}
         </span>
