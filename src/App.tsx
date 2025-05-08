@@ -1,9 +1,8 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useState, createContext, useEffect } from "react";
 import { Session } from "@supabase/supabase-js";
 import Index from "./pages/Index";
@@ -17,6 +16,7 @@ import AdminPage from "./pages/AdminPage";
 import { supabase } from "./integrations/supabase/client";
 import { PaymentStatus } from "./components/payment/PaymentStatus";
 import { toast } from "sonner";
+import { Sidebar } from "@/components/layout/Sidebar";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -139,31 +139,102 @@ const ProtectedRoute = ({ children, requiredRole, restrictedRoles }: ProtectedRo
   return <>{children}</>;
 };
 
+const AppWithRouter = ({
+  session, userRoles, userProfile, loading, sidebarCollapsed, setSidebarCollapsed
+}: {
+  session: Session | null,
+  userRoles: any[],
+  userProfile: any,
+  loading: boolean,
+  sidebarCollapsed: boolean,
+  setSidebarCollapsed: React.Dispatch<React.SetStateAction<boolean>>
+}) => {
+  const location = useLocation();
+  return (
+    <>
+      {location.pathname !== "/" && (
+        <Sidebar
+          userProfile={userProfile}
+          userRoles={userRoles}
+          collapsed={sidebarCollapsed}
+          setCollapsed={setSidebarCollapsed}
+          onSignOut={() => {
+            window.location.href = "/";
+          }}
+        />
+      )}
+      <div
+        className="transition-all duration-200 min-h-screen"
+        style={{
+          marginLeft: location.pathname !== "/" ? (sidebarCollapsed ? 80 : 200) : 0
+        }}
+      >
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/request" element={
+            <ProtectedRoute restrictedRoles={['faculty', 'admin']}>
+              <RequestForm />
+            </ProtectedRoute>
+          } />
+          <Route path="/requests" element={
+            <ProtectedRoute restrictedRoles={['faculty', 'admin']}>
+              <Requests />
+            </ProtectedRoute>
+          } />
+          <Route path="/employee" element={<ProtectedRoute requiredRole="faculty"><EmployeePortal /></ProtectedRoute>} />
+          <Route path="/employee/logs" element={<ProtectedRoute requiredRole="faculty"><EmployeeLogs /></ProtectedRoute>} />
+          <Route path="/faculty" element={<Navigate to="/employee" replace />} />
+          <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute>} />
+          <Route path="/payment-status" element={
+            <ProtectedRoute restrictedRoles={['faculty', 'admin']}>
+              <PaymentStatus />
+            </ProtectedRoute>
+          } />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </div>
+    </>
+  );
+}
+
 const App = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-      
-      if (data.session) {
-        // Fetch user roles
-        const { data: roles, error } = await supabase.rpc(
-          'get_user_roles',
-          { user_id: data.session.user.id }
-        );
-        
-        if (error) {
-          console.error("Error fetching roles:", error);
-        } else {
-          setUserRoles(roles || []);
+    const getSessionAndRoles = async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData.session) {
+          setSession(sessionData.session);
+          const userMeta = sessionData.session.user.user_metadata;
+          setUserProfile({
+            ...userMeta,
+            avatarUrl: userMeta.avatar_url || userMeta.picture || null
+          });
+          // Always fetch latest roles from Supabase
+          const { data: roles, error } = await supabase.rpc(
+            'get_user_roles',
+            { user_id: sessionData.session.user.id }
+          );
+          if (error) {
+            console.error('Error fetching roles:', error);
+            setUserRoles([]);
+          } else {
+            setUserRoles(roles || []);
+          }
         }
+      } catch (error) {
+        console.error('Error getting session or roles:', error);
+      } finally {
+        setLoading(false);
       }
     };
-    
-    checkSession();
+    getSessionAndRoles();
   }, []);
 
   return (
@@ -173,30 +244,14 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/request" element={
-                <ProtectedRoute restrictedRoles={['faculty', 'admin']}>
-                  <RequestForm />
-                </ProtectedRoute>
-              } />
-              <Route path="/requests" element={
-                <ProtectedRoute restrictedRoles={['faculty', 'admin']}>
-                  <Requests />
-                </ProtectedRoute>
-              } />
-              <Route path="/employee" element={<ProtectedRoute requiredRole="faculty"><EmployeePortal /></ProtectedRoute>} />
-              <Route path="/employee/logs" element={<ProtectedRoute requiredRole="faculty"><EmployeeLogs /></ProtectedRoute>} />
-              <Route path="/faculty" element={<Navigate to="/employee" replace />} />
-              <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute>} />
-              <Route path="/payment-status" element={
-                <ProtectedRoute restrictedRoles={['faculty', 'admin']}>
-                  <PaymentStatus />
-                </ProtectedRoute>
-              } />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AppWithRouter
+              session={session}
+              userRoles={userRoles}
+              userProfile={userProfile}
+              loading={loading}
+              sidebarCollapsed={sidebarCollapsed}
+              setSidebarCollapsed={setSidebarCollapsed}
+            />
           </BrowserRouter>
         </TooltipProvider>
       </QueryClientProvider>

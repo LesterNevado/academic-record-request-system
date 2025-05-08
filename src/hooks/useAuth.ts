@@ -1,98 +1,218 @@
 
-import { useContext, useEffect, useState } from "react";
-import { SessionContext } from "@/App";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import * as React from "react"
 
-type UserRole = 'student' | 'faculty' | 'admin';
+import {
+  Toast,
+  ToastActionElement,
+  ToastProps,
+} from "@/components/ui/toast"
 
-interface UserProfile {
-  name: string | null;
-  email: string | null;
-  avatarUrl: string | null;
+const TOAST_LIMIT = 5
+const TOAST_REMOVE_DELAY = 1000000
+
+type ToasterToast = ToastProps & {
+  id: string
+  title?: React.ReactNode
+  description?: React.ReactNode
+  action?: ToastActionElement
 }
 
-export const useAuth = () => {
-  const navigate = useNavigate();
-  const { session, userRoles = [] } = useContext(SessionContext);
-  const [loading, setLoading] = useState(true);
-  const [userProfile, setUserProfile] = useState<UserProfile>({
-    name: null,
-    email: null,
-    avatarUrl: null
-  });
-  const [roles, setRoles] = useState<UserRole[]>(userRoles || []);
+const actionTypes = {
+  ADD_TOAST: "ADD_TOAST",
+  UPDATE_TOAST: "UPDATE_TOAST",
+  DISMISS_TOAST: "DISMISS_TOAST",
+  REMOVE_TOAST: "REMOVE_TOAST",
+} as const
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        if (!session) {
-          navigate('/');
-          return;
-        }
+let count = 0
 
-        const { user } = session;
-        const name = user.user_metadata.name || user.user_metadata.full_name;
-        const email = user.email;
-        const avatarUrl = user.user_metadata.avatar_url;
+function genId() {
+  count = (count + 1) % Number.MAX_VALUE
+  return count.toString()
+}
 
-        setUserProfile({
-          name,
-          email,
-          avatarUrl
-        });
+type ActionType = typeof actionTypes
 
-        // Get user roles from Supabase
-        const { data: fetchedRoles, error: rolesError } = await supabase.rpc(
-          'get_user_roles',
-          { user_id: user.id }
-        );
-
-        if (rolesError) {
-          console.error("Error fetching roles:", rolesError);
-        } else {
-          setRoles(fetchedRoles || []);
-        }
-      } catch (err) {
-        console.error("Error getting user data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserData();
-  }, [session, navigate]);
-
-  const handleSignOut = async () => {
-    try {
-      setLoading(true);
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        toast.error(`Logout failed: ${error.message}`);
-      } else {
-        toast.success("Successfully logged out");
-        navigate("/");
-      }
-    } catch (err) {
-      toast.error("An unexpected error occurred. Please try again.");
-    } finally {
-      setLoading(false);
+type Action =
+  | {
+      type: ActionType["ADD_TOAST"]
+      toast: ToasterToast
     }
-  };
+  | {
+      type: ActionType["UPDATE_TOAST"]
+      toast: Partial<ToasterToast>
+    }
+  | {
+      type: ActionType["DISMISS_TOAST"]
+      toastId?: string
+    }
+  | {
+      type: ActionType["REMOVE_TOAST"]
+      toastId?: string
+    }
 
-  const isStudent = roles.length === 0 || (roles.length === 1 && roles.includes('student'));
-  const isFaculty = roles.includes('faculty');
-  const isAdmin = roles.includes('admin');
+interface State {
+  toasts: ToasterToast[]
+}
+
+const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+
+const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case "ADD_TOAST":
+      return {
+        ...state,
+        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
+      }
+
+    case "UPDATE_TOAST":
+      return {
+        ...state,
+        toasts: state.toasts.map((t) =>
+          t.id === action.toast.id ? { ...t, ...action.toast } : t
+        ),
+      }
+
+    case "DISMISS_TOAST": {
+      const { toastId } = action
+
+      if (toastId) {
+        toastTimeouts.forEach((_, id) => {
+          if (id === toastId) {
+            toastTimeouts.delete(id)
+          }
+        })
+
+        return {
+          ...state,
+          toasts: state.toasts.map((t) =>
+            t.id === toastId
+              ? {
+                  ...t,
+                  open: false,
+                }
+              : t
+          ),
+        }
+      }
+      
+      return {
+        ...state,
+        toasts: state.toasts.map((t) => ({
+          ...t,
+          open: false,
+        })),
+      }
+    }
+    case "REMOVE_TOAST":
+      if (action.toastId === undefined) {
+        return {
+          ...state,
+          toasts: [],
+        }
+      }
+      return {
+        ...state,
+        toasts: state.toasts.filter((t) => t.id !== action.toastId),
+      }
+  }
+}
+
+const listeners: Array<(state: State) => void> = []
+
+let memoryState: State = { toasts: [] }
+
+function dispatch(action: Action) {
+  memoryState = reducer(memoryState, action)
+  listeners.forEach((listener) => {
+    listener(memoryState)
+  })
+}
+
+type Toast = Omit<ToasterToast, "id">
+
+function toast({ ...props }: Toast) {
+  const id = genId()
+
+  const update = (props: ToasterToast) =>
+    dispatch({
+      type: "UPDATE_TOAST",
+      toast: { ...props, id },
+    })
+  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+
+  dispatch({
+    type: "ADD_TOAST",
+    toast: {
+      ...props,
+      id,
+      open: true,
+      onOpenChange: (open) => {
+        if (!open) dismiss()
+      },
+    },
+  })
 
   return {
-    session,
-    userProfile,
-    roles,
-    loading,
-    isStudent,
-    isFaculty,
-    isAdmin,
-    handleSignOut
-  };
-};
+    id,
+    dismiss,
+    update,
+  }
+}
+
+// Add helper functions for common toast types
+toast.success = (message: string, options?: Partial<Toast>) => {
+  return toast({
+    variant: "default",
+    title: "Success",
+    description: message,
+    ...options,
+  })
+}
+
+toast.error = (message: string, options?: Partial<Toast>) => {
+  return toast({
+    variant: "destructive",
+    title: "Error",
+    description: message,
+    ...options,
+  })
+}
+
+toast.info = (message: string, options?: Partial<Toast>) => {
+  return toast({
+    title: "Info",
+    description: message,
+    ...options,
+  })
+}
+
+toast.warning = (message: string, options?: Partial<Toast>) => {
+  return toast({
+    title: "Warning",
+    description: message,
+    ...options,
+  })
+}
+
+function useToast() {
+  const [state, setState] = React.useState<State>(memoryState)
+
+  React.useEffect(() => {
+    listeners.push(setState)
+    return () => {
+      const index = listeners.indexOf(setState)
+      if (index > -1) {
+        listeners.splice(index, 1)
+      }
+    }
+  }, [state])
+
+  return {
+    ...state,
+    toast,
+    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+  }
+}
+
+export { useToast, toast }

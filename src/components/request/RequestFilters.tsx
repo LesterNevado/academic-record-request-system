@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Search, Filter, ArrowUpDown, CheckCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -179,31 +178,30 @@ export const RequestFilters: React.FC<RequestFiltersProps> = ({
       )}
 
       <Dialog open={showFilters} onOpenChange={setShowFilters}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Filter Requests</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">Document Type</label>
+          <div className="grid gap-6 py-4">
+            <div className="grid gap-3">
+              <label className="text-base font-semibold">Document Type</label>
               <ToggleGroup 
                 type="single"
                 variant="outline"
-                className="justify-start flex-wrap"
+                className="justify-start flex-wrap gap-2"
                 value={filters.documentType}
                 onValueChange={(value) => {
                   if (value) setDocumentType(value as DocumentType);
                 }}
               >
                 <ToggleGroupItem value="all">All</ToggleGroupItem>
-                <ToggleGroupItem value="transcript">Transcript</ToggleGroupItem>
-                <ToggleGroupItem value="certificate">Certificate</ToggleGroupItem>
+                <ToggleGroupItem value="certificate">Certificate of Grades (COG)</ToggleGroupItem>
                 <ToggleGroupItem value="certification">Certification</ToggleGroupItem>
-                <ToggleGroupItem value="soa">Statement of Account</ToggleGroupItem>
+                <ToggleGroupItem value="soa">Statement of Account (SOA)</ToggleGroupItem>
                 <ToggleGroupItem value="registration_form">Registration Form</ToggleGroupItem>
-                <ToggleGroupItem value="com">Certificate of Matriculation</ToggleGroupItem>
-                <ToggleGroupItem value="coe">Certificate of Enrollment</ToggleGroupItem>
-                <ToggleGroupItem value="coa">Certificate of No Availed Scholarship</ToggleGroupItem>
+                <ToggleGroupItem value="com">Certificate of Matriculation (COM)</ToggleGroupItem>
+                <ToggleGroupItem value="coe">Certificate of Enrollment (COE)</ToggleGroupItem>
+                <ToggleGroupItem value="coa">Certificate of No Availed Scholarship (COA)</ToggleGroupItem>
                 <ToggleGroupItem value="others">Others</ToggleGroupItem>
               </ToggleGroup>
             </div>

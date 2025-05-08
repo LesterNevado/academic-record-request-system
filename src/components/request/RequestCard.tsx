@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Request, getRequestType } from '@/utils/requestUtils';
 import { format } from 'date-fns';
@@ -9,9 +8,20 @@ interface RequestCardProps {
 }
 
 export const RequestCard: React.FC<RequestCardProps> = ({ request }) => {
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return format(date, 'MMM d, yyyy');
+  const formatDate = (dateString: string | null) => {
+    if (!dateString || typeof dateString !== 'string') return 'N/A';
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      const [year, month, day] = parts.map(Number);
+      if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+        return new Intl.DateTimeFormat('en-PH', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        }).format(new Date(year, month - 1, day));
+      }
+    }
+    return dateString;
   };
 
   return (
@@ -19,7 +29,33 @@ export const RequestCard: React.FC<RequestCardProps> = ({ request }) => {
       <div className="flex justify-between">
         <div className="flex-1">
           <h3 className="text-lg font-semibold">{request.student_name}</h3>
-          <p className="text-gray-600 text-sm">Type: {getRequestType(request)}</p>
+          <p className="text-gray-600 text-sm">Type:</p>
+          <ul className="text-gray-600 text-sm ml-2 list-disc">
+            {request.certificate_selected && (
+              <li>Certificate of Grades (COG): {request.certificate_copies || 1} copy{(request.certificate_copies || 1) > 1 ? 'ies' : 'y'}, CTC/Dry Seal: {request.certificate_ctc ? 'Yes' : 'No'}</li>
+            )}
+            {request.registration_form_selected && (
+              <li>Registration Form: {request.registration_form_copies || 1} copy{(request.registration_form_copies || 1) > 1 ? 'ies' : 'y'}, CTC/Dry Seal: {request.registration_form_ctc ? 'Yes' : 'No'}</li>
+            )}
+            {request.com_selected && (
+              <li>Certificate of Matriculation (COM): {request.com_copies || 1} copy{(request.com_copies || 1) > 1 ? 'ies' : 'y'}, CTC/Dry Seal: {request.com_ctc ? 'Yes' : 'No'}</li>
+            )}
+            {request.coe_selected && (
+              <li>Certificate of Enrollment (COE): {request.coe_copies || 1} copy{(request.coe_copies || 1) > 1 ? 'ies' : 'y'}, CTC/Dry Seal: {request.coe_ctc ? 'Yes' : 'No'}</li>
+            )}
+            {request.coa_selected && (
+              <li>Certificate of No Availed Scholarship (COA): {request.coa_copies || 1} copy{(request.coa_copies || 1) > 1 ? 'ies' : 'y'}, CTC/Dry Seal: {request.coa_ctc ? 'Yes' : 'No'}</li>
+            )}
+            {request.soa_selected && (
+              <li>Statement of Account (SOA): {request.soa_copies || 1} copy{(request.soa_copies || 1) > 1 ? 'ies' : 'y'}, CTC/Dry Seal: {request.soa_ctc ? 'Yes' : 'No'}</li>
+            )}
+            {request.certification_selected && (
+              <li>Certification: {request.certification_copies || 1} copy{(request.certification_copies || 1) > 1 ? 'ies' : 'y'}, CTC/Dry Seal: {request.certification_ctc ? 'Yes' : 'No'}</li>
+            )}
+            {request.others_selected && (
+              <li>Others: {request.others_copies || 1} copy{(request.others_copies || 1) > 1 ? 'ies' : 'y'}, CTC/Dry Seal: {request.others_ctc ? 'Yes' : 'No'}</li>
+            )}
+          </ul>
           <p className="text-gray-600 text-sm">Student Number: {request.student_number}</p>
           <p className="text-gray-600 text-sm">Submitted: {formatDate(request.created_at)}</p>
           

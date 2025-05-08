@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Table, 
@@ -36,9 +35,19 @@ export const RequestDetailTable: React.FC<RequestDetailTableProps> = ({ request 
   };
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return format(date, 'MMM d, yyyy');
+    if (!dateString || typeof dateString !== 'string') return 'N/A';
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      const [year, month, day] = parts.map(Number);
+      if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+        return new Intl.DateTimeFormat('en-PH', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        }).format(new Date(year, month - 1, day));
+      }
+    }
+    return dateString;
   };
 
   return (
