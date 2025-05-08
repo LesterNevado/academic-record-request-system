@@ -1,116 +1,98 @@
 
-import { useState } from "react";
-import { DocumentType, Request, SortOption, matchesDocumentTypeFilter, getRequestType } from "@/utils/requestUtils";
+import { useContext, useEffect, useState } from "react";
+import { SessionContext } from "@/App";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
-interface DateRange {
-  from: string | null;
-  to: string | null;
+type UserRole = 'student' | 'faculty' | 'admin';
+
+interface UserProfile {
+  name: string | null;
+  email: string | null;
+  avatarUrl: string | null;
 }
 
-interface UseRequestFiltersProps {
-  requests: Request[];
-}
-
-export const useRequestFilters = ({ requests }: UseRequestFiltersProps) => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortOption, setSortOption] = useState<SortOption>("newest");
-  const [documentType, setDocumentType] = useState<DocumentType>("all");
-  const [processor, setProcessor] = useState<string>("all");
-  const [dateRange, setDateRange] = useState<DateRange>({
-    from: null,
-    to: null
+export const useAuth = () => {
+  const navigate = useNavigate();
+  const { session, userRoles = [] } = useContext(SessionContext);
+  const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    name: null,
+    email: null,
+    avatarUrl: null
   });
+  const [roles, setRoles] = useState<UserRole[]>(userRoles || []);
 
-  const matchesProcessorFilter = (request: Request): boolean => {
-    if (processor === "all") return true;
-    return request.processed_by === processor;
-  };
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        if (!session) {
+          navigate('/');
+          return;
+        }
 
-  const matchesDateFilter = (request: Request): boolean => {
-    if (!dateRange.from && !dateRange.to) return true;
-    
-    const requestDate = new Date(request.created_at);
-    
-    if (dateRange.from && !dateRange.to) {
-      const fromDate = new Date(dateRange.from);
-      return requestDate >= fromDate;
-    }
-    
-    if (!dateRange.from && dateRange.to) {
-      const toDate = new Date(dateRange.to);
-      return requestDate <= toDate;
-    }
-    
-    const fromDate = new Date(dateRange.from!);
-    const toDate = new Date(dateRange.to!);
-    return requestDate >= fromDate && requestDate <= toDate;
-  };
+        const { user } = session;
+        const name = user.user_metadata.name || user.user_metadata.full_name;
+        const email = user.email;
+        const avatarUrl = user.user_metadata.avatar_url;
 
-  const getFilteredAndSortedRequests = () => {
-    if (!Array.isArray(requests)) return [];
-    
-    const filtered = requests.filter(request => {
-      // Use the imported getRequestType function instead of trying to call it as a method
-      const requestType = getRequestType(request);
-        
-      const matchesSearch = 
-        request.student_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        requestType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        request.student_number.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      return matchesSearch && 
-        matchesDocumentTypeFilter(request, documentType) && 
-        matchesProcessorFilter(request) &&
-        matchesDateFilter(request);
-    });
-    
-    return filtered.sort((a, b) => {
-      switch (sortOption) {
-        case "newest":
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        case "oldest":
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        case "name_asc":
-          return a.student_name.localeCompare(b.student_name);
-        case "name_desc":
-          return b.student_name.localeCompare(a.student_name);
-        case "status":
-          const statusOrder = { 
-            'approved': 1, 
-            'awaiting_pickup': 2, 
-            'pending': 3, 
-            'rejected': 4 
-          };
-          return (statusOrder[a.status as keyof typeof statusOrder] || 5) - 
-                 (statusOrder[b.status as keyof typeof statusOrder] || 5);
-        default:
-          return 0;
+        setUserProfile({
+          name,
+          email,
+          avatarUrl
+        });
+
+        // Get user roles from Supabase
+        const { data: fetchedRoles, error: rolesError } = await supabase.rpc(
+          'get_user_roles',
+          { user_id: user.id }
+        );
+
+        if (rolesError) {
+          console.error("Error fetching roles:", rolesError);
+        } else {
+          setRoles(fetchedRoles || []);
+        }
+      } catch (err) {
+        console.error("Error getting user data:", err);
+      } finally {
+        setLoading(false);
       }
-    });
+    };
+
+    fetchUserData();
+  }, [session, navigate]);
+
+  const handleSignOut = async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        toast.error(`Logout failed: ${error.message}`);
+      } else {
+        toast.success("Successfully logged out");
+        navigate("/");
+      }
+    } catch (err) {
+      toast.error("An unexpected error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const clearFilters = () => {
-    setDocumentType("all");
-    setProcessor("all");
-    setDateRange({ from: null, to: null });
-    setSortOption("newest");
-    setSearchTerm("");
-  };
+  const isStudent = roles.length === 0 || (roles.length === 1 && roles.includes('student'));
+  const isFaculty = roles.includes('faculty');
+  const isAdmin = roles.includes('admin');
 
   return {
-    filters: {
-      searchTerm,
-      sortOption,
-      documentType,
-      processor,
-      dateRange
-    },
-    setSearchTerm,
-    setSortOption,
-    setDocumentType,
-    setProcessor,
-    setDateRange,
-    clearFilters,
-    filteredRequests: getFilteredAndSortedRequests()
+    session,
+    userProfile,
+    roles,
+    loading,
+    isStudent,
+    isFaculty,
+    isAdmin,
+    handleSignOut
   };
 };

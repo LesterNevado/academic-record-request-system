@@ -1,4 +1,4 @@
-
+// @ts-nocheck
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.33.1';
 import { renderAsync } from 'npm:@react-email/render@0.0.9';
@@ -91,15 +91,24 @@ serve(async (req) => {
 
     // Format date for email
     const pickupDate = requestData.pickup_date 
-      ? new Date(requestData.pickup_date).toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        })
+      ? (() => {
+          const parts = requestData.pickup_date.split('-');
+          if (parts.length === 3) {
+            const [year, month, day] = parts.map(Number);
+            if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+              return new Intl.DateTimeFormat('en-PH', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              }).format(new Date(year, month - 1, day));
+            }
+          }
+          return requestData.pickup_date;
+        })()
       : "To be determined";
       
     // Get request type and total number of copies
-    const requestTypes = [];
+    const requestTypes: string[] = [];
     let totalCopies = 0;
     
     if (requestData.certificate_selected) {

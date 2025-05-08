@@ -1,206 +1,224 @@
-
-import React, { useContext } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, User, FileText, LogOut, Package, ShieldCheck, ClipboardList } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import React from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import { 
+  LayoutDashboard, 
+  FileText, 
+  LogOut,
+  ChevronRight,
+  ChevronLeft,
+  Package,
+  ClipboardList,
+  ShieldCheck
+} from "lucide-react";
+import { Button } from "../ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { SessionContext } from "@/App";
 
-type SidebarProps = {
+interface SidebarProps {
   userProfile: {
     name: string | null;
     email: string | null;
     avatarUrl: string | null;
   };
   userRoles: string[];
-  loading: boolean;
-};
+  onSignOut: () => void;
+  collapsed: boolean;
+  setCollapsed: (collapsed: boolean) => void;
+}
 
-export const Sidebar: React.FC<SidebarProps> = ({ userProfile, userRoles, loading }) => {
-  const navigate = useNavigate();
+export function getHighestRole(userRoles: string[]): string {
+  if (userRoles.includes("admin")) return "Admin";
+  if (userRoles.includes("faculty")) return "Employee";
+  return "Student";
+}
+
+export function Sidebar({ userProfile, userRoles, onSignOut, collapsed, setCollapsed }: SidebarProps) {
   const location = useLocation();
-  const { session } = useContext(SessionContext);
-
-  // Check if user is a student (no special roles or only has 'student' role)
-  const isStudent = userRoles.length === 0 || (userRoles.length === 1 && userRoles.includes('student'));
-  // Check if user is an employee/faculty
-  const isEmployee = userRoles.includes('faculty');
-  // Check if user is an admin
-  const isAdmin = userRoles.includes('admin');
+  const navigate = useNavigate();
+  const highestRole = getHighestRole(userRoles);
 
   const handleSignOut = async () => {
     try {
-      // Only attempt to log sign out activity for faculty users
-      if (session?.user?.id && isEmployee) {
-        try {
-          await supabase.rpc(
-            'log_activity',
-            { 
-              p_user_id: session.user.id, 
-              p_activity_type: 'sign_out',
-              p_details: `User signed out - ${userProfile.email || 'Unknown email'}`
-            }
-          );
-        } catch (logError) {
-          console.error("Error logging sign out activity:", logError);
-          // Continue with sign out even if logging fails
-        }
-      }
-      
       const { error } = await supabase.auth.signOut();
-      if (error) {
-        toast.error(`Logout failed: ${error.message}`);
-      } else {
-        toast.success("Successfully logged out");
-        navigate("/");
-      }
-    } catch (err) {
-      console.error("Unexpected error during logout:", err);
-      toast.error("An unexpected error occurred. Please try again.");
+      if (error) throw error;
+      
+      // Clear any local storage or state
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Show success message
+      toast.success('Successfully signed out');
+      
+      // Navigate to root path (login page)
+      navigate('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast.error('Failed to sign out. Please try again.');
     }
   };
 
-  const isActive = (path: string) => {
-    return location.pathname === path;
-  };
+  // Determine menu items based on roles
+  let menuItems = [
+    { title: "Dashboard", icon: LayoutDashboard, href: "/dashboard" }
+  ];
+  if (userRoles.includes("faculty")) {
+    menuItems.push(
+      { title: "Employee Portal", icon: Package, href: "/employee" },
+      { title: "Activity Logs", icon: ClipboardList, href: "/employee/logs" }
+    );
+  } else if (userRoles.includes("admin")) {
+    menuItems.push(
+      { title: "Admin Portal", icon: ShieldCheck, href: "/admin" }
+    );
+  } else {
+    // Default/student
+    menuItems.push(
+      { title: "My Requests", icon: FileText, href: "/requests" }
+    );
+  }
 
-  // Helper function to display role name correctly
-  const displayRoleName = (role: string): string => {
-    if (role === 'faculty') return 'Employee';
-    return role.charAt(0).toUpperCase() + role.slice(1);
-  };
+  // Role badge color
+  const roleBadgeColor = highestRole === "Admin"
+    ? "bg-gradient-to-r from-green-500 to-green-700 text-white"
+    : highestRole === "Employee"
+    ? "bg-gradient-to-r from-yellow-400 to-yellow-600 text-white"
+    : "bg-gradient-to-r from-blue-400 to-blue-600 text-white";
 
   return (
-    <div className="w-64 bg-[#0047AB] text-white p-6 flex flex-col min-h-screen h-full sticky top-0">
-      <div className="flex items-center mb-10">
-        <img
-          src="https://cdn.builder.io/api/v1/image/assets/e3c6b0ec50df45b58e99e24af78e19b0/496ecc137f8c0eeb6c4acc7eae1c9701ab567695346929631763cd049528af73?placeholderIfAbsent=true"
-          alt="NEU Logo"
-          className="w-12 h-12 mr-3"
-        />
-        <h1 className="text-xl font-bold">NEU ARRS</h1>
-      </div>
-      
-      {/* User Profile Section */}
-      <div className="mb-6 flex flex-col items-center">
-        {userProfile.avatarUrl ? (
-          <img 
-            src={userProfile.avatarUrl} 
-            alt="Profile" 
-            className="w-16 h-16 rounded-full mb-2 border-2 border-white"
-          />
-        ) : (
-          <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-2">
-            <User className="w-8 h-8" />
-          </div>
-        )}
-        <p className="text-sm font-semibold text-center">{userProfile.name || "User"}</p>
-        <p className="text-xs text-white/70 text-center">{userProfile.email}</p>
-        
-        {/* Role badges - Always displayed prominently */}
-        <div className="mt-2 flex flex-wrap gap-1 justify-center">
-          {userRoles.map((role) => (
-            <span key={role} className={`px-2 py-1 text-xs rounded-full ${
-              role === 'admin' ? 'bg-red-500' : 
-              role === 'faculty' ? 'bg-amber-500' : 
-              'bg-blue-500'
-            }`}>
-              {displayRoleName(role)}
-            </span>
-          ))}
-          {userRoles.length === 0 && (
-            <span className="px-2 py-1 bg-blue-500 text-xs rounded-full">
-              Student
-            </span>
-          )}
-        </div>
-      </div>
-      
-      <nav className="flex-1">
-        <ul className="space-y-4">
-          <li>
-            <Link 
-              to="/dashboard" 
-              className={`flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors ${
-                isActive('/dashboard') ? 'bg-white/10' : ''
-              }`}
+    <div className={cn(
+      "fixed left-0 top-0 h-screen border-r border-blue-100 transition-all duration-300 z-50 bg-gradient-to-b from-blue-700 to-blue-500 overflow-x-hidden",
+      collapsed ? "w-20" : "w-64"
+    )}>
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className={cn(
+          "border-b border-blue-100 transition-all duration-300",
+          collapsed ? "p-0 flex flex-col items-center justify-center h-20" : "p-4"
+        )}>
+          <div className={cn(
+            collapsed ? "flex flex-col items-center justify-center h-full w-full" : "flex items-center justify-between"
+          )}>
+            {!collapsed && (
+              <div className="flex items-center gap-3">
+                <img
+                  src="/neu-logo.png"
+                  alt="NEU Logo"
+                  className="h-10 w-10 rounded-full border-2 border-gray-200 shadow bg-white"
+                  style={{ background: 'white' }}
+                />
+                <span className="text-2xl font-bold tracking-tight text-white drop-shadow-sm">
+                  NEU<span className="text-blue-200">-ARRS</span>
+                </span>
+              </div>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "rounded-lg transition-all",
+                collapsed
+                  ? "mx-auto my-auto flex items-center justify-center hover:bg-white/20"
+                  : "ml-auto hover:bg-white/20"
+              )}
+              onClick={() => setCollapsed(!collapsed)}
             >
-              <LayoutDashboard className="w-5 h-5 mr-3" />
-              Dashboard
-            </Link>
-          </li>
-          
-          {/* Employee links */}
-          {isEmployee && (
-            <>
-              <li>
-                <Link 
-                  to="/employee" 
-                  className={`flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors ${
-                    isActive('/employee') || isActive('/faculty') ? 'bg-white/10' : ''
-                  }`}
-                >
-                  <Package className="w-5 h-5 mr-3" />
-                  Employee Portal
-                </Link>
-              </li>
-              {/* Always show Activity Logs for employees */}
-              <li>
-                <Link 
-                  to="/employee/logs" 
-                  className={`flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors ${
-                    isActive('/employee/logs') ? 'bg-white/10' : ''
-                  }`}
-                >
-                  <ClipboardList className="w-5 h-5 mr-3" />
-                  Activity Logs
-                </Link>
-              </li>
-            </>
-          )}
-          
-          {isAdmin && (
-            <li>
-              <Link 
-                to="/admin" 
-                className={`flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors ${
-                  isActive('/admin') ? 'bg-white/10' : ''
-                }`}
+              {collapsed ? (
+                <ChevronRight className="h-4 w-4 text-white transition-transform" />
+              ) : (
+                <ChevronLeft className="h-4 w-4 text-blue-200 transition-transform" />
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* User Profile */}
+        <div className="p-4 border-b border-blue-100">
+          <div className={cn(
+            "gap-3 flex flex-col items-center justify-center"
+          )}>
+            <div className="relative">
+              {userProfile && userProfile.avatarUrl ? (
+                <img
+                  src={userProfile.avatarUrl}
+                  alt="Profile"
+                  className="w-12 h-12 min-w-[3rem] min-h-[3rem] max-w-[3rem] max-h-[3rem] rounded-full object-cover border-2 border-white shadow"
+                />
+              ) : (
+                <div className="w-12 h-12 min-w-[3rem] min-h-[3rem] max-w-[3rem] max-h-[3rem] rounded-full bg-gradient-to-br from-blue-500 to-blue-400 flex items-center justify-center text-white text-xl font-bold">
+                  {userProfile && userProfile.name?.[0]?.toUpperCase() || "U"}
+                </div>
+              )}
+            </div>
+            {!collapsed && (
+              <div className="flex-1 min-w-0 text-center">
+                <p className="text-base font-semibold text-white truncate">
+                  {userProfile && userProfile.name || "User"}
+                </p>
+                <p className="text-xs text-blue-100 truncate">
+                  {userProfile && userProfile.email || "user@example.com"}
+                </p>
+                <span className={cn(
+                  "mt-1.5 inline-block px-3 py-0.5 rounded-full text-xs font-semibold shadow-sm",
+                  roleBadgeColor
+                )}>
+                  {highestRole}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <nav className={cn(
+          "flex-1 p-4 space-y-1.5 overflow-y-auto overflow-x-hidden",
+          collapsed ? "flex flex-col items-center" : ""
+        )}>
+          {menuItems.map((item) => {
+            const isActive = location.pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                to={item.href}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all duration-200 font-medium",
+                  collapsed ? "justify-center" : "",
+                  isActive
+                    ? "bg-white/20 text-white shadow-md"
+                    : "text-white hover:bg-white/10 hover:text-white"
+                )}
               >
-                <ShieldCheck className="w-5 h-5 mr-3" />
-                Admin Portal
+                <item.icon className={cn(
+                  "h-5 w-5 min-w-[1.25rem] min-h-[1.25rem] text-white transition-colors duration-200",
+                  isActive ? "text-white" : "text-white/80 group-hover:text-white"
+                )} />
+                {!collapsed && (
+                  <span className="text-sm font-medium">{item.title}</span>
+                )}
               </Link>
-            </li>
-          )}
-          
-          {/* Only show Requests link for students */}
-          {isStudent && (
-            <li>
-              <Link 
-                to="/requests" 
-                className={`flex items-center p-2 rounded-lg hover:bg-white/20 transition-colors ${
-                  isActive('/requests') ? 'bg-white/10' : ''
-                }`}
-              >
-                <FileText className="w-5 h-5 mr-3" />
-                Requests
-              </Link>
-            </li>
-          )}
-        </ul>
-      </nav>
-      
-      <div className="mt-auto">
-        <Button 
-          onClick={handleSignOut}
-          className="w-full flex items-center justify-center text-white bg-[#0047AB] border-2 border-white hover:bg-[#003d91]"
-          disabled={loading}
-        >
-          <LogOut className="w-4 h-4 mr-2" />
-          {loading ? "Signing out..." : "Sign Out"}
-        </Button>
+            );
+          })}
+        </nav>
+
+        {/* Footer */}
+        <div className={cn(
+          "p-4 border-t border-blue-100 transition-all duration-300",
+          "bg-gradient-to-r from-blue-700 to-blue-500",
+          collapsed ? "flex justify-center items-center" : ""
+        )}>
+          <Button
+            variant="ghost"
+            className={cn(
+              "gap-3 text-white transition-all text-sm py-2.5 font-medium rounded-lg px-4 hover:bg-white/20 hover:text-white focus:outline-none",
+              collapsed ? "" : "w-[90%] mx-auto justify-start"
+            )}
+            onClick={handleSignOut}
+          >
+            <LogOut className="h-5 w-5 text-white transition-colors duration-200" />
+            {!collapsed && <span className="text-sm font-medium text-white">Sign Out</span>}
+          </Button>
+        </div>
       </div>
     </div>
   );
-};
+}

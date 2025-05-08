@@ -1,4 +1,3 @@
-
 import { Tables } from "@/integrations/supabase/types";
 
 export type Request = Tables<"requests"> & {
@@ -25,16 +24,14 @@ export type SortOption = "newest" | "oldest" | "name_asc" | "name_desc" | "statu
  */
 export const getRequestType = (request: Request): string => {
   const types = [];
-  if (request.transcript_selected) types.push("Transcript of Records");
-  if (request.certificate_selected) types.push("Certificate of Grades");
+  if (request.certificate_selected) types.push("Certificate of Grades (COG)");
   if (request.certification_selected) types.push("Certification");
-  if (request.soa_selected) types.push("Statement of Account");
+  if (request.soa_selected) types.push("Statement of Account (SOA)");
   if (request.registration_form_selected) types.push("Registration Form");
-  if (request.com_selected) types.push("Certificate of Matriculation");
-  if (request.coe_selected) types.push("Certificate of Enrollment");
-  if (request.coa_selected) types.push("Certificate of No Availed Scholarship");
+  if (request.com_selected) types.push("Certificate of Matriculation (COM)");
+  if (request.coe_selected) types.push("Certificate of Enrollment (COE)");
+  if (request.coa_selected) types.push("Certificate of No Availed Scholarship (COA)");
   if (request.others_selected) types.push("Others");
-  
   return types.join(", ");
 };
 
@@ -64,14 +61,13 @@ export const matchesDocumentTypeFilter = (request: Request, documentType: Docume
 export const getDocumentTypeDisplayName = (documentType: DocumentType): string => {
   switch (documentType) {
     case "all": return "All";
-    case "transcript": return "Transcript";
-    case "certificate": return "Certificate of Grades";
+    case "certificate": return "Certificate of Grades (COG)";
     case "certification": return "Certification";
-    case "soa": return "Statement of Account";
+    case "soa": return "Statement of Account (SOA)";
     case "registration_form": return "Registration Form";
-    case "com": return "Certificate of Matriculation";
-    case "coe": return "Certificate of Enrollment";
-    case "coa": return "Certificate of No Availed Scholarship";
+    case "com": return "Certificate of Matriculation (COM)";
+    case "coe": return "Certificate of Enrollment (COE)";
+    case "coa": return "Certificate of No Availed Scholarship (COA)";
     case "others": return "Others";
     default: return "Unknown";
   }

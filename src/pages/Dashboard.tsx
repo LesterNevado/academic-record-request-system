@@ -1,4 +1,3 @@
-
 import React, { useContext, useEffect, useRef, useState } from "react";
 import { SessionContext } from "@/App";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,8 +5,8 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Sidebar } from "@/components/layout/Sidebar";
 import { Activity, ListTodo } from "lucide-react";
+import { DashboardCards } from "@/components/dashboard/DashboardCards";
 
 type UserRole = 'student' | 'faculty' | 'admin';
 
@@ -183,6 +182,12 @@ const Dashboard: React.FC = () => {
   const isEmployee = roles.includes('faculty');
   const isAdmin = roles.includes('admin');
 
+  // Helper function to display role name correctly
+  const displayRoleName = (role: string): string => {
+    if (role === 'faculty') return 'Employee';
+    return role.charAt(0).toUpperCase() + role.slice(1);
+  };
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -195,94 +200,35 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex w-full">
-      <Sidebar userProfile={userProfile} userRoles={roles} loading={loading} />
-
-      <div className="flex-1 p-10">
-        <header className="mb-10">
-          <h1 className="text-3xl font-bold">Welcome{userProfile.name ? `, ${userProfile.name.split(' ')[0]}` : ''}!</h1>
-          <p className="text-gray-600 mt-2">
+    <div className="min-h-screen bg-white flex items-center justify-center py-12">
+      <div className="w-full max-w-5xl mx-auto px-4 sm:px-8 lg:px-12">
+        <header className="mb-10 flex flex-col items-center justify-center text-center">
+          <div className="flex items-center gap-6 mb-1">
+            <div className="flex flex-col items-start">
+              <h1 className="text-4xl font-black flex items-end gap-2 flex-wrap">
+                <span className="text-black">Welcome,</span>
+                <span className="bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent font-black">{userProfile.name || ''}</span>
+                <span className="text-black">!</span>
+              </h1>
+            </div>
+          </div>
+          <p className="text-base text-slate-600 font-medium mt-3 tracking-wide">
             {isAdmin
-              ? "Manage users and view requests in the system"
+              ? "Access the admin portal to manage users, roles, and system settings."
               : isEmployee
               ? "Process and verify student requests"
               : "Manage and track your academic record requests"}
           </p>
         </header>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {isStudent && (
-            <Card className="border border-gray-200 shadow-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold">My Requests</h2>
-                  <div className="bg-blue-100 text-blue-800 rounded-full w-8 h-8 flex items-center justify-center font-bold">
-                    {requestCount}
-                  </div>
-                </div>
-                <p className="text-gray-600">
-                  {requestCount > 0
-                    ? `You have ${requestCount} request${requestCount !== 1 ? "s" : ""}`
-                    : "You have no requests yet"}
-                </p>
-                <Button
-                  onClick={() => navigate("/request")}
-                  className="mt-4 w-full bg-[#0047AB] hover:bg-[#00377e]"
-                >
-                  New Request
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {(isEmployee || isAdmin) && (
-            <>
-              <Card className="border border-gray-200 shadow-sm">
-                <CardContent className="p-6 flex flex-col gap-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <h2 className="text-xl font-semibold flex items-center gap-2">
-                      <span>Pending Requests</span>
-                    </h2>
-                    <div className="bg-yellow-100 text-yellow-800 rounded-full w-8 h-8 flex items-center justify-center font-bold">
-                      {pendingCount}
-                    </div>
-                  </div>
-                  <p className="text-gray-600">Requests awaiting approval</p>
-                  <Button
-                    variant="outline"
-                    className="mt-2"
-                    onClick={() =>
-                      navigate(isEmployee ? '/employee' : '/admin')
-                    }
-                  >
-                    View Requests
-                  </Button>
-                </CardContent>
-              </Card>
-              <Card className="border border-gray-200 shadow-sm">
-                <CardContent className="p-6 flex flex-col gap-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <h2 className="text-xl font-semibold flex items-center gap-2">
-                      <span>Approved Requests</span>
-                    </h2>
-                    <div className="bg-green-100 text-green-800 rounded-full w-8 h-8 flex items-center justify-center font-bold">
-                      {approvedCount}
-                    </div>
-                  </div>
-                  <p className="text-gray-600">Requests that have been approved</p>
-                  <Button
-                    variant="outline"
-                    className="mt-2"
-                    onClick={() =>
-                      navigate(isEmployee ? '/employee' : '/admin')
-                    }
-                  >
-                    View Approved
-                  </Button>
-                </CardContent>
-              </Card>
-            </>
-          )}
+        <div className="mt-8">
+          <DashboardCards
+            isStudent={isStudent}
+            isEmployee={isEmployee}
+            isAdmin={isAdmin}
+            requestCount={requestCount}
+            pendingCount={pendingCount}
+            approvedCount={approvedCount}
+          />
         </div>
       </div>
     </div>
