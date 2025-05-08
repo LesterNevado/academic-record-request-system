@@ -213,7 +213,7 @@ export const PaymentStatus: React.FC = () => {
           
           console.log("Successfully processed payment, created request, and transaction");
           setSuccess(true);
-          toast.success("Payment successful! Your request is waiting for faculty approval.");
+          toast.success("Payment successful! Your request is waiting for employee approval.");
         } else {
           console.log("Payment was not successful or session ID is missing");
           toast.error("Payment was canceled or unsuccessful.");
