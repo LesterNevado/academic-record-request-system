@@ -81,7 +81,7 @@ type Request = Tables<"requests"> & {
   processor_name?: string | null;
 };
 
-type SortOption = "date" | "name" | "status";
+type SortOption = "request_date" | "pickup_date" | "document_type" | "status";
 type DocumentType = 
   "all" | "certificate" | "certification" | "soa" | "others" | 
   "registration_form" | "com" | "coe" | "coa";
@@ -156,17 +156,20 @@ const RequestCard: React.FC<{ request: Request }> = ({ request }) => {
             Student Number: {request.student_number}
           </CardDescription>
         </div>
-        <span className={`px-4 py-1 rounded-full text-sm font-semibold shadow ${
+        <span className={`px-4 py-1 min-w-[90px] flex items-center justify-center rounded-full text-sm font-semibold shadow whitespace-nowrap overflow-visible text-ellipsis ${
           request.status === 'approved' 
             ? 'bg-green-200 text-green-900' 
             : request.status === 'awaiting_pickup'
             ? 'bg-yellow-200 text-yellow-900'
+            : request.status === 'picked_up'
+            ? 'bg-blue-200 text-blue-900'
             : request.status === 'rejected'
             ? 'bg-red-200 text-red-900'
             : 'bg-blue-200 text-blue-900'
         }`}>
-          {request.status === 'approved' && 'Ready for Pickup'}
+          {request.status === 'approved' && 'Approved'}
           {request.status === 'awaiting_pickup' && 'Pending'}
+          {request.status === 'picked_up' && 'Completed'}
           {request.status === 'rejected' && 'Rejected'}
           {request.status === 'pending' && 'Pending'}
         </span>
@@ -276,7 +279,7 @@ const Requests: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [sortOption, setSortOption] = useState<SortOption>("date");
+  const [sortOption, setSortOption] = useState<SortOption>("request_date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [documentType, setDocumentType] = useState<string[]>([]);
   const [status, setStatus] = useState<string>("all");
@@ -418,6 +421,7 @@ const Requests: React.FC = () => {
     if (status === "all") return true;
     if (status === "pending") return request.status === "pending" || request.status === "awaiting_pickup";
     if (status === "approved") return request.status === "approved";
+    if (status === "picked_up") return request.status === "picked_up";
     return true;
   };
 
@@ -428,33 +432,57 @@ const Requests: React.FC = () => {
 
   const getFilteredAndSortedRequests = () => {
     if (!Array.isArray(requests)) return [];
-    
     const filtered = requests.filter(request => {
       const matchesSearch = 
         request.student_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
         getRequestType(request).toLowerCase().includes(searchTerm.toLowerCase()) ||
         request.student_number.toLowerCase().includes(searchTerm.toLowerCase());
-      
       return matchesSearch && 
         matchesDocumentTypeFilter(request) && 
         matchesStatusFilter(request);
     });
-    
+    // Only apply custom default order if sortOption is 'request_date' and sortDirection is 'desc'
+    if (sortOption === 'request_date' && sortDirection === 'desc') {
+      const statusRank = (status: string) => {
+        if (status === 'pending' || status === 'awaiting_pickup') return 1;
+        if (status === 'approved') return 2;
+        if (status === 'picked_up') return 3;
+        if (status === 'rejected') return 4;
+        return 99;
+      };
+      return filtered.sort((a, b) => {
+        const aRank = statusRank(a.status);
+        const bRank = statusRank(b.status);
+        if (aRank !== bRank) return aRank - bRank;
+        // Newest first within each status
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+    }
+    // Otherwise, use the user-selected sort logic
     return filtered.sort((a, b) => {
       switch (sortOption) {
-        case "date":
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        case "name":
-          return a.student_name.localeCompare(b.student_name);
+        case "request_date":
+          return sortDirection === 'asc'
+            ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case "pickup_date":
+          const aPickup = a.pickup_date ? new Date(a.pickup_date).getTime() : (sortDirection === 'asc' ? Number.MAX_SAFE_INTEGER : 0);
+          const bPickup = b.pickup_date ? new Date(b.pickup_date).getTime() : (sortDirection === 'asc' ? Number.MAX_SAFE_INTEGER : 0);
+          return sortDirection === 'asc' ? aPickup - bPickup : bPickup - aPickup;
+        case "document_type":
+          return sortDirection === 'asc'
+            ? getRequestType(a).localeCompare(getRequestType(b))
+            : getRequestType(b).localeCompare(getRequestType(a));
         case "status":
-          const statusOrder = { 
-            'approved': 1, 
-            'awaiting_pickup': 2, 
-            'pending': 3, 
-            'rejected': 4 
-          };
-          return (statusOrder[a.status as keyof typeof statusOrder] || 5) - 
-                 (statusOrder[b.status as keyof typeof statusOrder] || 5);
+          if (a.status !== b.status) {
+            return sortDirection === 'asc'
+              ? a.status.localeCompare(b.status)
+              : b.status.localeCompare(a.status);
+          } else {
+            return sortDirection === 'asc'
+              ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+              : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          }
         default:
           return 0;
       }
@@ -467,9 +495,10 @@ const Requests: React.FC = () => {
     setDocumentType([]);
     setProcessor("all");
     setDateRange({ from: null, to: null });
-    setSortOption("date");
+    setSortOption("request_date");
     setSortDirection("asc");
     setSearchTerm("");
+    setStatus("all");
     setShowFilters(false);
   };
 
@@ -511,11 +540,12 @@ const Requests: React.FC = () => {
             <div className="bg-white/80 rounded-2xl shadow-2xl border border-blue-100 p-7 flex flex-col sm:flex-row gap-4 items-center transition-all">
               <div className="relative flex-1 w-full">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-blue-400 pointer-events-none" />
-                <Input
+                <input
+                  type="text"
                   placeholder="Search requests..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-12 pr-4 py-4 rounded-full border border-blue-100 shadow focus:ring-2 focus:ring-blue-200 bg-white/90 focus:outline-none transition-all w-full text-base hover:shadow-lg focus:shadow-lg placeholder:text-blue-400"
+                  className="pl-12 pr-4 py-4 rounded-full border border-blue-100 shadow focus:ring-2 focus:ring-blue-200 bg-white/80 focus:outline-none transition-all w-full text-base hover:shadow-lg focus:shadow-lg"
                 />
               </div>
               <div className="hidden sm:block h-10 w-px bg-blue-100 mx-2 rounded-full" />
@@ -541,14 +571,14 @@ const Requests: React.FC = () => {
                             value={documentType}
                             onValueChange={(value) => setDocumentType(value)}
                           >
-                            <ToggleGroupItem value="certificate">Certificate of Grades (COG)</ToggleGroupItem>
-                            <ToggleGroupItem value="certification">Certification</ToggleGroupItem>
-                            <ToggleGroupItem value="soa">Statement of Account (SOA)</ToggleGroupItem>
-                            <ToggleGroupItem value="registration_form">Registration Form</ToggleGroupItem>
-                            <ToggleGroupItem value="com">Certificate of Matriculation (COM)</ToggleGroupItem>
-                            <ToggleGroupItem value="coe">Certificate of Enrollment (COE)</ToggleGroupItem>
-                            <ToggleGroupItem value="coa">Certificate of No Availed Scholarship (COA)</ToggleGroupItem>
-                            <ToggleGroupItem value="others">Others</ToggleGroupItem>
+                            <ToggleGroupItem value="certificate" className={documentType.includes('certificate') ? 'bg-blue-500 text-white' : ''}>Certificate of Grades (COG)</ToggleGroupItem>
+                            <ToggleGroupItem value="certification" className={documentType.includes('certification') ? 'bg-blue-500 text-white' : ''}>Certification</ToggleGroupItem>
+                            <ToggleGroupItem value="soa" className={documentType.includes('soa') ? 'bg-blue-500 text-white' : ''}>Statement of Account (SOA)</ToggleGroupItem>
+                            <ToggleGroupItem value="registration_form" className={documentType.includes('registration_form') ? 'bg-blue-500 text-white' : ''}>Registration Form</ToggleGroupItem>
+                            <ToggleGroupItem value="com" className={documentType.includes('com') ? 'bg-blue-500 text-white' : ''}>Certificate of Matriculation (COM)</ToggleGroupItem>
+                            <ToggleGroupItem value="coe" className={documentType.includes('coe') ? 'bg-blue-500 text-white' : ''}>Certificate of Enrollment (COE)</ToggleGroupItem>
+                            <ToggleGroupItem value="coa" className={documentType.includes('coa') ? 'bg-blue-500 text-white' : ''}>Certificate of No Availed Scholarship (COA)</ToggleGroupItem>
+                            <ToggleGroupItem value="others" className={documentType.includes('others') ? 'bg-blue-500 text-white' : ''}>Others</ToggleGroupItem>
                           </ToggleGroup>
                         </div>
                         <div>
@@ -561,10 +591,18 @@ const Requests: React.FC = () => {
                               <SelectItem value="all">All</SelectItem>
                               <SelectItem value="pending">Pending</SelectItem>
                               <SelectItem value="approved">Approved</SelectItem>
+                              <SelectItem value="picked_up">Picked Up</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                       </div>
+                      <Button
+                        className="w-full bg-gradient-to-r from-blue-500 to-blue-400 text-white font-semibold rounded-full px-6 py-2 shadow mt-4"
+                        onClick={clearFilters}
+                        type="button"
+                      >
+                        Reset Filters
+                      </Button>
                     </div>
                   </PopoverContent>
                 </Popover>
@@ -580,26 +618,30 @@ const Requests: React.FC = () => {
                       <h3 className="text-sm font-medium mb-2">Sort by</h3>
                       <div className="border-b border-gray-200 mb-4" />
                       {[
-                        { key: 'date', label: 'Date' },
-                        { key: 'name', label: 'Name' },
-                        { key: 'status', label: 'Status' }
+                        { key: 'request_date', label: 'Request Date', disabled: false },
+                        { key: 'pickup_date', label: 'Pickup Date', disabled: status === 'pending' },
+                        { key: 'document_type', label: 'Document Type', disabled: documentType.length > 0 },
+                        { key: 'status', label: 'Status', disabled: status !== 'all' }
                       ].map((item) => (
                         <Button
                           key={item.key}
                           variant="ghost"
                           className={cn(
                             "w-full justify-start",
-                            sortOption === item.key && "bg-accent"
+                            sortOption === item.key && "bg-accent",
+                            item.disabled && "opacity-50 cursor-not-allowed"
                           )}
                           onClick={() => {
+                            if (item.disabled) return;
                             if (sortOption === item.key) {
                               setSortDirection(sortDirection === "asc" ? "desc" : "asc");
                             } else {
                               setSortOption(item.key as SortOption);
-                              setSortDirection(item.key === "date" ? "desc" : "asc");
+                              setSortDirection(item.key === "request_date" || item.key === "pickup_date" ? "desc" : "asc");
                             }
                             setSortPopoverOpen(false);
                           }}
+                          disabled={item.disabled}
                         >
                           {item.label}
                           {sortOption === item.key && (
@@ -623,61 +665,6 @@ const Requests: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-6">
-            {(documentType.length > 0 || status !== "all") && (
-              <div className="flex flex-wrap gap-2">
-                {documentType.length > 0 && (
-                  <div className="bg-blue-50 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center">
-                    {documentType.map(type => (
-                      <span key={type} className="mr-2">
-                        {type === "certificate" && "Certificate of Grades (COG)"}
-                        {type === "certification" && "Certification"}
-                        {type === "soa" && "Statement of Account (SOA)"}
-                        {type === "registration_form" && "Registration Form"}
-                        {type === "com" && "Certificate of Matriculation (COM)"}
-                        {type === "coe" && "Certificate of Enrollment (COE)"}
-                        {type === "coa" && "Certificate of No Availed Scholarship (COA)"}
-                        {type === "others" && "Others"}
-                      </span>
-                    ))}
-                    <button
-                      onClick={() => setDocumentType([])}
-                      className="ml-2 focus:outline-none"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
-                {status !== "all" && (
-                  <div className="bg-blue-50 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center">
-                    Status: {status === "pending" ? "Pending" : "Approved"}
-                    <button
-                      onClick={() => setStatus("all")}
-                      className="ml-2 focus:outline-none"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
-                {(dateRange.from || dateRange.to) && (
-                  <div className="bg-blue-50 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center">
-                    Date: {dateRange.from ? formatDate(dateRange.from) : 'Any'} - {dateRange.to ? formatDate(dateRange.to) : 'Any'}
-                    <button
-                      onClick={() => setDateRange({ from: null, to: null })}
-                      className="ml-2 focus:outline-none"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
-                <button
-                  onClick={clearFilters}
-                  className="text-sm text-blue-600 hover:text-blue-800 underline ml-2"
-                >
-                  Clear all filters
-                </button>
-              </div>
-            )}
-
             {requestsLoading ? (
               <div className="flex justify-center items-center h-64">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
@@ -703,10 +690,23 @@ const Requests: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <FileText className="w-12 h-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900">No requests found</h3>
-                <p className="text-gray-500 mt-1">Try adjusting your search or filters to find what you're looking for.</p>
+              <div className="bg-white rounded-2xl shadow p-10 border border-blue-100 text-center flex flex-col items-center">
+                <FileText className="w-20 h-20 mx-auto text-blue-200 mb-4" />
+                <h3 className="text-xl font-semibold mb-2 text-blue-900">No requests found</h3>
+                <p className="text-blue-700 mb-6">
+                  {(searchTerm || documentType.length > 0 || status !== 'all')
+                    ? "No requests match your current filters. Try adjusting your filters or resetting them."
+                    : "There are no requests recorded yet. Start using the system to see requests here!"}
+                </p>
+                {(searchTerm || documentType.length > 0 || status !== 'all') && (
+                  <Button
+                    onClick={clearFilters}
+                    variant="outline"
+                    className="mx-auto rounded-full border-blue-200 text-blue-700 bg-white hover:bg-blue-50 shadow-sm"
+                  >
+                    Reset Filters
+                  </Button>
+                )}
               </div>
             )}
           </div>

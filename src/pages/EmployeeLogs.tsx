@@ -33,7 +33,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 
-// Update type definition to better handle related user info
 type ActivityLog = {
   id: string;
   user_id: string;
@@ -45,21 +44,23 @@ type ActivityLog = {
   related_user_name?: string | null;
   related_user_avatar?: string | null;
   user_role?: string | null;
+  related_user_role?: string | null;
 };
 
-// Add this helper for colored border
 function getActivityIconColor(activityType: string) {
   switch (activityType) {
     case 'login':
-      return '#3b82f6'; // blue-500
+      return '#3b82f6';
     case 'sign_out':
-      return '#f59e42'; // orange-400
+      return '#f59e42';
     case 'schedule_pickup':
-      return '#22c55e'; // green-500
+      return '#fde047';
     case 'approve_request':
-      return '#a78bfa'; // purple-400
+      return '#a78bfa';
+    case 'confirm_pickup':
+      return '#22c55e';
     default:
-      return '#cbd5e1'; // slate-300
+      return '#cbd5e1';
   }
 }
 
@@ -91,6 +92,8 @@ const EmployeeLogs: React.FC = () => {
     direction: 'desc'
   });
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
+
+  const isAnyFilterActive = activityFilter || roleFilter;
 
   useEffect(() => {
     if (!session) {
@@ -142,14 +145,19 @@ const EmployeeLogs: React.FC = () => {
     checkUserRole();
   }, [session, navigate]);
 
+  useEffect(() => {
+    if (activityFilter === 'schedule_pickup' || activityFilter === 'confirm_pickup') {
+      setRoleFilter(null);
+    }
+  }, [activityFilter]);
+
   const fetchActivityLogs = async () => {
     try {
-      console.log("Fetching activity logs...");
-      
-      // Fetch ALL logs without filtering by user or activity type
+      setIsLoading(true);
+      // 1. Fetch only needed columns
       const { data: logsData, error: logsError } = await supabase
         .from('activity_logs')
-        .select('*')
+        .select('id, user_id, activity_type, details, related_id, related_user_id, created_at')
         .order('created_at', { ascending: false });
       
       if (logsError) {
@@ -159,73 +167,118 @@ const EmployeeLogs: React.FC = () => {
         setFilteredLogs([]);
         setIsLoading(false);
         return;
-      } 
-      
-      console.log("Retrieved logs data:", logsData);
-      
-      // Process logs to include user profiles information
-      const processedLogs: ActivityLog[] = [];
-      
-      for (const log of logsData) {
+      }
+
+      // 2. Collect all unique user IDs and related user IDs
+      const userIds = Array.from(new Set(logsData.map(log => log.user_id).filter(Boolean)));
+      const relatedUserIds = Array.from(new Set(logsData.map(log => log.related_user_id).filter(Boolean)));
+      const allProfileIds = Array.from(new Set([...userIds, ...relatedUserIds]));
+
+      // 3. Batch fetch all profiles
+      let profilesMap = {};
+      if (allProfileIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url');
+        if (profilesData) {
+          profilesMap = profilesData.reduce((acc, profile) => {
+            acc[profile.id] = profile;
+            return acc;
+          }, {});
+        }
+      }
+
+      // 4. Batch fetch all roles
+      let rolesMap = {};
+      if (allProfileIds.length > 0) {
+        // Use an RPC or a roles table if available; fallback to per-user if not
+        // Here, we assume a roles table for batch fetch
+        const { data: rolesData } = await supabase
+          .from('user_roles')
+          .select('user_id, role');
+        if (rolesData) {
+          rolesMap = rolesData.reduce((acc, row) => {
+            if (!acc[row.user_id]) acc[row.user_id] = [];
+            acc[row.user_id].push(row.role);
+            return acc;
+          }, {});
+        }
+      }
+
+      // Debug: log rolesMap
+      console.log('rolesMap:', rolesMap);
+
+      // 5. Map profiles and roles to logs
+      const processedLogs = await Promise.all(logsData.map(async log => {
         let relatedUserAvatar = null;
         let relatedUserName = null;
         let userName = null;
         let userRole = null;
-        
-        // Get the user who performed the action
-        if (log.user_id) {
-          const { data: userProfileData } = await supabase
-            .from('profiles')
-            .select('full_name, avatar_url')
-            .eq('id', log.user_id)
-            .maybeSingle();
-            
-          if (userProfileData) {
-            userName = userProfileData.full_name;
-          }
-          // Fetch user roles for login/sign_out logs
-          if (['login', 'sign_out'].includes(log.activity_type)) {
+        let relatedUserRole = null;
+
+        if (log.user_id && profilesMap[log.user_id]) {
+          userName = profilesMap[log.user_id].full_name;
+        }
+        if (log.related_user_id && profilesMap[log.related_user_id]) {
+          relatedUserAvatar = profilesMap[log.related_user_id].avatar_url;
+          relatedUserName = profilesMap[log.related_user_id].full_name;
+        }
+
+        // Restore per-user RPC for login/sign_out logs
+        if (['login', 'sign_out'].includes(log.activity_type)) {
+          try {
             const { data: userRolesData } = await supabase.rpc('get_user_roles', { user_id: log.user_id });
             if (userRolesData && Array.isArray(userRolesData)) {
-              if (userRolesData.includes('admin')) userRole = 'Admin';
-              else if (userRolesData.includes('faculty')) userRole = 'Employee';
+              const normalizedRoles = userRolesData.map(r => r.toLowerCase());
+              if (normalizedRoles.includes('admin')) userRole = 'Admin';
+              else if (normalizedRoles.includes('faculty')) userRole = 'Employee';
+              else if (normalizedRoles.includes('student')) userRole = 'Student';
               else userRole = 'Student';
+              } else {
+              userRole = 'Student';
             }
+            } catch {
+            userRole = 'Student';
+          }
+        } else if (log.user_id) {
+          if (rolesMap[log.user_id]) {
+            const userRoles = rolesMap[log.user_id].map(r => r.toLowerCase());
+            if (userRoles.includes('admin')) userRole = 'Admin';
+            else if (userRoles.includes('faculty')) userRole = 'Employee';
+            else if (userRoles.includes('student')) userRole = 'Student';
+            else userRole = 'Student';
+          } else {
+            userRole = 'Student';
           }
         }
-        
-        // If there's a related user (e.g., student for pickup scheduling), fetch their profile info
-        if (log.related_user_id) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('full_name, avatar_url')
-            .eq('id', log.related_user_id)
-            .maybeSingle();
-            
-          if (profileData) {
-            relatedUserAvatar = profileData.avatar_url;
-            relatedUserName = profileData.full_name;
-          }
+
+        if (log.related_user_id && rolesMap[log.related_user_id]) {
+          const relatedUserRoles = rolesMap[log.related_user_id].map(r => r.toLowerCase());
+          if (relatedUserRoles.includes('admin')) relatedUserRole = 'Admin';
+          else if (relatedUserRoles.includes('faculty')) relatedUserRole = 'Employee';
+          else if (relatedUserRoles.includes('student')) relatedUserRole = 'Student';
+          else relatedUserRole = 'Student';
         }
-        
-        // For schedule pickup activities, update the details to include the processor's name
+
         let details = log.details;
         if (log.activity_type === 'schedule_pickup' && userName) {
           details = `${userName} scheduled pickup for request ${log.related_id} - ${relatedUserName || 'Unknown Student'}`;
+        } else if (log.activity_type === 'confirm_pickup') {
+          details = `Completed pickup for request ${log.related_id} - ${relatedUserName || 'Unknown Student'}`;
         }
         
-        processedLogs.push({
+        return {
           ...log,
           details,
           related_user_avatar: relatedUserAvatar,
           related_user_name: relatedUserName,
           user_role: userRole,
-        });
-      }
-      
-      console.log("Processed logs:", processedLogs);
-      setLogs(processedLogs);
-      setFilteredLogs(processedLogs);
+          related_user_role: relatedUserRole,
+        };
+      }));
+
+      setLogs(await processedLogs);
+      setFilteredLogs(await processedLogs);
     } catch (error) {
       console.error("Unexpected error fetching logs:", error);
       toast.error("An unexpected error occurred");
@@ -261,6 +314,52 @@ const EmployeeLogs: React.FC = () => {
         return sortConfig.direction === 'asc'
           ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
           : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          } else if (sortConfig.key === 'activity_type') {
+        return sortConfig.direction === 'asc'
+          ? a.activity_type.localeCompare(b.activity_type)
+          : b.activity_type.localeCompare(a.activity_type);
+      } else if (sortConfig.key === 'related_user_name') {
+        const getRoleRank = (role) => {
+          if (role === 'Admin') return 1;
+          if (role === 'Employee') return 2;
+          if (role === 'Student') return 3;
+          return 4;
+        };
+        const isLoginOrSignOut = (log) => log.activity_type === 'login' || log.activity_type === 'sign_out';
+        const isPickup = (log) => log.activity_type === 'schedule_pickup' || log.activity_type === 'confirm_pickup';
+        // If both are login/sign_out, sort by extracted email from details
+        if (isLoginOrSignOut(a) && isLoginOrSignOut(b)) {
+          const extractEmail = (details) => {
+            if (!details) return '';
+            // Try to extract email from details (e.g., 'User signed out - email@example.com')
+            const match = details.match(/-\s*([\w.-]+@[\w.-]+)/);
+            return match ? match[1].trim().toLowerCase() : details.toLowerCase();
+          };
+          const aEmail = extractEmail(a.details);
+          const bEmail = extractEmail(b.details);
+          return sortConfig.direction === 'asc' ? aEmail.localeCompare(bEmail) : bEmail.localeCompare(aEmail);
+        }
+        // If only one is login/sign_out, always put login/sign_out after (or before, depending on direction)
+        if (isLoginOrSignOut(a) !== isLoginOrSignOut(b)) {
+          return sortConfig.direction === 'asc'
+            ? (isLoginOrSignOut(a) ? 1 : -1)
+            : (isLoginOrSignOut(a) ? -1 : 1);
+        }
+        // If both are pickup/confirm_pickup, sort by badge then name
+        if (isPickup(a) && isPickup(b)) {
+          const aRelatedRank = getRoleRank(a.related_user_role);
+          const bRelatedRank = getRoleRank(b.related_user_role);
+          if (aRelatedRank !== bRelatedRank) {
+            return sortConfig.direction === 'asc' ? aRelatedRank - bRelatedRank : bRelatedRank - aRelatedRank;
+          }
+          const aRelatedName = a.related_user_name || '';
+          const bRelatedName = b.related_user_name || '';
+          return sortConfig.direction === 'asc' ? aRelatedName.localeCompare(bRelatedName) : bRelatedName.localeCompare(aRelatedName);
+        }
+        // Default: sort by related_user_name
+        const aRelatedUserName = a.related_user_name || '';
+        const bRelatedUserName = b.related_user_name || '';
+        return sortConfig.direction === 'asc' ? aRelatedUserName.localeCompare(bRelatedUserName) : bRelatedUserName.localeCompare(aRelatedUserName);
       }
       return 0;
     });
@@ -270,7 +369,7 @@ const EmployeeLogs: React.FC = () => {
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
-    return format(date, 'MMM dd, yyyy HH:mm');
+    return format(date, 'MMM dd, yyyy') + ' · ' + format(date, 'hh:mm a');
   };
 
   const getActivityIcon = (activityType: string) => {
@@ -280,7 +379,9 @@ const EmployeeLogs: React.FC = () => {
       case 'sign_out':
         return <LogOut className="h-4 w-4 text-orange-500" />;
       case 'schedule_pickup':
-        return <CalendarClock className="h-4 w-4 text-green-500" />;
+        return <CalendarClock className="h-4 w-4 text-yellow-500" />;
+      case 'confirm_pickup':
+        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
       case 'approve_request':
         return <CheckCircle2 className="h-4 w-4 text-purple-500" />;
       default:
@@ -296,6 +397,8 @@ const EmployeeLogs: React.FC = () => {
         return 'Sign Out';
       case 'schedule_pickup':
         return 'Schedule Pickup';
+      case 'confirm_pickup':
+        return 'Complete Pickup';
       case 'approve_request':
         return 'Approve Request';
       default:
@@ -315,6 +418,7 @@ const EmployeeLogs: React.FC = () => {
 
   const resetFilters = () => {
     setActivityFilter(null);
+    setRoleFilter(null);
     setSearchTerm('');
     setFilterPopoverOpen(false);
   };
@@ -410,6 +514,10 @@ const EmployeeLogs: React.FC = () => {
                               <RadioGroupItem value="schedule_pickup" id="activity-schedule" />
                               <Label htmlFor="activity-schedule" className="text-sm">Schedule Pickup</Label>
                             </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="confirm_pickup" id="activity-complete-pickup" />
+                              <Label htmlFor="activity-complete-pickup" className="text-sm">Complete Pickup</Label>
+                            </div>
                           </div>
                         </RadioGroup>
                       </div>
@@ -422,6 +530,7 @@ const EmployeeLogs: React.FC = () => {
                             setRoleFilter(value || null);
                             setFilterPopoverOpen(false);
                           }}
+                          disabled={activityFilter === 'schedule_pickup' || activityFilter === 'confirm_pickup'}
                         >
                           <div className="space-y-4">
                             <div className="flex items-center space-x-2">
@@ -453,8 +562,12 @@ const EmployeeLogs: React.FC = () => {
                   </PopoverContent>
                 </Popover>
                 <Popover open={sortPopoverOpen} onOpenChange={setSortPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="rounded-full h-12 gap-2 bg-gradient-to-r from-blue-400 to-blue-500 text-white shadow hover:scale-105 active:scale-95 transition border-0 focus:ring-2 focus:ring-blue-300">
+                  <PopoverTrigger asChild disabled={filteredLogs.length === 0}>
+                    <Button
+                      variant="outline"
+                      className={`rounded-full h-12 gap-2 bg-gradient-to-r from-blue-400 to-blue-500 text-white shadow hover:scale-105 active:scale-95 transition border-0 focus:ring-2 focus:ring-blue-300 ${filteredLogs.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={filteredLogs.length === 0}
+                    >
                       <ArrowUpDown className="h-5 w-5" />
                       Sort
                     </Button>
@@ -464,13 +577,16 @@ const EmployeeLogs: React.FC = () => {
                       <h3 className="text-sm font-medium mb-2">Sort by</h3>
                       <div className="border-b border-gray-200 mb-4" />
                       {[
-                        { key: 'created_at', label: 'Date & Time' }
+                        { key: 'created_at', label: 'Date & Time' },
+                        { key: 'activity_type', label: 'Activity', disabled: !!activityFilter },
+                        { key: 'related_user_name', label: 'Related User & Role' }
                       ].map((item) => (
                         <Button
                           key={item.key}
                           variant="ghost"
-                          className={`w-full justify-start ${sortConfig.key === item.key ? 'bg-accent' : ''}`}
-                          onClick={() => handleSortChange(item.key)}
+                          className={`w-full justify-start ${sortConfig.key === item.key ? 'bg-accent' : ''} ${item.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          onClick={() => !item.disabled && handleSortChange(item.key)}
+                          disabled={item.disabled}
                         >
                           {item.label}
                           {sortConfig.key === item.key && (
@@ -510,13 +626,13 @@ const EmployeeLogs: React.FC = () => {
                     <TableHead className="w-[180px]">Date & Time</TableHead>
                     <TableHead className="w-[150px]">Activity</TableHead>
                     <TableHead>Details</TableHead>
-                    <TableHead className="w-[200px]">Related User</TableHead>
+                    <TableHead className="w-[200px]">Related User & Role</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredLogs.map((log, idx) => (
                     <TableRow key={log.id} className={`transition group ${idx % 2 === 0 ? 'bg-blue-50/40' : 'bg-white'} hover:bg-blue-100/60`}>
-                      <TableCell className="font-medium text-blue-900 border-l-4" style={{ borderColor: getActivityIconColor(log.activity_type) }}>
+                      <TableCell className="font-medium text-blue-900 border-l-4" style={{ borderColor: getActivityIconColor(log.activity_type), whiteSpace: 'nowrap' }}>
                         {formatDate(log.created_at)}
                       </TableCell>
                       <TableCell>
@@ -524,32 +640,49 @@ const EmployeeLogs: React.FC = () => {
                           <span title={getActivityName(log.activity_type)}>
                             {getActivityIcon(log.activity_type)}
                           </span>
-                          <span className="font-semibold text-gray-800">{getActivityName(log.activity_type)}</span>
+                          <span className="font-semibold text-gray-800">
+                            {getActivityName(log.activity_type)}
+                          </span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-gray-700">{log.details}</TableCell>
+                      <TableCell className="text-gray-700">
+                        {log.details}
+                      </TableCell>
                       <TableCell>
                         {log.related_user_id ? (
-                          <div className="flex items-center gap-2 bg-blue-50 rounded-lg px-2 py-1 group-hover:bg-blue-200/60 transition">
-                            <Avatar className="h-8 w-8 mr-2">
-                              <AvatarImage src={log.related_user_avatar || undefined} />
-                              <AvatarFallback>
-                                <UserIcon className="h-4 w-4" />
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm font-medium text-blue-900">{log.related_user_name || "User"}</span>
-                          </div>
+                          (() => {
+                            // Debug: log the role and name
+                            console.log('related_user_role:', log.related_user_role, 'related_user_name:', log.related_user_name);
+                            // Use related_user_role, fallback to user_role if missing
+                            const role = log.related_user_role || log.user_role;
+                            const cardClass = role === 'Admin'
+                              ? 'bg-green-50 text-green-900'
+                              : role === 'Employee'
+                                ? 'bg-yellow-50 text-yellow-900'
+                                : 'bg-blue-50 text-blue-900';
+                            return (
+                              <div className={`flex items-center gap-2 rounded-lg px-2 py-1 group-hover:bg-opacity-80 transition ${cardClass}`}>
+                                <Avatar className="h-8 w-8 mr-2">
+                                  <AvatarImage src={log.related_user_avatar || undefined} />
+                                  <AvatarFallback>
+                                    <UserIcon className="h-4 w-4" />
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm font-medium">{log.related_user_name || "User"}</span>
+                              </div>
+                            );
+                          })()
                         ) : (
-                          ['login', 'sign_out'].includes(log.activity_type) ? (
+                          ['login', 'sign_out'].includes(log.activity_type) && log.user_role ? (
                             <span className="flex items-center gap-2">
                               {log.user_role === 'Admin' && (
-                                <span className="rounded px-2 py-0.5 font-semibold text-xs text-white bg-green-500">Admin</span>
+                                <span className="rounded px-2 py-0.5 font-semibold text-xs bg-green-50 text-green-900">Admin</span>
                               )}
                               {log.user_role === 'Employee' && (
-                                <span className="rounded px-2 py-0.5 font-semibold text-xs text-white bg-yellow-500">Employee</span>
+                                <span className="rounded px-2 py-0.5 font-semibold text-xs bg-yellow-50 text-yellow-900">Employee</span>
                               )}
                               {log.user_role === 'Student' && (
-                                <span className="rounded px-2 py-0.5 font-semibold text-xs text-white bg-blue-500">Student</span>
+                                <span className="rounded px-2 py-0.5 font-semibold text-xs bg-blue-50 text-blue-900">Student</span>
                               )}
                             </span>
                           ) : (
@@ -567,11 +700,11 @@ const EmployeeLogs: React.FC = () => {
               <BookOpen className="w-20 h-20 mx-auto text-blue-200 mb-4" />
               <h3 className="text-xl font-semibold mb-2 text-blue-900">No activity logs found</h3>
               <p className="text-blue-700 mb-6">
-                {activityFilter ?
+                {isAnyFilterActive ?
                   "No logs match your current filters. Try adjusting your filters or resetting them." :
                   "There are no activity logs recorded yet. Start using the system to see activity here!"}
               </p>
-              {activityFilter && (
+              {isAnyFilterActive && (
                 <Button
                   onClick={resetFilters}
                   variant="outline"

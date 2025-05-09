@@ -130,7 +130,7 @@ const EmployeePortal: React.FC = () => {
     direction: 'desc',
   });
   const [activeFilters, setActiveFilters] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<'pending' | 'approved'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'picked_up'>('pending');
 
   useEffect(() => {
     let count = 0;
@@ -190,7 +190,7 @@ const EmployeePortal: React.FC = () => {
         const { data: requestsData, error: requestsError } = await supabase
           .from('requests')
           .select('*')
-          .in('status', ['awaiting_pickup', 'approved'])
+          .in('status', ['awaiting_pickup', 'approved', 'picked_up'])
           .order('created_at', { ascending: false });
 
         if (requestsError) throw requestsError;
@@ -458,11 +458,58 @@ const EmployeePortal: React.FC = () => {
     }
   };
 
+  const confirmPickup = async (request: RequestWithTransaction) => {
+    try {
+      const { error } = await supabase
+        .from('requests')
+        .update({
+          status: 'picked_up',
+          processed_by: session?.user?.id,
+          notes: 'Request has been picked up by the student'
+        })
+        .eq('id', request.id);
+      
+      if (error) throw error;
+
+      if (session?.user?.id) {
+        try {
+          await supabase.rpc(
+            'log_activity',
+            { 
+              p_user_id: session.user.id, 
+              p_activity_type: 'confirm_pickup',
+              p_details: `Confirmed pickup for request #${request.id} - ${request.student_name}`,
+              p_related_id: request.id,
+              p_related_user_id: request.user_id
+            }
+          );
+        } catch (logError) {
+          console.error("Error logging pickup confirmation:", logError);
+        }
+      }
+      
+      toast.success("Request marked as picked up successfully");
+      refetch();
+    } catch (err) {
+      console.error("Error confirming pickup:", err);
+      toast.error("Failed to confirm pickup. Please try again.");
+    }
+  };
+
   const pendingRequests = employeeRequests.filter(r => r.status === 'awaiting_pickup');
   const approvedRequests = employeeRequests.filter(r => r.status === 'approved');
 
   const handleSignOut = async () => {
     try {
+      if (session?.user?.id) {
+        await supabase.rpc('log_activity', {
+          p_user_id: session.user.id,
+          p_activity_type: 'sign_out',
+          p_details: `User signed out - ${session.user.email}`,
+          p_related_user_id: null,
+          p_related_id: null,
+        });
+      }
       await supabase.auth.signOut();
       navigate('/');
     } catch (error) {
@@ -492,11 +539,12 @@ const EmployeePortal: React.FC = () => {
             <div className="bg-white/80 rounded-2xl shadow-2xl border border-blue-100 p-7 flex flex-col sm:flex-row gap-4 items-center transition-all">
               <div className="relative flex-1 w-full">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-blue-400 pointer-events-none" />
-                <Input
-                  placeholder="Search by name, request type, or student number..."
+                <input
+                  type="text"
+                  placeholder="Search requests..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-12 pr-4 py-4 rounded-full border border-blue-100 shadow focus:ring-2 focus:ring-blue-200 bg-white/90 focus:outline-none transition-all w-full text-base hover:shadow-lg focus:shadow-lg"
+                  className="pl-12 pr-4 py-4 rounded-full border border-blue-100 shadow focus:ring-2 focus:ring-blue-200 bg-white/80 focus:outline-none transition-all w-full text-base hover:shadow-lg focus:shadow-lg"
                 />
               </div>
               <div className="hidden sm:block h-10 w-px bg-blue-100 mx-2 rounded-full" />
@@ -580,13 +628,16 @@ const EmployeePortal: React.FC = () => {
           </div>
 
           {/* Tabs Section */}
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'pending' | 'approved')} className="space-y-4">
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'pending' | 'approved' | 'picked_up')} className="space-y-4">
             <TabsList className="flex w-full justify-center gap-4 bg-transparent rounded-full p-1 mb-8">
               <TabsTrigger value="pending" className="rounded-full px-6 py-2 text-base font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-300 data-[state=active]:text-white data-[state=active]:shadow">
                 Pending Requests
               </TabsTrigger>
               <TabsTrigger value="approved" className="rounded-full px-6 py-2 text-base font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-green-400 data-[state=active]:text-white data-[state=active]:shadow">
                 Approved Requests
+              </TabsTrigger>
+              <TabsTrigger value="picked_up" className="rounded-full px-6 py-2 text-base font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-blue-400 data-[state=active]:text-white data-[state=active]:shadow">
+              Completed Pickups
               </TabsTrigger>
             </TabsList>
 
@@ -902,14 +953,169 @@ const EmployeePortal: React.FC = () => {
                         <Button
                           variant="outline"
                           className="rounded-full border-green-300 text-green-800 hover:bg-green-100 hover:scale-105 transition"
-                          onClick={() => {
-                            setSelectedRequest(request);
-                            setDialogOpen(true);
-                          }}
+                          onClick={() => confirmPickup(request)}
                         >
-                          View Details
+                          Mark as Picked Up
                         </Button>
                       </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="picked_up" className="space-y-8">
+              {requestsLoading ? (
+                <div className="flex justify-center items-center h-64">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
+                </div>
+              ) : error ? (
+                <div className="bg-white rounded-lg shadow p-10 border border-gray-200 text-center">
+                  <div className="text-red-500 mb-4">
+                    <X className="w-16 h-16 mx-auto" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">Error loading requests</h3>
+                  <p className="text-gray-600 mb-6">There was a problem loading the requests.</p>
+                  <Button
+                    onClick={() => refetch()}
+                    className="bg-[#0047AB] hover:bg-[#00377e]"
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-8">
+                  {applyFilters(applySorting(employeeRequests.filter(req => req.status === 'picked_up'))).map((request) => (
+                    <Card key={request.id} className="rounded-2xl border border-blue-100 shadow-xl bg-white hover:shadow-2xl hover:border-blue-300 transition-transform hover:scale-[1.025]">
+                      <CardHeader className="bg-blue-50 rounded-t-2xl p-6 flex flex-row items-center justify-between">
+                        <div>
+                          <CardTitle className="text-xl font-bold text-blue-700 flex items-center gap-2">
+                            <Package className="w-5 h-5 text-blue-500" />
+                            {request.student_name}
+                          </CardTitle>
+                          <CardDescription className="mt-1 text-blue-700/80">
+                            Student Number: {request.student_number}
+                          </CardDescription>
+                        </div>
+                        <span className="px-4 py-1 rounded-full text-sm font-semibold bg-blue-200 text-blue-900 shadow">Completed</span>
+                      </CardHeader>
+                      <CardContent className="p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <FileText className="h-4 w-4" />
+                              <span className="font-medium">Request Type:</span>
+                            </div>
+                            <ul className="text-gray-600 text-sm ml-8 list-disc">
+                              {request.certificate_selected && (
+                                <li>Certificate of Grades (COG):
+                                  <span className="inline-flex items-center ml-2 mr-1 rounded px-2 py-0.5 font-semibold text-white bg-blue-500 text-xs">{request.certificate_copies || 1} {((request.certificate_copies || 1) === 1 ? 'copy' : 'copies')}</span>
+                                  <span className={`inline-flex items-center ml-1 rounded px-2 py-0.5 font-semibold text-xs text-white ${request.certificate_ctc ? 'bg-green-500' : 'bg-gray-400'}`}>CTC/Dry Seal: {request.certificate_ctc ? 'Yes' : 'No'}</span>
+                                </li>
+                              )}
+                              {request.registration_form_selected && (
+                                <li>Registration Form:
+                                  <span className="inline-flex items-center ml-2 mr-1 rounded px-2 py-0.5 font-semibold text-white bg-blue-500 text-xs">{request.registration_form_copies || 1} {((request.registration_form_copies || 1) === 1 ? 'copy' : 'copies')}</span>
+                                  <span className={`inline-flex items-center ml-1 rounded px-2 py-0.5 font-semibold text-xs text-white ${request.registration_form_ctc ? 'bg-green-500' : 'bg-gray-400'}`}>CTC/Dry Seal: {request.registration_form_ctc ? 'Yes' : 'No'}</span>
+                                </li>
+                              )}
+                              {request.com_selected && (
+                                <li>Certificate of Matriculation (COM):
+                                  <span className="inline-flex items-center ml-2 mr-1 rounded px-2 py-0.5 font-semibold text-white bg-blue-500 text-xs">{request.com_copies || 1} {((request.com_copies || 1) === 1 ? 'copy' : 'copies')}</span>
+                                  <span className={`inline-flex items-center ml-1 rounded px-2 py-0.5 font-semibold text-xs text-white ${request.com_ctc ? 'bg-green-500' : 'bg-gray-400'}`}>CTC/Dry Seal: {request.com_ctc ? 'Yes' : 'No'}</span>
+                                </li>
+                              )}
+                              {request.coe_selected && (
+                                <li>Certificate of Enrollment (COE):
+                                  <span className="inline-flex items-center ml-2 mr-1 rounded px-2 py-0.5 font-semibold text-white bg-blue-500 text-xs">{request.coe_copies || 1} {((request.coe_copies || 1) === 1 ? 'copy' : 'copies')}</span>
+                                  <span className={`inline-flex items-center ml-1 rounded px-2 py-0.5 font-semibold text-xs text-white ${request.coe_ctc ? 'bg-green-500' : 'bg-gray-400'}`}>CTC/Dry Seal: {request.coe_ctc ? 'Yes' : 'No'}</span>
+                                </li>
+                              )}
+                              {request.coa_selected && (
+                                <li>Certificate of No Availed Scholarship (COA):
+                                  <span className="inline-flex items-center ml-2 mr-1 rounded px-2 py-0.5 font-semibold text-white bg-blue-500 text-xs">{request.coa_copies || 1} {((request.coa_copies || 1) === 1 ? 'copy' : 'copies')}</span>
+                                  <span className={`inline-flex items-center ml-1 rounded px-2 py-0.5 font-semibold text-xs text-white ${request.coa_ctc ? 'bg-green-500' : 'bg-gray-400'}`}>CTC/Dry Seal: {request.coa_ctc ? 'Yes' : 'No'}</span>
+                                </li>
+                              )}
+                              {request.soa_selected && (
+                                <li>Statement of Account (SOA):
+                                  <span className="inline-flex items-center ml-2 mr-1 rounded px-2 py-0.5 font-semibold text-white bg-blue-500 text-xs">{request.soa_copies || 1} {((request.soa_copies || 1) === 1 ? 'copy' : 'copies')}</span>
+                                  <span className={`inline-flex items-center ml-1 rounded px-2 py-0.5 font-semibold text-xs text-white ${request.soa_ctc ? 'bg-green-500' : 'bg-gray-400'}`}>CTC/Dry Seal: {request.soa_ctc ? 'Yes' : 'No'}</span>
+                                </li>
+                              )}
+                              {request.certification_selected && (
+                                <li>Certification:
+                                  <span className="inline-flex items-center ml-2 mr-1 rounded px-2 py-0.5 font-semibold text-white bg-blue-500 text-xs">{request.certification_copies || 1} {((request.certification_copies || 1) === 1 ? 'copy' : 'copies')}</span>
+                                  <span className={`inline-flex items-center ml-1 rounded px-2 py-0.5 font-semibold text-xs text-white ${request.certification_ctc ? 'bg-green-500' : 'bg-gray-400'}`}>CTC/Dry Seal: {request.certification_ctc ? 'Yes' : 'No'}</span>
+                                </li>
+                              )}
+                              {request.others_selected && (
+                                <li>Others:
+                                  <span className="inline-flex items-center ml-2 mr-1 rounded px-2 py-0.5 font-semibold text-white bg-blue-500 text-xs">{request.others_copies || 1} {((request.others_copies || 1) === 1 ? 'copy' : 'copies')}</span>
+                                  <span className={`inline-flex items-center ml-1 rounded px-2 py-0.5 font-semibold text-xs text-white ${request.others_ctc ? 'bg-green-500' : 'bg-gray-400'}`}>CTC/Dry Seal: {request.others_ctc ? 'Yes' : 'No'}</span>
+                                </li>
+                              )}
+                            </ul>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <CalendarIcon className="h-4 w-4" />
+                              <span className="font-medium">Request Date:</span>
+                              <span>{formatDate(request.created_at)}</span>
+                            </div>
+                            {request.pickup_date && (
+                              <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <Clock className="h-4 w-4" />
+                                <span className="font-medium">Pickup Date:</span>
+                                <span>{formatDate(request.pickup_date)}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <MapPin className="h-4 w-4" />
+                              <span className="font-medium">Address:</span>
+                              <span>{request.home_address}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <Phone className="h-4 w-4" />
+                              <span className="font-medium">Contact:</span>
+                              <span>{request.contact_number}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                              <Building2 className="h-4 w-4" />
+                              <span className="font-medium">Purpose:</span>
+                              <span>{request.purpose}</span>
+                            </div>
+                            {request.transaction && (
+                              <div>
+                                <div className="my-4 border-b border-gray-200" />
+                                <div className="flex items-center gap-2 text-sm text-gray-500 font-medium mb-1">Payment Information:</div>
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                                    <CreditCard className="h-4 w-4" />
+                                    <span className="font-medium">Amount:</span>
+                                    <span>₱{Number(request.transaction.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                                    <Banknote className="h-4 w-4" />
+                                    <span className="font-medium">Payment Method:</span>
+                                    <span>{request.transaction.payment_method || '-'}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                                    <CheckCircle className="h-4 w-4" />
+                                    <span className="font-medium">Payment Status:</span>
+                                    <span className={`rounded px-2 py-0.5 font-semibold text-white ${['paid', 'successful'].includes((request.transaction.payment_status || '').toLowerCase()) ? 'bg-green-500' : 'bg-red-500'}`}>{['paid', 'successful'].includes((request.transaction.payment_status || '').toLowerCase()) ? (request.transaction.payment_status.charAt(0).toUpperCase() + request.transaction.payment_status.slice(1)) : (request.transaction.payment_status || 'Unpaid')}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                                    <CalendarIcon className="h-4 w-4" />
+                                    <span className="font-medium">Payment Date:</span>
+                                    <span>{request.transaction.created_at ? formatDate(request.transaction.created_at) : '-'}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
                     </Card>
                   ))}
                 </div>
