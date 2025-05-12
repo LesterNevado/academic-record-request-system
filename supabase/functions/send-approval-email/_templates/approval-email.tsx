@@ -113,7 +113,14 @@ export const ApprovalEmail = ({
             </Section>
 
             <Text style={paragraph}>
-              Please bring your ID for verification when you come to pick up your documents.
+            You may pick up your document(s) any time starting from your scheduled date during the following hours:{"\n"}
+            Monday to Friday: 8:00 AM – 4:00 PM{"\n"}
+            Saturday: 8:00 AM – 12:00 PM{"\n\n"}
+            Note: Pickups are unavailable on Sundays, holidays, and during class suspensions.
+            </Text>
+
+            <Text style={paragraph}>
+              Please present a valid ID along with your confirmation email upon document(s) pickup. These are required for verification.
             </Text>
             
             <Text style={highlightText}>

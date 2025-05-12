@@ -347,7 +347,7 @@ const RequestForm: React.FC = () => {
                 <div className="w-1.5 h-8 bg-gradient-to-b from-blue-500 to-blue-400 rounded-full" />
                 <h2 className="text-2xl font-extrabold text-gray-900">Complete Your Payment</h2>
               </div>
-              <p className="mb-8 text-slate-600 text-lg">Please complete the payment to process your request.</p>
+              <p className="mb-8 text-slate-600 text-lg">Please review your request summary carefully before proceeding. Once you continue to payment, your selected documents and details can no longer be edited.</p>
               <div className="p-6 bg-blue-50 rounded-xl mb-8 border border-blue-100 shadow flex flex-col gap-2">
                 <h3 className="font-semibold text-blue-900 mb-2">Request Summary:</h3>
                 <ul className="space-y-2">
