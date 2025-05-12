@@ -68,8 +68,9 @@ const RequestForm: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState({
     certificationDetails: false,
-    othersDetails: false
-  });
+    othersDetails: false,
+    purposeFormat: false
+});
   const [showPayment, setShowPayment] = useState(false);
 
   useEffect(() => {
@@ -236,7 +237,8 @@ const RequestForm: React.FC = () => {
     let isValid = true;
     const newErrors = {
       certificationDetails: false,
-      othersDetails: false
+      othersDetails: false,
+      purposeFormat: false
     };
 
     if (formData.requestTypes.certification.selected && !formData.requestTypes.certification.details?.trim()) {
@@ -248,6 +250,12 @@ const RequestForm: React.FC = () => {
       newErrors.othersDetails = true;
       isValid = false;
     }
+
+  const purposeLower = formData.purpose.toLowerCase();
+    if (!/ay\s?\d{4}[-–]\d{4}/i.test(formData.purpose) || !/sem|semester/i.test(purposeLower)) {
+    newErrors.purposeFormat = true;
+    isValid = false;
+  }
 
     setFormErrors(newErrors);
     return isValid;
@@ -550,9 +558,18 @@ const RequestForm: React.FC = () => {
               <div className="border-b border-blue-100 my-8" />
               {/* Purpose Section */}
               <div className="bg-blue-50/30 rounded-xl p-6 mb-8 shadow-sm border border-blue-100">
-                <div className="flex items-center gap-2 mb-4">
-                  <BookOpen className="w-5 h-5 text-blue-500" />
-                  <span className="font-semibold text-blue-900 text-lg">Purpose <span className="text-[#ea384c]">*</span></span>
+                <div className="mb-4">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-blue-500" />
+                    <span className="font-semibold text-blue-900 text-lg">
+                      Purpose (Include Academic Year and Semester)
+                      <span className="text-[#ea384c]">*</span>
+                    </span>
+                  </div>
+                  <div className="text-sm text-slate-600 mt-1 ml-7">
+                  <p>Indicate where the document(s) will be submitted, along with the academic year and semester of the requested document(s).</p>
+                  <p>If submitting to multiple recipients, list them all.</p>
+                  </div>
                 </div>
                 <Textarea
                   id="purpose"
@@ -561,8 +578,14 @@ const RequestForm: React.FC = () => {
                   onChange={handleInputChange}
                   required
                   rows={3}
+                  placeholder="e.g., For DOST and QCYDO (AY 2023–2024, 2nd Semester)"
                   className="rounded-2xl border-blue-100 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-all"
                 />
+                {formErrors.purposeFormat && (
+                <span className="text-sm text-[#ea384c] mt-1 block">
+                  Make sure to include academic year and semester of document(s) requested (e.g., AY 2023–2024, 1st Semester).
+                </span>
+              )}
               </div>
               <div className="border-b border-blue-100 my-8" />
               {/* Action Buttons */}
